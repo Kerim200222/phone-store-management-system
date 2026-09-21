@@ -46,7 +46,6 @@ Bu proje, telefon mağazalarının günlük operasyonlarını (stok, IMEI, satı
 Proje **Scrumban** yöntemi ile yönetilir:
 - **WIP Limiti**: `In Progress` kolonunda aynı anda en fazla **2** görev bulunabilir.
 - **Pull Prensibi**: İş kapasitesi açıldıkça görevler `Ready` kolonundan çekilir.
--
 ┌─────────┬─────────┬────────────────┬─────────┬─────────┐
 │ Backlog │ Ready   │ In Progress    │ Review  │ Done    │
 │ (WIP ∞) │ (WIP≤5) │ (WIP≤2)        │ (WIP≤2) │ (∞)     │
