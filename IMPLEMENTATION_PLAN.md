@@ -75,7 +75,7 @@ Proje **Scrumban** yöntemi ile yönetilir:
 ### Faz 1 — Foundation (Gün 1–5)
 - [x] **G1**: Proje dizin yapısının ve Git deposunun oluşturulması.
 - [ ] **G2**: Scrumban panosunun ve WIP kurallarının hazırlanması.
-- [ ] **G3**: C# altyapısının ve SQLite veritabanı bağlantısının kurulması.
+- [x] **G3**: C# altyapısının ve SQLite veritabanı bağlantısının kurulması.
 - [ ] **G4**: C++ DLL köprüsünün (P/Invoke) hazırlanması.
 - [ ] **G5**: Antigravity üzerinden ilk HTML arayüz görünümünün bağlanması.
 
