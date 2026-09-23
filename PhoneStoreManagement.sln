@@ -9,6 +9,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Backend", "Backend", "{4049
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhoneStore.Core", "src\Backend\PhoneStore.Core\PhoneStore.Core.csproj", "{C1982CCD-81F3-4318-8039-4662D569566D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhoneStore.Infrastructure", "src\Backend\PhoneStore.Infrastructure\PhoneStore.Infrastructure.csproj", "{024940BD-201C-4FB7-BDC4-9140EAE17210}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -22,9 +24,14 @@ Global
 		{C1982CCD-81F3-4318-8039-4662D569566D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C1982CCD-81F3-4318-8039-4662D569566D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C1982CCD-81F3-4318-8039-4662D569566D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{024940BD-201C-4FB7-BDC4-9140EAE17210}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{024940BD-201C-4FB7-BDC4-9140EAE17210}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{024940BD-201C-4FB7-BDC4-9140EAE17210}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{024940BD-201C-4FB7-BDC4-9140EAE17210}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{4049682B-8BFD-4BBE-AC51-76976D629818} = {FD08C0AA-13B6-4EA8-8D19-0D07CFE33279}
 		{C1982CCD-81F3-4318-8039-4662D569566D} = {4049682B-8BFD-4BBE-AC51-76976D629818}
+		{024940BD-201C-4FB7-BDC4-9140EAE17210} = {4049682B-8BFD-4BBE-AC51-76976D629818}
 	EndGlobalSection
 EndGlobal
