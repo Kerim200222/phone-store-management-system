@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{FD08C0AA-13B6-4EA8-8D19-0D07CFE33279}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Backend", "Backend", "{4049682B-8BFD-4BBE-AC51-76976D629818}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhoneStore.Core", "src\Backend\PhoneStore.Core\PhoneStore.Core.csproj", "{C1982CCD-81F3-4318-8039-4662D569566D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C1982CCD-81F3-4318-8039-4662D569566D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1982CCD-81F3-4318-8039-4662D569566D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1982CCD-81F3-4318-8039-4662D569566D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1982CCD-81F3-4318-8039-4662D569566D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{4049682B-8BFD-4BBE-AC51-76976D629818} = {FD08C0AA-13B6-4EA8-8D19-0D07CFE33279}
+		{C1982CCD-81F3-4318-8039-4662D569566D} = {4049682B-8BFD-4BBE-AC51-76976D629818}
+	EndGlobalSection
+EndGlobal
