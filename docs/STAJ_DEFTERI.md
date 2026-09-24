@@ -70,4 +70,4 @@
   - Supabase'in yeni SSR kütüphanesinde (`@supabase/ssr`) çerezlerin (cookies) sunucu bileşenlerinde güvenli şekilde nasıl yönetildiği deneyimlendi.
   - PostgreSQL üzerinde `CHECK (length(imei) = 15 AND imei ~ '^[0-9]+$')` ve kısmi unique index (`WHERE imei IS NOT NULL`) kullanılarak hem sadece telefonlar için IMEI zorunluluğu sağlandı hem de mükerrer IMEI girişleri engellendi.
   - Next.js 14 App Router altında güçlü tip güvenliği için Supabase jenerik tiplerinin (`createBrowserClient<Database>`) entegrasyonu sağlandı.
-- **Referans:** `PR #43 (feature/G4-supabase-nextjs-integration)`
+- **Referans:** `PR #75 (Issue: #43, feature/G4-supabase-nextjs-integration)`
