@@ -54,20 +54,25 @@
 
 ---
 
-## 📅 Gün 4: Next.js 14 Web Mimarisi, Supabase SSR & SQL Veritabanı Şeması
+## 📅 Gün 4: Next.js 14 Web Mimarisi, Supabase SSR & Müşteri / Kasa (İşlem) Şeması
 
 - **Tarih:** 24 Eylül 2026
-- **Konu:** Next.js 14 App Router, Supabase JS Client & SSR, Kullanıcı/Rol Yetkilendirme ve IMEI Envanter Şeması
+- **Konu:** Next.js 14 App Router, Supabase SSR, Kullanıcı/Rol Yetkilendirme, IMEI Envanteri ve Müşteri & Kasa (İşlem) Veritabanı Mimarisi (Closes #43)
 - **Yapılan Çalışmalar:**
-  1. **Next.js 14 & UI Altyapısı:** Next.js 14 App Router projesi oluşturuldu. Tailwind CSS ve Shadcn UI tasarım sistemi (`components.json`, `globals.css`, `button`, `card`, `badge`, `table`, `input`) entegre edildi.
-  2. **Supabase SSR İstemcileri:** `@supabase/supabase-js` ve `@supabase/ssr` kurularak `utils/supabase/client.ts` (tarayıcı) ve `utils/supabase/server.ts` (çerez tabanlı sunucu istemcisi) yazıldı. `.env.local` şablonu oluşturuldu.
-  3. **Kullanıcılar ve Roller SQL:** `roles` (Admin, Personel) ve `profiles` tabloları, `auth.users` tetikleyicisi (`handle_new_user`), `updated_at` trigger'ı ve Row Level Security (RLS) politikaları yazıldı (`supabase/01_users_and_roles.sql`).
-  4. **Ürünler ve Kategoriler SQL:** `categories` (Telefon, Aksesuar, Yedek Parça) ve `products` tabloları oluşturuldu. Telefonlar için 15 haneli benzersiz `imei` kolonu, kondisyon (`sıfır`/`ikinci el`), alış ve satış fiyatları ile stok takip alanları eklendi (`supabase/02_categories_and_products.sql` ve `supabase/schema.sql`).
-  5. **TypeScript Veritabanı Arayüzleri:** `types/database.ts` dosyası oluşturularak Supabase şemasıyla birebir uyumlu strongly-typed TypeScript arayüzleri (`Role`, `Profile`, `Category`, `Product`, `ProductWithCategory`) tanımlandı.
-  6. **İnteraktif Yönetim Paneli:** Envanter arama, kategori ve IMEI filtreleme, kar marjı hesaplama ve SQL şema önizleme özelliklerine sahip modern Next.js gösterge paneli (`app/page.tsx`) kodlandı.
-  7. **Derleme Doğrulaması:** `npm run build` ile tüm TypeScript kontrolleri ve statik sayfa derlemesi sıfır hata ile doğrulandı.
+  1. **Next.js 14 & UI Tasarım Sistemi:** Next.js 14 App Router projesi TypeScript ile oluşturuldu. Tailwind CSS ve Shadcn UI tasarım sistemi (`components.json`, `globals.css`, `button`, `card`, `badge`, `table`, `input`) entegre edildi.
+  2. **Supabase SSR İstemcileri:** `@supabase/supabase-js` ve `@supabase/ssr` kurularak `utils/supabase/client.ts` (tarayıcı) ve `utils/supabase/server.ts` (çerez tabanlı sunucu istemcisi) yazıldı. `.env.local` ve `.env.example` şablonları hazırlandı.
+  3. **Kullanıcılar ve Roller SQL Şeması:** `roles` (Admin, Personel) ve `profiles` tabloları, `auth.users` tetikleyicisi (`handle_new_user`), `updated_at` trigger'ı ve Row Level Security (RLS) politikaları yazıldı (`supabase/01_users_and_roles.sql`).
+  4. **Kategoriler ve Ürünler SQL Şeması:** `categories` (Telefon, Aksesuar, Yedek Parça) ve `products` tabloları oluşturuldu. Telefonlar için 15 haneli benzersiz `imei` kolonu, kondisyon (`sıfır`/`ikinci el`), alış ve satış fiyatları ile stok takip alanları eklendi (`supabase/02_categories_and_products.sql`).
+  5. **Müşteriler (Customers) & Cari Takip Şeması (Closes #43):** Müşteri adı, telefon (hızlı arama indeksi), T.C. Kimlik / Pasaport no, adres ve cari bakiye (borç/alacak takibi) alanlarını içeren `customers` tablosu kuruldu (`supabase/03_customers_and_transactions.sql`).
+  6. **Kasa ve İşlemler (Transactions) Şeması (Closes #43):** Benzersiz fiş/işlem numarası (`transaction_number`), müşteri ilişkisi, işlem türü (`sale`, `purchase`, `return`, `repair_payment`), ödeme yöntemi (`cash`, `credit_card`, `bank_transfer`, `on_account`, `split`), brüt/net/ödenen tutar sütunları ile kasa hareketleri modellendi.
+  7. **İşlem Detayları (Transaction_Items) Ara Tablosu (Closes #43):** Çoklu ürün satışı ve ikinci el alımları için `transaction_items` tablosu kurularak satılan cihazın 15 haneli IMEI numarası, adet ve anlık birim fiyatı bağlandı.
+  8. **Master SQL & Seed Data:** Tek tıkla Supabase SQL Editor üzerinde tüm sistemi ayağa kaldıran `supabase/schema.sql` konsolide edildi; örnek müşteriler, cihaz satışları ve kasa kayıtları eklendi.
+  9. **TypeScript Strongly-Typed Veritabanı Modelleri:** `types/database.ts` genişletilerek `Customer`, `Transaction`, `TransactionItem`, `TransactionWithDetails` ve `Database` tanımları eklendi.
+  10. **Zengin İnteraktif Yönetim Paneli:** Envanter arama, IMEI/Barkod sorgulama, Kasa Ciro ve Tahsilat tablosu, Müşteri borç/alacak takibi ve SQL şema görüntüleyicisi içeren modern dashboard (`app/page.tsx`) geliştirildi.
+  11. **Derleme ve Kod Standartları Doğrulaması:** `npm run build` ile tüm TypeScript kontrolleri ve statik sayfa derlemesi sıfır hata ve sıfır uyarı ile doğrulandı.
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - Supabase'in yeni SSR kütüphanesinde (`@supabase/ssr`) çerezlerin (cookies) sunucu bileşenlerinde güvenli şekilde nasıl yönetildiği deneyimlendi.
   - PostgreSQL üzerinde `CHECK (length(imei) = 15 AND imei ~ '^[0-9]+$')` ve kısmi unique index (`WHERE imei IS NOT NULL`) kullanılarak hem sadece telefonlar için IMEI zorunluluğu sağlandı hem de mükerrer IMEI girişleri engellendi.
-  - Next.js 14 App Router altında güçlü tip güvenliği için Supabase jenerik tiplerinin (`createBrowserClient<Database>`) entegrasyonu sağlandı.
-- **Referans:** `PR #75 (Issue: #43, feature/G4-supabase-nextjs-integration)`
+  - Satış ve kasa işlemlerinde bire-çok (1:N) ve çoka-çok (M:N) ilişkisel veri modellemesi yapılarak `CASCADE` silme ve `RESTRICT` ürün koruma kuralları foreign key seviyesinde garantiye alındı.
+  - Cari bakiye mantığında pozitif (+) değerlerin müşteri alacağı/avansı, negatif (-) değerlerin ise mağazaya olan veresiye borcu şeklinde standart muhasebe prensibiyle yönetilmesi sağlandı.
+- **Referans:** `PR #75 (İlgili Görev: Day 4 Issue #43, feature/G4-supabase-nextjs-integration)`
