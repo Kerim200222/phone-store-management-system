@@ -243,3 +243,116 @@ BEGIN
     VALUES (cat_part, 'iPhone 11 Orijinal Kalite GX OLED Ekran', 'Apple Uyumlu', 'iPhone 11', '8680001122334', 'sıfır', 1100.00, 1950.00, 12, 3, 'Teknik servis montajına hazır dokunmatik entegreli ekran paneli')
     ON CONFLICT (barcode) DO NOTHING;
 END $$;
+
+-- ------------------------------------------------------------------------------
+-- 9. MÜŞTERİLER (CUSTOMERS) TABLOSU (Day 4 - Closes #43)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.customers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    email VARCHAR(255),
+    identity_number VARCHAR(11),
+    address TEXT,
+    notes TEXT,
+    balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE INDEX IF NOT EXISTS idx_customers_phone ON public.customers(phone);
+CREATE INDEX IF NOT EXISTS idx_customers_full_name ON public.customers(full_name);
+CREATE INDEX IF NOT EXISTS idx_customers_identity_number ON public.customers(identity_number) WHERE identity_number IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_customers_is_active ON public.customers(is_active);
+
+DROP TRIGGER IF EXISTS trigger_customers_updated_at ON public.customers;
+CREATE TRIGGER trigger_customers_updated_at
+    BEFORE UPDATE ON public.customers
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_updated_at();
+
+-- ------------------------------------------------------------------------------
+-- 10. KASA VE İŞLEMLER (TRANSACTIONS) TABLOSU (Day 4 - Closes #43)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_number VARCHAR(50) NOT NULL UNIQUE,
+    customer_id UUID REFERENCES public.customers(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    type VARCHAR(30) NOT NULL CHECK (type IN ('sale', 'purchase', 'return', 'repair_payment')),
+    payment_method VARCHAR(30) NOT NULL CHECK (payment_method IN ('cash', 'credit_card', 'bank_transfer', 'on_account', 'split')),
+    total_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (total_amount >= 0),
+    discount_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (discount_amount >= 0),
+    net_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (net_amount >= 0),
+    paid_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (paid_amount >= 0),
+    status VARCHAR(20) NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'pending', 'cancelled')),
+    notes TEXT,
+    created_by UUID REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_customer_id ON public.transactions(customer_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_type ON public.transactions(type);
+CREATE INDEX IF NOT EXISTS idx_transactions_payment_method ON public.transactions(payment_method);
+CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);
+CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON public.transactions(created_at DESC);
+
+DROP TRIGGER IF EXISTS trigger_transactions_updated_at ON public.transactions;
+CREATE TRIGGER trigger_transactions_updated_at
+    BEFORE UPDATE ON public.transactions
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_updated_at();
+
+-- ------------------------------------------------------------------------------
+-- 11. İŞLEM DETAYLARI (TRANSACTION_ITEMS) TABLOSU (Day 4 - Closes #43)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.transaction_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID NOT NULL REFERENCES public.transactions(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES public.products(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    imei VARCHAR(15),
+    quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    unit_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (unit_price >= 0),
+    total_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (total_price >= 0),
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    CONSTRAINT check_item_imei_format CHECK (imei IS NULL OR (length(imei) = 15 AND imei ~ '^[0-9]+$'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction_id ON public.transaction_items(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_items_product_id ON public.transaction_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_items_imei ON public.transaction_items(imei) WHERE imei IS NOT NULL;
+
+-- ------------------------------------------------------------------------------
+-- 12. KASA & MÜŞTERİ RLS POLİTİKALARI
+-- ------------------------------------------------------------------------------
+ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transaction_items ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Yetkili kullanıcılar müşterileri görebilir" ON public.customers;
+CREATE POLICY "Yetkili kullanıcılar müşterileri görebilir" ON public.customers FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Yetkili kullanıcılar müşteri yönetebilir" ON public.customers;
+CREATE POLICY "Yetkili kullanıcılar müşteri yönetebilir" ON public.customers FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Yetkili kullanıcılar işlemleri görebilir" ON public.transactions;
+CREATE POLICY "Yetkili kullanıcılar işlemleri görebilir" ON public.transactions FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Yetkili kullanıcılar işlem yönetebilir" ON public.transactions;
+CREATE POLICY "Yetkili kullanıcılar işlem yönetebilir" ON public.transactions FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Yetkili kullanıcılar işlem detaylarını görebilir" ON public.transaction_items;
+CREATE POLICY "Yetkili kullanıcılar işlem detaylarını görebilir" ON public.transaction_items FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Yetkili kullanıcılar işlem detayları yönetebilir" ON public.transaction_items;
+CREATE POLICY "Yetkili kullanıcılar işlem detayları yönetebilir" ON public.transaction_items FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- ------------------------------------------------------------------------------
+-- 13. MÜŞTERİ VE KASA SEED VERİLERİ
+-- ------------------------------------------------------------------------------
+INSERT INTO public.customers (id, full_name, phone, email, identity_number, address, balance)
+VALUES 
+    ('c1111111-1111-1111-1111-111111111111', 'Ahmet Yılmaz', '05321112233', 'ahmet.yilmaz@example.com', '12345678901', 'Kadıköy, İstanbul', 0.00),
+    ('c2222222-2222-2222-2222-222222222222', 'Fatma Kaya', '05423334455', 'fatma.kaya@example.com', '23456789012', 'Beşiktaş, İstanbul', 0.00),
+    ('c3333333-3333-3333-3333-333333333333', 'Mehmet Öztürk', '05557778899', 'mehmet.ozturk@example.com', '34567890123', 'Çankaya, Ankara', -1200.00),
+    ('c4444444-4444-4444-4444-444444444444', 'Zeynep Çelik', '05059990011', 'zeynep.celik@example.com', '45678901234', 'Muratpaşa, Antalya', 500.00)
+ON CONFLICT (id) DO NOTHING;
