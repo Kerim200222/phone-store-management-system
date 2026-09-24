@@ -9,6 +9,9 @@ export type Json =
 export type UserRole = 'Admin' | 'Personel'
 export type ProductCondition = 'sıfır' | 'ikinci el'
 export type CategoryName = 'Telefon' | 'Aksesuar' | 'Yedek Parça' | string
+export type TransactionType = 'sale' | 'purchase' | 'return' | 'repair_payment'
+export type PaymentMethod = 'cash' | 'credit_card' | 'bank_transfer' | 'on_account' | 'split'
+export type TransactionStatus = 'completed' | 'pending' | 'cancelled'
 
 export interface Database {
   public: {
@@ -33,9 +36,26 @@ export interface Database {
         Insert: ProductInsert
         Update: ProductUpdate
       }
+      customers: {
+        Row: Customer
+        Insert: CustomerInsert
+        Update: CustomerUpdate
+      }
+      transactions: {
+        Row: Transaction
+        Insert: TransactionInsert
+        Update: TransactionUpdate
+      }
+      transaction_items: {
+        Row: TransactionItem
+        Insert: TransactionItemInsert
+        Update: TransactionItemUpdate
+      }
     }
     Views: {
-      [_ in never]: never
+      v_transactions_summary: {
+        Row: TransactionSummaryView
+      }
     }
     Functions: {
       [_ in never]: never
@@ -43,6 +63,9 @@ export interface Database {
     Enums: {
       user_role: UserRole
       product_condition: ProductCondition
+      transaction_type: TransactionType
+      payment_method: PaymentMethod
+      transaction_status: TransactionStatus
     }
   }
 }
@@ -218,4 +241,175 @@ export interface ProductWithCategory extends Product {
 
 export interface ProfileWithRole extends Profile {
   role_details?: Role
+}
+
+// ==========================================
+// 5. MÜŞTERİLER (CUSTOMERS) ARAYÜZLERİ (Day 4)
+// ==========================================
+export interface Customer {
+  id: string
+  full_name: string
+  phone: string
+  email: string | null
+  identity_number: string | null
+  address: string | null
+  notes: string | null
+  balance: number // Cari bakiye (+ alacak, - borç)
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CustomerInsert {
+  id?: string
+  full_name: string
+  phone: string
+  email?: string | null
+  identity_number?: string | null
+  address?: string | null
+  notes?: string | null
+  balance?: number
+  is_active?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CustomerUpdate {
+  id?: string
+  full_name?: string
+  phone?: string
+  email?: string | null
+  identity_number?: string | null
+  address?: string | null
+  notes?: string | null
+  balance?: number
+  is_active?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+// ==========================================
+// 6. KASA VE İŞLEMLER (TRANSACTIONS) ARAYÜZLERİ (Day 4)
+// ==========================================
+export interface Transaction {
+  id: string
+  transaction_number: string
+  customer_id: string | null
+  type: TransactionType
+  payment_method: PaymentMethod
+  total_amount: number
+  discount_amount: number
+  net_amount: number
+  paid_amount: number
+  status: TransactionStatus
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface TransactionInsert {
+  id?: string
+  transaction_number: string
+  customer_id?: string | null
+  type: TransactionType
+  payment_method: PaymentMethod
+  total_amount: number
+  discount_amount?: number
+  net_amount: number
+  paid_amount?: number
+  status?: TransactionStatus
+  notes?: string | null
+  created_by?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface TransactionUpdate {
+  id?: string
+  transaction_number?: string
+  customer_id?: string | null
+  type?: TransactionType
+  payment_method?: PaymentMethod
+  total_amount?: number
+  discount_amount?: number
+  net_amount?: number
+  paid_amount?: number
+  status?: TransactionStatus
+  notes?: string | null
+  created_by?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+// ==========================================
+// 7. İŞLEM DETAYLARI (TRANSACTION_ITEMS) ARAYÜZLERİ (Day 4)
+// ==========================================
+export interface TransactionItem {
+  id: string
+  transaction_id: string
+  product_id: string
+  imei: string | null
+  quantity: number
+  unit_price: number
+  total_price: number
+  notes: string | null
+  created_at: string
+}
+
+export interface TransactionItemInsert {
+  id?: string
+  transaction_id: string
+  product_id: string
+  imei?: string | null
+  quantity?: number
+  unit_price: number
+  total_price: number
+  notes?: string | null
+  created_at?: string
+}
+
+export interface TransactionItemUpdate {
+  id?: string
+  transaction_id?: string
+  product_id?: string
+  imei?: string | null
+  quantity?: number
+  unit_price?: number
+  total_price?: number
+  notes?: string | null
+  created_at?: string
+}
+
+// ==========================================
+// 8. BİRLEŞİK GÖRÜNÜM VE İLİŞKİLİ MODELLER
+// ==========================================
+export interface TransactionSummaryView {
+  id: string
+  transaction_number: string
+  type: TransactionType
+  payment_method: PaymentMethod
+  total_amount: number
+  discount_amount: number
+  net_amount: number
+  paid_amount: number
+  status: TransactionStatus
+  customer_id: string | null
+  customer_name: string | null
+  customer_phone: string | null
+  created_by: string | null
+  staff_name: string | null
+  created_at: string
+  total_items: number
+  total_quantity: number
+}
+
+export interface TransactionItemWithProduct extends TransactionItem {
+  product?: Product
+}
+
+export interface TransactionWithDetails extends Transaction {
+  customer?: Customer | null
+  items: TransactionItemWithProduct[]
+  staff?: Profile | null
 }
