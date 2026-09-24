@@ -4,30 +4,44 @@ import React, { useState } from "react"
 import { 
   Smartphone, 
   ShieldCheck, 
-  UserCheck, 
   Database, 
-  Layers, 
   Search, 
   CheckCircle2, 
   Tag, 
   Hash, 
   Copy, 
   FileCode, 
-  Server
+  Server,
+  Users,
+  Receipt,
+  CreditCard,
+  Banknote,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Phone
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { Product, Category, Role } from "@/types/database"
+import type { 
+  Product, 
+  Category, 
+  Role, 
+  Customer, 
+  Transaction 
+} from "@/types/database"
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"inventory" | "schema" | "types" | "config">("inventory")
+  const [activeTab, setActiveTab] = useState<"inventory" | "transactions" | "customers" | "schema" | "types" | "config">("inventory")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [selectedCondition, setSelectedCondition] = useState<string>("all")
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState<string>("all")
+  const [customerSearch, setCustomerSearch] = useState("")
   const [copiedText, setCopiedText] = useState<string | null>(null)
+  const [selectedSqlTab, setSelectedSqlTab] = useState<"01" | "02" | "03" | "all">("03")
 
   const roles: Role[] = [
     {
@@ -166,7 +180,7 @@ export default function Home() {
       sale_price: 1950,
       stock_quantity: 12,
       min_stock_level: 3,
-      description: "Teknik servis montajına hazır dokunmatik ekran",
+      description: "Servis montajına hazır dokunmatik panel",
       image_url: null,
       is_active: true,
       created_at: new Date().toISOString(),
@@ -174,26 +188,195 @@ export default function Home() {
     }
   ]
 
-  const filteredProducts = initialProducts.filter(item => {
+  // Day 4: Örnek Müşteriler (Customers)
+  const initialCustomers: Customer[] = [
+    {
+      id: "c1",
+      full_name: "Ahmet Yılmaz",
+      phone: "0532 111 22 33",
+      email: "ahmet.yilmaz@example.com",
+      identity_number: "12345678901",
+      address: "Kadıköy, İstanbul",
+      notes: "Sürekli iPhone müşterisi, faturalı alım yapar.",
+      balance: 0.00,
+      is_active: true,
+      created_at: "2026-09-24T10:00:00Z",
+      updated_at: "2026-09-24T10:00:00Z"
+    },
+    {
+      id: "c2",
+      full_name: "Fatma Kaya",
+      phone: "0542 333 44 55",
+      email: "fatma.kaya@example.com",
+      identity_number: "23456789012",
+      address: "Beşiktaş, İstanbul",
+      notes: "Aksesuar ve şarj aletleri satın aldı.",
+      balance: 0.00,
+      is_active: true,
+      created_at: "2026-09-24T11:15:00Z",
+      updated_at: "2026-09-24T11:15:00Z"
+    },
+    {
+      id: "c3",
+      full_name: "Mehmet Öztürk",
+      phone: "0555 777 88 99",
+      email: "mehmet.ozturk@example.com",
+      identity_number: "34567890123",
+      address: "Çankaya, Ankara",
+      notes: "İkinci el cihaz takası yaptı, veresiye borcu bulunuyor.",
+      balance: -1200.00,
+      is_active: true,
+      created_at: "2026-09-24T12:30:00Z",
+      updated_at: "2026-09-24T12:30:00Z"
+    },
+    {
+      id: "c4",
+      full_name: "Zeynep Çelik",
+      phone: "0505 999 00 11",
+      email: "zeynep.celik@example.com",
+      identity_number: "45678901234",
+      address: "Muratpaşa, Antalya",
+      notes: "Ekran koruyucu taktırdı, kasada avansı var.",
+      balance: 500.00,
+      is_active: true,
+      created_at: "2026-09-24T13:45:00Z",
+      updated_at: "2026-09-24T13:45:00Z"
+    }
+  ]
+
+  // Day 4: Örnek Kasa ve Satış İşlemleri (Transactions)
+  const initialTransactions: (Transaction & { customerName: string; itemCount: number })[] = [
+    {
+      id: "t1",
+      transaction_number: "TRX-20260924-001",
+      customer_id: "c1",
+      customerName: "Ahmet Yılmaz",
+      type: "sale",
+      payment_method: "credit_card",
+      total_amount: 68000,
+      discount_amount: 1000,
+      net_amount: 67000,
+      paid_amount: 67000,
+      status: "completed",
+      notes: "iPhone 15 Pro 128GB Naturel Titanyum satışı (IMEI: 354892091234567)",
+      created_by: "role-1",
+      itemCount: 1,
+      created_at: "2026-09-24T10:15:00Z",
+      updated_at: "2026-09-24T10:15:00Z"
+    },
+    {
+      id: "t2",
+      transaction_number: "TRX-20260924-002",
+      customer_id: "c2",
+      customerName: "Fatma Kaya",
+      type: "sale",
+      payment_method: "cash",
+      total_amount: 1400,
+      discount_amount: 0,
+      net_amount: 1400,
+      paid_amount: 1400,
+      status: "completed",
+      notes: "Apple 20W Hızlı Şarj Başlığı + Magsafe Kılıf",
+      created_by: "role-2",
+      itemCount: 2,
+      created_at: "2026-09-24T11:20:00Z",
+      updated_at: "2026-09-24T11:20:00Z"
+    },
+    {
+      id: "t3",
+      transaction_number: "TRX-20260924-003",
+      customer_id: "c3",
+      customerName: "Mehmet Öztürk",
+      type: "purchase",
+      payment_method: "bank_transfer",
+      total_amount: 42000,
+      discount_amount: 0,
+      net_amount: 42000,
+      paid_amount: 42000,
+      status: "completed",
+      notes: "İkinci el Samsung Galaxy S23 Ultra alımı (IMEI: 359876098765432)",
+      created_by: "role-1",
+      itemCount: 1,
+      created_at: "2026-09-24T12:45:00Z",
+      updated_at: "2026-09-24T12:45:00Z"
+    },
+    {
+      id: "t4",
+      transaction_number: "TRX-20260924-004",
+      customer_id: "c4",
+      customerName: "Zeynep Çelik",
+      type: "sale",
+      payment_method: "cash",
+      total_amount: 250,
+      discount_amount: 0,
+      net_amount: 250,
+      paid_amount: 250,
+      status: "completed",
+      notes: "Kırılmaz cam ekran koruyucu ve montaj hizmeti",
+      created_by: "role-2",
+      itemCount: 1,
+      created_at: "2026-09-24T13:50:00Z",
+      updated_at: "2026-09-24T13:50:00Z"
+    }
+  ]
+
+  // Filter products
+  const filteredProducts = initialProducts.filter((product) => {
     const matchesSearch = 
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.imei && item.imei.includes(searchQuery)) ||
-      (item.barcode && item.barcode.includes(searchQuery))
-    
-    const matchesCategory = selectedCategory === "all" || item.categoryName === selectedCategory
-    const matchesCondition = selectedCondition === "all" || item.condition === selectedCondition
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.barcode && product.barcode.includes(searchQuery)) ||
+      (product.imei && product.imei.includes(searchQuery))
+
+    const matchesCategory = 
+      selectedCategory === "all" || product.categoryName === selectedCategory
+
+    const matchesCondition = 
+      selectedCondition === "all" || product.condition === selectedCondition
 
     return matchesSearch && matchesCategory && matchesCondition
+  })
+
+  // Filter transactions
+  const filteredTransactions = initialTransactions.filter((trx) => {
+    const matchesType = transactionTypeFilter === "all" || trx.type === transactionTypeFilter
+    return matchesType
+  })
+
+  // Filter customers
+  const filteredCustomers = initialCustomers.filter((cust) => {
+    return (
+      cust.full_name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      cust.phone.includes(customerSearch) ||
+      (cust.identity_number && cust.identity_number.includes(customerSearch))
+    )
   })
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text)
     setCopiedText(label)
-    setTimeout(() => setCopiedText(null), 2500)
+    setTimeout(() => setCopiedText(null), 2000)
   }
 
-  const sqlCodeUsersRoles = `-- Kullanıcılar ve Roller (01_users_and_roles.sql)
+  // Financial calculations
+  const totalSalesRevenue = initialTransactions
+    .filter(t => t.type === "sale" && t.status === "completed")
+    .reduce((acc, t) => acc + t.net_amount, 0)
+
+  const totalCashInRegister = initialTransactions
+    .filter(t => t.payment_method === "cash" && t.type === "sale")
+    .reduce((acc, t) => acc + t.paid_amount, 0)
+
+  const totalCreditCardSales = initialTransactions
+    .filter(t => t.payment_method === "credit_card" && t.type === "sale")
+    .reduce((acc, t) => acc + t.paid_amount, 0)
+
+  const totalPurchases = initialTransactions
+    .filter(t => t.type === "purchase")
+    .reduce((acc, t) => acc + t.paid_amount, 0)
+
+  // SQL code snippets
+  const sqlCodeUsersRoles = `-- 01_users_and_roles.sql
 CREATE TABLE IF NOT EXISTS public.roles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(50) NOT NULL UNIQUE,
@@ -206,46 +389,83 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     email VARCHAR(255),
     full_name VARCHAR(100) NOT NULL,
     phone VARCHAR(20),
-    role_id UUID NOT NULL REFERENCES public.roles(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    role_id UUID NOT NULL REFERENCES public.roles(id),
     role VARCHAR(50) NOT NULL DEFAULT 'Personel',
-    avatar_url TEXT,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );`
 
-  const sqlCodeProductsCategories = `-- Kategoriler ve Ürünler (02_categories_and_products.sql)
+  const sqlCodeProductsCategories = `-- 02_categories_and_products.sql
 CREATE TABLE IF NOT EXISTS public.categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL UNIQUE,
     slug VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
 CREATE TABLE IF NOT EXISTS public.products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    category_id UUID NOT NULL REFERENCES public.categories(id) ON DELETE RESTRICT,
+    category_id UUID NOT NULL REFERENCES public.categories(id),
     name VARCHAR(255) NOT NULL,
     brand VARCHAR(100) NOT NULL,
     model VARCHAR(100),
     barcode VARCHAR(100) UNIQUE,
-    imei VARCHAR(15), -- Telefonlar için 15 haneli benzersiz IMEI
+    imei VARCHAR(15), -- 15 Haneli Unique IMEI
     condition VARCHAR(20) NOT NULL DEFAULT 'sıfır' CHECK (condition IN ('sıfır', 'ikinci el')),
-    purchase_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (purchase_price >= 0),
-    sale_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (sale_price >= 0),
-    stock_quantity INTEGER NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
-    min_stock_level INTEGER NOT NULL DEFAULT 1 CHECK (min_stock_level >= 0),
-    description TEXT,
-    image_url TEXT,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    purchase_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    sale_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    stock_quantity INTEGER NOT NULL DEFAULT 0,
+    min_stock_level INTEGER NOT NULL DEFAULT 1,
     CONSTRAINT check_imei_format CHECK (imei IS NULL OR (length(imei) = 15 AND imei ~ '^[0-9]+$'))
 );
-
 CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei IS NOT NULL;`
+
+  const sqlCodeCustomersTransactions = `-- 03_customers_and_transactions.sql (Day 4 - Closes #43)
+CREATE TABLE IF NOT EXISTS public.customers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    email VARCHAR(255),
+    identity_number VARCHAR(11), -- TCKN / Vergi No
+    address TEXT,
+    notes TEXT,
+    balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00, -- Cari bakiye
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+CREATE INDEX idx_customers_phone ON public.customers(phone);
+CREATE INDEX idx_customers_full_name ON public.customers(full_name);
+
+CREATE TABLE IF NOT EXISTS public.transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_number VARCHAR(50) NOT NULL UNIQUE,
+    customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
+    type VARCHAR(30) NOT NULL CHECK (type IN ('sale', 'purchase', 'return', 'repair_payment')),
+    payment_method VARCHAR(30) NOT NULL CHECK (payment_method IN ('cash', 'credit_card', 'bank_transfer', 'on_account', 'split')),
+    total_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    discount_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    net_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    paid_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(20) NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'pending', 'cancelled')),
+    notes TEXT,
+    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.transaction_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID NOT NULL REFERENCES public.transactions(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES public.products(id),
+    imei VARCHAR(15),
+    quantity INTEGER NOT NULL DEFAULT 1,
+    unit_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    total_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);`
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500 selection:text-white">
@@ -270,7 +490,7 @@ CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei
                   PhoneStore Pro
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-400">
-                  Telefon Mağazası ve Teknik Servis Yönetim Sistemi
+                  Trunçgiller Staj Projesi — Telefon Mağazası ve Teknik Servis Yönetim Sistemi
                 </p>
               </div>
             </div>
@@ -290,44 +510,57 @@ CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei
           </div>
         </header>
 
-        {/* Milestone Status Banner */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 4 Task Cards (G1 - G4) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-slate-300">Görev 1: Altyapı & Supabase</CardTitle>
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <CardTitle className="text-xs font-semibold text-slate-300">1. Altyapı & Supabase</CardTitle>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               </div>
             </CardHeader>
-            <CardContent className="text-xs text-slate-400 space-y-1.5">
-              <p className="text-slate-200 font-medium">Next.js 14 + Shadcn UI + SSR Client</p>
-              <p className="text-slate-400">utils/supabase/client.ts & server.ts hazırlandı, .env.local yapılandırıldı.</p>
+            <CardContent className="text-xs text-slate-400 space-y-1">
+              <p className="text-slate-200 font-medium">Next.js 14 + Shadcn UI</p>
+              <p className="text-slate-400">SSR Client & Server yapıları hazırlandı.</p>
             </CardContent>
           </Card>
 
           <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-slate-300">Görev 2: Kullanıcılar & Roller</CardTitle>
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <CardTitle className="text-xs font-semibold text-slate-300">2. Kullanıcılar & Roller</CardTitle>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               </div>
             </CardHeader>
-            <CardContent className="text-xs text-slate-400 space-y-1.5">
-              <p className="text-slate-200 font-medium">Admin & Personel Yetki Şeması</p>
-              <p className="text-slate-400">RLS politikaları, auth.users tetikleyicisi ve types/database.ts tanımlandı.</p>
+            <CardContent className="text-xs text-slate-400 space-y-1">
+              <p className="text-slate-200 font-medium">Admin & Personel Şeması</p>
+              <p className="text-slate-400">RLS politikaları & auth trigger&apos;ı kuruldu.</p>
             </CardContent>
           </Card>
 
           <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-slate-300">Görev 3: Ürünler & Kategoriler</CardTitle>
-                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <CardTitle className="text-xs font-semibold text-slate-300">3. Ürünler & IMEI</CardTitle>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               </div>
             </CardHeader>
-            <CardContent className="text-xs text-slate-400 space-y-1.5">
-              <p className="text-slate-200 font-medium">15 Haneli Benzersiz IMEI & Durum</p>
-              <p className="text-slate-400">Telefon, Aksesuar, Yedek Parça tabloları, alış/satış fiyatı ve stok sütunları hazır.</p>
+            <CardContent className="text-xs text-slate-400 space-y-1">
+              <p className="text-slate-200 font-medium">15 Haneli Unique IMEI</p>
+              <p className="text-slate-400">Telefon, Aksesuar & Parça envanteri.</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900/60 border-cyan-500/40 backdrop-blur-md shadow-lg shadow-cyan-950/20">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xs font-semibold text-cyan-400">4. Müşteri & Kasa (Day 4)</CardTitle>
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 animate-pulse" />
+              </div>
+            </CardHeader>
+            <CardContent className="text-xs text-slate-400 space-y-1">
+              <p className="text-slate-100 font-medium">Kasa, İşlem & Cari Takip</p>
+              <p className="text-slate-400">Transactions & Items ara tablosu (Closes #43).</p>
             </CardContent>
           </Card>
         </div>
@@ -341,7 +574,33 @@ CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei
             className={activeTab === "inventory" ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium" : "text-slate-400 hover:text-white"}
           >
             <Smartphone className="w-4 h-4 mr-2" />
-            Ürün Envanteri & IMEI Tablosu
+            Ürün Envanteri & IMEI
+          </Button>
+
+          <Button
+            variant={activeTab === "transactions" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("transactions")}
+            className={activeTab === "transactions" ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium" : "text-slate-400 hover:text-white"}
+          >
+            <Receipt className="w-4 h-4 mr-2 text-cyan-400" />
+            Kasa & İşlemler
+            <Badge className="ml-2 bg-cyan-500/20 text-cyan-300 border-none text-[10px] px-1.5 py-0">
+              G4
+            </Badge>
+          </Button>
+
+          <Button
+            variant={activeTab === "customers" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("customers")}
+            className={activeTab === "customers" ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium" : "text-slate-400 hover:text-white"}
+          >
+            <Users className="w-4 h-4 mr-2 text-emerald-400" />
+            Müşteriler & Cari
+            <Badge className="ml-2 bg-emerald-500/20 text-emerald-300 border-none text-[10px] px-1.5 py-0">
+              G4
+            </Badge>
           </Button>
 
           <Button
@@ -351,7 +610,7 @@ CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei
             className={activeTab === "schema" ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium" : "text-slate-400 hover:text-white"}
           >
             <Database className="w-4 h-4 mr-2" />
-            Supabase SQL Scriptleri
+            SQL Şemaları
           </Button>
 
           <Button
@@ -361,7 +620,7 @@ CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei
             className={activeTab === "types" ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium" : "text-slate-400 hover:text-white"}
           >
             <FileCode className="w-4 h-4 mr-2" />
-            TypeScript Tipleri (types/database.ts)
+            TypeScript Tipleri
           </Button>
 
           <Button
@@ -371,7 +630,7 @@ CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei
             className={activeTab === "config" ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium" : "text-slate-400 hover:text-white"}
           >
             <Server className="w-4 h-4 mr-2" />
-            Supabase İstemci / Sunucu Yapısı
+            Supabase SSR
           </Button>
         </div>
 
@@ -384,7 +643,7 @@ CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei
                 <span className="text-xs text-slate-400">Toplam Ürün Çeşidi</span>
                 <p className="text-2xl font-bold text-white mt-1">{initialProducts.length}</p>
                 <span className="text-[11px] text-cyan-400 flex items-center gap-1 mt-1">
-                  <Tag className="w-3 h-3" /> 3 Ana Kategori
+                  <Tag className="w-3 h-3" /> {categories.length} Ana Kategori
                 </span>
               </div>
 
@@ -410,7 +669,7 @@ CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei
 
               <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
                 <span className="text-xs text-slate-400">Kullanıcı Rolleri</span>
-                <p className="text-2xl font-bold text-emerald-400 mt-1">2 Rol</p>
+                <p className="text-2xl font-bold text-emerald-400 mt-1">{roles.length} Rol</p>
                 <span className="text-[11px] text-emerald-400/80 flex items-center gap-1 mt-1">
                   <ShieldCheck className="w-3 h-3" /> Admin & Personel (RLS)
                 </span>
@@ -448,9 +707,9 @@ CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei
                       onChange={(e) => setSelectedCondition(e.target.value)}
                       className="px-3 py-2 text-sm bg-slate-950/70 border border-slate-800 rounded-md text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                     >
-                      <option value="all">Tüm Durumlar</option>
+                      <option value="all">Tüm Kondisyonlar</option>
                       <option value="sıfır">Sıfır Cihaz</option>
-                      <option value="ikinci el">İkinci El</option>
+                      <option value="ikinci el">İkinci El Cihaz</option>
                     </select>
                   </div>
                 </div>
@@ -458,256 +717,380 @@ CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei
             </Card>
 
             {/* Products Table */}
-            <Card className="bg-slate-900/80 border-slate-800 overflow-hidden">
-              <CardHeader className="py-4 px-6 border-b border-slate-800/80 flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-base font-semibold text-slate-100">
-                    Ürün ve Stok Envanteri ({filteredProducts.length} kayıt listelendi)
-                  </CardTitle>
-                  <CardDescription className="text-xs text-slate-400">
-                    Supabase PostgreSQL products tablosunun birebir şemasını ve tiplerini yansıtır
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0 overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-slate-950/50">
-                    <TableRow className="border-slate-800 hover:bg-transparent">
-                      <TableHead className="text-slate-400 font-medium">Ürün & Model</TableHead>
-                      <TableHead className="text-slate-400 font-medium">Kategori</TableHead>
-                      <TableHead className="text-slate-400 font-medium">Durum</TableHead>
-                      <TableHead className="text-slate-400 font-medium">IMEI / Barkod</TableHead>
-                      <TableHead className="text-slate-400 font-medium text-right">Alış Fiyatı</TableHead>
-                      <TableHead className="text-slate-400 font-medium text-right">Satış Fiyatı</TableHead>
-                      <TableHead className="text-slate-400 font-medium text-right">Stok</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProducts.map((p) => {
-                      const profit = p.sale_price - p.purchase_price
-                      return (
-                        <TableRow key={p.id} className="border-slate-800/60 hover:bg-slate-800/30 transition-colors">
-                          <TableCell className="font-medium text-slate-200">
-                            <div>{p.name}</div>
-                            <span className="text-[11px] text-slate-400 font-normal">
-                              {p.brand} {p.model ? `• ${p.model}` : ""}
-                            </span>
-                          </TableCell>
-
-                          <TableCell>
-                            <Badge 
-                              variant="outline" 
-                              className={
-                                p.categoryName === "Telefon" 
-                                  ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-400"
-                                  : p.categoryName === "Aksesuar"
-                                  ? "border-indigo-500/30 bg-indigo-500/10 text-indigo-300"
-                                  : "border-purple-500/30 bg-purple-500/10 text-purple-300"
-                              }
-                            >
-                              {p.categoryName}
-                            </Badge>
-                          </TableCell>
-
-                          <TableCell>
-                            <Badge 
-                              variant="outline"
-                              className={
-                                p.condition === "sıfır"
-                                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-medium"
-                                  : "border-amber-500/30 bg-amber-500/10 text-amber-400 font-medium"
-                              }
-                            >
-                              {p.condition}
-                            </Badge>
-                          </TableCell>
-
-                          <TableCell className="font-mono text-xs">
-                            {p.imei ? (
-                              <div className="flex items-center gap-1.5 text-cyan-300 bg-cyan-950/40 px-2 py-1 rounded border border-cyan-800/50 w-fit">
-                                <Hash className="w-3 h-3 text-cyan-400" />
-                                <span>{p.imei}</span>
-                              </div>
-                            ) : p.barcode ? (
-                              <span className="text-slate-400">{p.barcode}</span>
-                            ) : (
-                              <span className="text-slate-600">-</span>
-                            )}
-                          </TableCell>
-
-                          <TableCell className="text-right font-mono text-slate-400">
-                            ₺{p.purchase_price.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
-                          </TableCell>
-
-                          <TableCell className="text-right font-mono font-semibold text-emerald-400">
-                            ₺{p.sale_price.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
-                            <div className="text-[10px] text-slate-500 font-normal">
-                              +₺{profit.toLocaleString("tr-TR")} kar
-                            </div>
-                          </TableCell>
-
-                          <TableCell className="text-right font-mono">
-                            <span className={p.stock_quantity <= p.min_stock_level ? "text-rose-400 font-bold" : "text-slate-300"}>
-                              {p.stock_quantity} adet
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            {/* Categories & Roles Detail Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Categories */}
-              <Card className="bg-slate-900/70 border-slate-800">
-                <CardHeader>
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2 text-slate-200">
-                    <Layers className="w-4 h-4 text-cyan-400" />
-                    Kategoriler Tablosu (categories)
-                  </CardTitle>
-                  <CardDescription className="text-xs text-slate-400">
-                    Görev 3 kapsamında oluşturulan ana kategoriler
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {categories.map((c) => (
-                    <div key={c.id} className="p-3 rounded-lg bg-slate-950/50 border border-slate-800/80 flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-slate-200 flex items-center gap-2">
-                          {c.name}
-                          <span className="text-xs font-mono text-slate-500">({c.slug})</span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-0.5">{c.description}</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs border-slate-700 text-slate-300">
-                        {c.name === "Telefon" ? "IMEI Zorunlu" : "Barkodlu"}
-                      </Badge>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Roles & Users */}
-              <Card className="bg-slate-900/70 border-slate-800">
-                <CardHeader>
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2 text-slate-200">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    Kullanıcı Rolleri (roles & profiles)
-                  </CardTitle>
-                  <CardDescription className="text-xs text-slate-400">
-                    Görev 2 kapsamında oluşturulan yetkilendirme modeli
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {roles.map((r) => (
-                    <div key={r.id} className="p-3 rounded-lg bg-slate-950/50 border border-slate-800/80">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-slate-200 flex items-center gap-2">
-                          <UserCheck className="w-4 h-4 text-cyan-400" />
-                          {r.name}
-                        </span>
-                        <Badge variant="secondary" className="text-[11px] bg-slate-800 text-slate-300">
-                          {r.name === "Admin" ? "Tam Yetki" : "Operasyonel Yetki"}
+            <Card className="bg-slate-900/70 border-slate-800 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-950/50">
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="text-slate-300 font-semibold">Ürün Adı & Model</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">Kategori</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">15 Haneli IMEI / Barkod</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">Kondisyon</TableHead>
+                    <TableHead className="text-slate-300 font-semibold text-right">Alış Fiyatı</TableHead>
+                    <TableHead className="text-slate-300 font-semibold text-right">Satış Fiyatı</TableHead>
+                    <TableHead className="text-slate-300 font-semibold text-center">Stok</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.map((p) => (
+                    <TableRow key={p.id} className="border-slate-800/60 hover:bg-slate-800/30">
+                      <TableCell className="font-medium">
+                        <div className="font-semibold text-slate-100">{p.name}</div>
+                        <div className="text-xs text-slate-400">{p.brand} {p.model ? `• ${p.model}` : ""}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="border-slate-700 bg-slate-900 text-slate-300">
+                          {p.categoryName}
                         </Badge>
-                      </div>
-                      <p className="text-xs text-slate-400">{r.description}</p>
-                    </div>
+                      </TableCell>
+                      <TableCell>
+                        {p.imei ? (
+                          <div className="flex items-center gap-1.5 font-mono text-xs text-cyan-300 bg-cyan-950/40 px-2 py-1 rounded border border-cyan-800/50 w-fit">
+                            <Hash className="w-3 h-3 text-cyan-400" />
+                            {p.imei}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-500 font-mono">{p.barcode || "—"}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {p.condition === "sıfır" ? (
+                          <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Sıfır
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            2. El
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-slate-400 text-xs">
+                        ₺{p.purchase_price.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-semibold text-slate-100">
+                        ₺{p.sale_price.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className={`inline-flex px-2 py-0.5 rounded text-xs font-semibold ${
+                          p.stock_quantity <= p.min_stock_level
+                            ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                            : "bg-slate-800 text-slate-200"
+                        }`}>
+                          {p.stock_quantity} Adet
+                        </span>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </CardContent>
-              </Card>
-            </div>
+                </TableBody>
+              </Table>
+            </Card>
           </div>
         )}
 
-        {/* TAB 2: SUPABASE SQL SCRIPTS */}
+        {/* TAB 2: TRANSACTIONS & CASH REGISTER (Day 4) */}
+        {activeTab === "transactions" && (
+          <div className="space-y-6">
+            {/* Financial Summary KPIs */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                  <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400" />
+                  Toplam Satış Cirosu
+                </span>
+                <p className="text-2xl font-bold text-emerald-400 mt-1">
+                  ₺{totalSalesRevenue.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                </p>
+                <span className="text-[11px] text-slate-400 mt-1 block">Net Tahsilat Tutarı</span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                  <Banknote className="w-3.5 h-3.5 text-cyan-400" />
+                  Kasa Nakit
+                </span>
+                <p className="text-2xl font-bold text-cyan-400 mt-1">
+                  ₺{totalCashInRegister.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                </p>
+                <span className="text-[11px] text-slate-400 mt-1 block">Fiili Nakit Kasa Bakiyesi</span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-indigo-400" />
+                  Kredi Kartı Satışları
+                </span>
+                <p className="text-2xl font-bold text-indigo-300 mt-1">
+                  ₺{totalCreditCardSales.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                </p>
+                <span className="text-[11px] text-slate-400 mt-1 block">POS Cihazı Toplamı</span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                  <ArrowDownLeft className="w-3.5 h-3.5 text-amber-400" />
+                  Cihaz Alım Ödemesi
+                </span>
+                <p className="text-2xl font-bold text-amber-400 mt-1">
+                  ₺{totalPurchases.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                </p>
+                <span className="text-[11px] text-slate-400 mt-1 block">2. El Cihaz Girişi</span>
+              </div>
+            </div>
+
+            {/* Filter */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={transactionTypeFilter === "all" ? "default" : "outline"}
+                  onClick={() => setTransactionTypeFilter("all")}
+                  className={transactionTypeFilter === "all" ? "bg-cyan-600 text-white" : "border-slate-800 text-slate-300"}
+                >
+                  Tüm İşlemler ({initialTransactions.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={transactionTypeFilter === "sale" ? "default" : "outline"}
+                  onClick={() => setTransactionTypeFilter("sale")}
+                  className={transactionTypeFilter === "sale" ? "bg-emerald-600 text-white" : "border-slate-800 text-slate-300"}
+                >
+                  Satışlar
+                </Button>
+                <Button
+                  size="sm"
+                  variant={transactionTypeFilter === "purchase" ? "default" : "outline"}
+                  onClick={() => setTransactionTypeFilter("purchase")}
+                  className={transactionTypeFilter === "purchase" ? "bg-amber-600 text-white" : "border-slate-800 text-slate-300"}
+                >
+                  2. El Alışlar
+                </Button>
+              </div>
+
+              <div className="text-xs text-slate-400 font-mono">
+                Tablolar: <span className="text-cyan-400">transactions</span> & <span className="text-cyan-400">transaction_items</span>
+              </div>
+            </div>
+
+            {/* Transactions Table */}
+            <Card className="bg-slate-900/70 border-slate-800 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-950/50">
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="text-slate-300 font-semibold">İşlem / Fiş No</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">Müşteri</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">Tür</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">Ödeme Yöntemi</TableHead>
+                    <TableHead className="text-slate-300 font-semibold text-center">Kalem</TableHead>
+                    <TableHead className="text-slate-300 font-semibold text-right">Net Tutar</TableHead>
+                    <TableHead className="text-slate-300 font-semibold text-center">Durum</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransactions.map((trx) => (
+                    <TableRow key={trx.id} className="border-slate-800/60 hover:bg-slate-800/30">
+                      <TableCell className="font-mono text-xs font-semibold text-cyan-300">
+                        {trx.transaction_number}
+                        <div className="text-[10px] text-slate-500 font-sans mt-0.5">{trx.notes}</div>
+                      </TableCell>
+                      <TableCell className="font-medium text-slate-200">
+                        {trx.customerName}
+                      </TableCell>
+                      <TableCell>
+                        {trx.type === "sale" ? (
+                          <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Satış
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            2. El Alış
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="capitalize text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                          {trx.payment_method === "cash" && <Banknote className="w-3.5 h-3.5 text-emerald-400" />}
+                          {trx.payment_method === "credit_card" && <CreditCard className="w-3.5 h-3.5 text-indigo-400" />}
+                          {trx.payment_method === "bank_transfer" && <ArrowDownLeft className="w-3.5 h-3.5 text-amber-400" />}
+                          {trx.payment_method === "cash" ? "Nakit" : trx.payment_method === "credit_card" ? "Kredi Kartı" : "Havale / EFT"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center font-mono text-xs text-slate-400">
+                        {trx.itemCount} Ürün
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-bold text-slate-100">
+                        ₺{trx.net_amount.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge className="bg-emerald-900/30 text-emerald-300 border border-emerald-800/50 text-[11px]">
+                          Tamamlandı
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </div>
+        )}
+
+        {/* TAB 3: CUSTOMERS & BALANCE (Day 4) */}
+        {activeTab === "customers" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between gap-4">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <Input
+                  placeholder="Müşteri adı, telefon (05XX) veya T.C. Kimlik No ile ara..."
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  className="pl-9 bg-slate-950/70 border-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 py-1.5 px-3">
+                  <Users className="w-3.5 h-3.5 mr-1.5" />
+                  Kayıtlı Müşteri: {initialCustomers.length}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Customers Table */}
+            <Card className="bg-slate-900/70 border-slate-800 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-950/50">
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="text-slate-300 font-semibold">Müşteri Adı</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">Telefon & İletişim</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">T.C. Kimlik / Pasaport</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">Adres</TableHead>
+                    <TableHead className="text-slate-300 font-semibold text-right">Cari Bakiye</TableHead>
+                    <TableHead className="text-slate-300 font-semibold text-center">Durum</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCustomers.map((cust) => (
+                    <TableRow key={cust.id} className="border-slate-800/60 hover:bg-slate-800/30">
+                      <TableCell className="font-semibold text-slate-100">
+                        {cust.full_name}
+                        {cust.notes && <div className="text-[11px] text-slate-400 font-normal">{cust.notes}</div>}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 font-mono text-xs text-cyan-300">
+                          <Phone className="w-3 h-3 text-slate-500" />
+                          {cust.phone}
+                        </div>
+                        <div className="text-[11px] text-slate-400">{cust.email}</div>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-slate-300">
+                        {cust.identity_number || "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-400">
+                        {cust.address || "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-mono font-semibold">
+                        {cust.balance < 0 ? (
+                          <span className="text-rose-400 bg-rose-950/30 px-2 py-0.5 rounded border border-rose-800/50 text-xs">
+                            -₺{Math.abs(cust.balance).toLocaleString("tr-TR", { minimumFractionDigits: 2 })} (Borçlu)
+                          </span>
+                        ) : cust.balance > 0 ? (
+                          <span className="text-emerald-400 bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-800/50 text-xs">
+                            +₺{cust.balance.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} (Avans)
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">₺0,00</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs">
+                          Aktif
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </div>
+        )}
+
+        {/* TAB 4: SUPABASE SQL SCRIPTS */}
         {activeTab === "schema" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-slate-100">Supabase SQL Editör Dosyaları</h2>
                 <p className="text-xs text-slate-400">
-                  Dosyalar <code className="text-cyan-400 font-mono">supabase/</code> klasöründe yer almaktadır ve SQL Editöründe doğrudan çalıştırılabilir.
+                  Dosyalar <code className="text-cyan-400 font-mono">supabase/</code> dizininde yer almaktadır.
                 </p>
               </div>
 
-              <div className="flex gap-2">
-                <Button 
+              <div className="flex flex-wrap gap-2">
+                <Button
                   size="sm"
-                  variant="outline" 
-                  onClick={() => copyToClipboard(sqlCodeUsersRoles, "users_sql")}
-                  className="text-xs border-slate-700 bg-slate-900 text-slate-300 hover:text-white"
+                  variant={selectedSqlTab === "03" ? "default" : "outline"}
+                  onClick={() => setSelectedSqlTab("03")}
+                  className={selectedSqlTab === "03" ? "bg-cyan-600 text-white" : "border-slate-800 text-slate-300"}
                 >
-                  <Copy className="w-3.5 h-3.5 mr-1.5" />
-                  {copiedText === "users_sql" ? "Kopyalandı!" : "Kullanıcılar SQL Kopyala"}
+                  03_customers_and_transactions.sql (Day 4)
                 </Button>
-                <Button 
+                <Button
                   size="sm"
-                  variant="outline" 
-                  onClick={() => copyToClipboard(sqlCodeProductsCategories, "products_sql")}
-                  className="text-xs border-slate-700 bg-slate-900 text-slate-300 hover:text-white"
+                  variant={selectedSqlTab === "02" ? "default" : "outline"}
+                  onClick={() => setSelectedSqlTab("02")}
+                  className={selectedSqlTab === "02" ? "bg-cyan-600 text-white" : "border-slate-800 text-slate-300"}
                 >
-                  <Copy className="w-3.5 h-3.5 mr-1.5" />
-                  {copiedText === "products_sql" ? "Kopyalandı!" : "Ürünler SQL Kopyala"}
+                  02_categories_and_products.sql
+                </Button>
+                <Button
+                  size="sm"
+                  variant={selectedSqlTab === "01" ? "default" : "outline"}
+                  onClick={() => setSelectedSqlTab("01")}
+                  className={selectedSqlTab === "01" ? "bg-cyan-600 text-white" : "border-slate-800 text-slate-300"}
+                >
+                  01_users_and_roles.sql
                 </Button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* File 1: Users & Roles */}
-              <Card className="bg-slate-900/80 border-slate-800">
-                <CardHeader className="pb-3 border-b border-slate-800/80">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-sm font-semibold text-slate-200">
-                        supabase/01_users_and_roles.sql
-                      </CardTitle>
-                      <CardDescription className="text-xs text-slate-400">
-                        Roller (Admin, Personel), profiller, tetikleyiciler & RLS
-                      </CardDescription>
-                    </div>
-                    <Badge variant="outline" className="border-cyan-500/30 text-cyan-400 text-xs">
-                      Görev 2
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <pre className="text-xs font-mono text-slate-300 bg-slate-950 p-4 rounded-lg overflow-x-auto max-h-[420px] border border-slate-800/60 leading-relaxed">
-                    {sqlCodeUsersRoles}
-                  </pre>
-                </CardContent>
-              </Card>
-
-              {/* File 2: Products & Categories */}
-              <Card className="bg-slate-900/80 border-slate-800">
-                <CardHeader className="pb-3 border-b border-slate-800/80">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-sm font-semibold text-slate-200">
-                        supabase/02_categories_and_products.sql
-                      </CardTitle>
-                      <CardDescription className="text-xs text-slate-400">
-                        Telefon, Aksesuar, Yedek Parça, 15 Haneli IMEI, Alış/Satış & Stok
-                      </CardDescription>
-                    </div>
-                    <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 text-xs">
-                      Görev 3
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <pre className="text-xs font-mono text-slate-300 bg-slate-950 p-4 rounded-lg overflow-x-auto max-h-[420px] border border-slate-800/60 leading-relaxed">
-                    {sqlCodeProductsCategories}
-                  </pre>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="bg-slate-900/80 border-slate-800">
+              <CardHeader className="pb-3 border-b border-slate-800/80 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-semibold text-slate-200">
+                    {selectedSqlTab === "03" && "supabase/03_customers_and_transactions.sql (Müşteri, Kasa & Kalemler)"}
+                    {selectedSqlTab === "02" && "supabase/02_categories_and_products.sql (15 Haneli IMEI & Ürünler)"}
+                    {selectedSqlTab === "01" && "supabase/01_users_and_roles.sql (Roller & Kullanıcı Profilleri)"}
+                  </CardTitle>
+                  <CardDescription className="text-xs text-slate-400">
+                    {selectedSqlTab === "03" && "Day 4: Müşteri veritabanı, Kasa hareketleri, İşlem detayları ve RLS politikaları"}
+                    {selectedSqlTab === "02" && "Day 3: Telefon, Aksesuar, Parça şeması ve UNIQUE IMEI indeksleri"}
+                    {selectedSqlTab === "01" && "Day 2: Admin/Personel rolleri, profiles ve auth.users tetikleyicisi"}
+                  </CardDescription>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const code = selectedSqlTab === "03" ? sqlCodeCustomersTransactions : selectedSqlTab === "02" ? sqlCodeProductsCategories : sqlCodeUsersRoles
+                    copyToClipboard(code, `sql_${selectedSqlTab}`)
+                  }}
+                  className="text-xs border-slate-700 bg-slate-950 text-slate-300"
+                >
+                  <Copy className="w-3.5 h-3.5 mr-1.5" />
+                  {copiedText === `sql_${selectedSqlTab}` ? "Kopyalandı!" : "SQL Kopyala"}
+                </Button>
+              </CardHeader>
+              <CardContent className="p-4">
+                <pre className="text-xs font-mono text-slate-300 bg-slate-950 p-4 rounded-lg overflow-x-auto max-h-[500px] border border-slate-800/60 leading-relaxed">
+                  {selectedSqlTab === "03" && sqlCodeCustomersTransactions}
+                  {selectedSqlTab === "02" && sqlCodeProductsCategories}
+                  {selectedSqlTab === "01" && sqlCodeUsersRoles}
+                </pre>
+              </CardContent>
+            </Card>
           </div>
         )}
 
-        {/* TAB 3: TYPESCRIPT INTERFACES */}
+        {/* TAB 5: TYPESCRIPT INTERFACES */}
         {activeTab === "types" && (
           <div className="space-y-6">
             <Card className="bg-slate-900/80 border-slate-800">
@@ -718,64 +1101,60 @@ CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei
                       types/database.ts
                     </CardTitle>
                     <CardDescription className="text-xs text-slate-400">
-                      Supabase tabloları ve şemasıyla %100 uyumlu strongly-typed TypeScript arayüzleri
+                      Supabase tabloları ve şemasıyla %100 uyumlu strongly-typed TypeScript modelleri
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="border-cyan-500/30 text-cyan-400">
-                    Full Type Safety
+                    Day 4 Genişletildi
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
-                    <h4 className="text-xs font-semibold text-cyan-400 mb-2 font-mono">Product Arayüzü</h4>
+                    <h4 className="text-xs font-semibold text-cyan-400 mb-2 font-mono">Customer & Transaction Modelleri (Day 4)</h4>
+                    <pre className="text-xs font-mono text-slate-300 leading-relaxed overflow-x-auto">
+{`export interface Customer {
+  id: string
+  full_name: string
+  phone: string
+  email: string | null
+  identity_number: string | null
+  address: string | null
+  balance: number // Cari bakiye
+  is_active: boolean
+}
+
+export interface Transaction {
+  id: string
+  transaction_number: string
+  customer_id: string | null
+  type: 'sale' | 'purchase' | 'return' | 'repair_payment'
+  payment_method: 'cash' | 'credit_card' | 'bank_transfer' | 'on_account'
+  total_amount: number
+  discount_amount: number
+  net_amount: number
+  paid_amount: number
+  status: 'completed' | 'pending' | 'cancelled'
+}`}
+                    </pre>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
+                    <h4 className="text-xs font-semibold text-emerald-400 mb-2 font-mono">Product & IMEI Modeli</h4>
                     <pre className="text-xs font-mono text-slate-300 leading-relaxed overflow-x-auto">
 {`export interface Product {
   id: string
   category_id: string
   name: string
   brand: string
-  model: string | null
-  barcode: string | null
-  imei: string | null // 15 haneli IMEI
+  imei: string | null // 15 haneli benzersiz IMEI
   condition: 'sıfır' | 'ikinci el'
-  purchase_price: number // Alış Fiyatı
-  sale_price: number // Satış Fiyatı
-  stock_quantity: number // Stok Adedi
+  purchase_price: number
+  sale_price: number
+  stock_quantity: number
   min_stock_level: number
-  description: string | null
-  image_url: string | null
   is_active: boolean
-  created_at: string
-  updated_at: string
-}`}
-                    </pre>
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
-                    <h4 className="text-xs font-semibold text-emerald-400 mb-2 font-mono">Profile & Role Arayüzü</h4>
-                    <pre className="text-xs font-mono text-slate-300 leading-relaxed overflow-x-auto">
-{`export type UserRole = 'Admin' | 'Personel'
-
-export interface Role {
-  id: string
-  name: UserRole
-  description: string | null
-  created_at: string
-}
-
-export interface Profile {
-  id: string // auth.users id
-  email: string | null
-  full_name: string
-  phone: string | null
-  role_id: string
-  role: UserRole
-  avatar_url: string | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
 }`}
                     </pre>
                   </div>
@@ -785,7 +1164,7 @@ export interface Profile {
           </div>
         )}
 
-        {/* TAB 4: SSR CLIENT / SERVER CONFIG */}
+        {/* TAB 6: SSR CONFIG */}
         {activeTab === "config" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
