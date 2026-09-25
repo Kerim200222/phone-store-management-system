@@ -76,3 +76,27 @@
   - Satış ve kasa işlemlerinde bire-çok (1:N) ve çoka-çok (M:N) ilişkisel veri modellemesi yapılarak `CASCADE` silme ve `RESTRICT` ürün koruma kuralları foreign key seviyesinde garantiye alındı.
   - Cari bakiye mantığında pozitif (+) değerlerin müşteri alacağı/avansı, negatif (-) değerlerin ise mağazaya olan veresiye borcu şeklinde standart muhasebe prensibiyle yönetilmesi sağlandı.
 - **Referans:** `PR #75 (İlgili Görev: Day 4 Issue #43, feature/G4-supabase-nextjs-integration)`
+
+---
+
+## 📅 Gün 5: Teknik Servis Şeması, Cihaz Şifresi ve JSONB Parça Mimarisi
+
+- **Tarih:** 25 Eylül 2026
+- **Konu:** Teknik Servis (Repair_Tickets) Tablosu, Cihaz Şifresi / PIN Güvenliği, Durum Akışı ve JSONB Parça Entegrasyonu (Closes #44)
+- **Yapılan Çalışmalar:**
+  1. **Teknik Servis (Repair_Tickets) SQL Şeması:** Müşteri arıza kabulü, cihaz takibi ve maliyet hesaplarını yöneten `repair_tickets` tablosu oluşturuldu (`supabase/04_repair_tickets.sql`).
+  2. **Güvenlik ve Test Bilgileri:** Teknisyenin cihazı tamir sonrası test edebilmesi için müşteri ekran kilidi / PIN bilgisi (`device_password`), desen kodu (`pattern_code`), teslim anındaki fiziksel kondisyon ve teslim alınan aksesuarlar şemaya eklendi.
+  3. **Servis Durum Akışı (Status Workflow):** `bekliyor` (kabul yapıldı / sırada), `islemde` (tamir ediliyor), `tamamlandi` (teslime hazır) ve `iade` (onarılamadı / maliyet reddedildi) durum kısıtlamaları (`CHECK constraint`) uygulandı.
+  4. **Tahmini ve Gerçek Maliyet Hesapları:** Müşteriye ilk kabulde verilen `estimated_cost` ile parça ve işçilik netleştikten sonra oluşan `labor_cost`, `parts_total_cost` ve `actual_cost` (nihai tutar) alanları yapılandırıldı.
+  5. **JSONB & İlişkisel Parça Takibi:** Kullanılan yedek parçaların JSONB formatında (`parts_used`) esnek saklanabilmesi için GIN indeksi kuruldu; ayrıca ilişkisel SQL raporları için `repair_ticket_parts` ara tablosu modellendi.
+  6. **Performans ve Güvenlik:** Müşteri ID, durum, 15 haneli IMEI ve fiş numarası (`ticket_number`) üzerinde indeksler tanımlandı. Giriş yapmış personel için Row Level Security (RLS) politikaları yazıldı.
+  7. **Gerçekçi Seed Verileri:** iPhone 13 ekran değişimi (işlemde), Samsung S21 batarya şişmesi (bekliyor), Xiaomi 12 şarj soketi tamiri (tamamlandı) ve Huawei P30 sıvı teması (iade) olmak üzere 4 farklı senaryoya ait gerçekçi servis kayıtları yüklendi.
+  8. **Master SQL Konsolidasyonu:** `supabase/schema.sql` dosyası güncellenerek Faz 1'in tüm gereksinimleri (G1-G5) tek dosyada çalıştırılabilir hale getirildi.
+  9. **TypeScript Strongly-Typed Modeller:** `types/database.ts` genişletilerek `RepairStatus`, `RepairPartItem`, `RepairTicket`, `RepairTicketInsert`, `RepairTicketUpdate` ve `RepairTicketWithDetails` tipleri tanımlandı.
+  10. **İnteraktif Teknik Servis Paneli:** Next.js gösterge paneline (`app/page.tsx`) Teknik Servis sekmesi eklendi; durum bazlı Kanban sayaçları (Bekleyen, İşlemde, Tamamlanan, İade), arama filtreleri, cihaz şifresi rozeti ve kullanılan parçalar listesi entegre edildi.
+  11. **Derleme Doğrulaması:** `npm run build` komutu sıfır hata ve sıfır uyarı ile doğrulanarak Faz 1 mimarisi %100 tamamlandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - PostgreSQL'de yarı-yapılandırılmış veriler için `JSONB` sütun tipi kullanılarak her servis kaydında kullanılan değişken parça listelerinin (parça adı, adet, birim fiyat) esnek bir şekilde saklanması ve `USING gin (parts_used)` indeksi ile mikro saniye düzeyinde sorgulanabilmesi pekiştirildi.
+  - Cihaz şifresi / PIN verisinin servis fişlerinde güvenli şekilde tutulması ve teknisyenin arıza teşhis sürecinde ekran kilidini aşabilmesinin operasyonel önemi kavrandı.
+  - Servis durumlarının enum/check constraint ile kısıtlanarak veri tutarlılığının veritabanı seviyesinde korunması sağlandı.
+- **Referans:** `PR #76 (İlgili Görev: Day 5 Issue #44, feature/G5-repair-tickets-schema)`
