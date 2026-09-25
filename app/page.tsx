@@ -18,7 +18,11 @@ import {
   Banknote,
   ArrowUpRight,
   ArrowDownLeft,
-  Phone
+  Phone,
+  Wrench,
+  KeyRound,
+  Clock,
+  RotateCcw
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,18 +34,21 @@ import type {
   Category, 
   Role, 
   Customer, 
-  Transaction 
+  Transaction,
+  RepairTicket
 } from "@/types/database"
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"inventory" | "transactions" | "customers" | "schema" | "types" | "config">("inventory")
+  const [activeTab, setActiveTab] = useState<"inventory" | "repairs" | "transactions" | "customers" | "schema" | "types" | "config">("inventory")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [selectedCondition, setSelectedCondition] = useState<string>("all")
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<string>("all")
   const [customerSearch, setCustomerSearch] = useState("")
+  const [repairStatusFilter, setRepairStatusFilter] = useState<string>("all")
+  const [repairSearch, setRepairSearch] = useState("")
   const [copiedText, setCopiedText] = useState<string | null>(null)
-  const [selectedSqlTab, setSelectedSqlTab] = useState<"01" | "02" | "03" | "all">("03")
+  const [selectedSqlTab, setSelectedSqlTab] = useState<"01" | "02" | "03" | "04" | "all">("04")
 
   const roles: Role[] = [
     {
@@ -188,7 +195,7 @@ export default function Home() {
     }
   ]
 
-  // Day 4: Örnek Müşteriler (Customers)
+  // Day 4: Müşteriler (Customers)
   const initialCustomers: Customer[] = [
     {
       id: "c1",
@@ -244,7 +251,7 @@ export default function Home() {
     }
   ]
 
-  // Day 4: Örnek Kasa ve Satış İşlemleri (Transactions)
+  // Day 4: Kasa ve Satış İşlemleri (Transactions)
   const initialTransactions: (Transaction & { customerName: string; itemCount: number })[] = [
     {
       id: "t1",
@@ -320,6 +327,128 @@ export default function Home() {
     }
   ]
 
+  // Day 5: Teknik Servis Kayıtları (Repair Tickets)
+  const initialRepairs: (RepairTicket & { customerName: string; customerPhone: string })[] = [
+    {
+      id: "r1",
+      ticket_number: "SRV-20260925-001",
+      customer_id: "c1",
+      customerName: "Ahmet Yılmaz",
+      customerPhone: "0532 111 22 33",
+      device_brand: "Apple",
+      device_model: "iPhone 13",
+      imei: "354892091234567",
+      serial_number: "F2LZ4K980P",
+      device_password: "1907",
+      pattern_code: null,
+      physical_condition: "Kasa köşelerinde hafif ezik, ön cam ve iç OLED panel tamamen kırık.",
+      has_accessories: "Orijinal silikon kılıf",
+      issue_description: "Cihaz sert zemine düştü. Ekran kapkaranlık, görüntü yok fakat ses ve titreşim geliyor.",
+      technician_notes: "Face ID ve anakart sağlam. GX OLED ekran montajı devam ediyor.",
+      status: "islemde",
+      estimated_cost: 3200,
+      labor_cost: 750,
+      parts_total_cost: 2450,
+      actual_cost: 3200,
+      parts_used: [
+        { part_name: "iPhone 13 GX OLED Ekran Paneli", quantity: 1, unit_price: 2450, total_price: 2450 }
+      ],
+      assigned_to: "role-2",
+      completed_at: null,
+      delivered_at: null,
+      created_at: "2026-09-25T09:15:00Z",
+      updated_at: "2026-09-25T09:45:00Z"
+    },
+    {
+      id: "r2",
+      ticket_number: "SRV-20260925-002",
+      customer_id: "c2",
+      customerName: "Fatma Kaya",
+      customerPhone: "0542 333 44 55",
+      device_brand: "Samsung",
+      device_model: "Galaxy S21 5G",
+      imei: "359876098765432",
+      serial_number: "R5CR10A987Z",
+      device_password: "2468",
+      pattern_code: null,
+      physical_condition: "Arka kapakta batarya şişmesine bağlı 1mm açıklık mevcut.",
+      has_accessories: "Teslim alınmadı",
+      issue_description: "Batarya çok hızlı tükeniyor (1-2 saatte %10'a düşüyor) ve arka kapak şişmiş.",
+      technician_notes: "Batarya hücre şişmesi teşhis edildi. Orijinal batarya temini bekleniyor.",
+      status: "bekliyor",
+      estimated_cost: 1450,
+      labor_cost: 450,
+      parts_total_cost: 1000,
+      actual_cost: 1450,
+      parts_used: [
+        { part_name: "Samsung Galaxy S21 4000mAh Batarya", quantity: 1, unit_price: 1000, total_price: 1000 }
+      ],
+      assigned_to: null,
+      completed_at: null,
+      delivered_at: null,
+      created_at: "2026-09-25T10:00:00Z",
+      updated_at: "2026-09-25T10:00:00Z"
+    },
+    {
+      id: "r3",
+      ticket_number: "SRV-20260925-003",
+      customer_id: "c3",
+      customerName: "Mehmet Öztürk",
+      customerPhone: "0555 777 88 99",
+      device_brand: "Xiaomi",
+      device_model: "Xiaomi 12",
+      imei: "867543021984210",
+      serial_number: "XM12TYP88231",
+      device_password: "0000",
+      pattern_code: null,
+      physical_condition: "Kozmetik temiz, ekran koruyucu mevcut.",
+      has_accessories: "SIM kart iade edildi",
+      issue_description: "Kablo oynatılmadığı sürece şarj almıyor, hızlı şarj devreye girmiyor.",
+      technician_notes: "Type-C şarj soket bordu değiştirildi. 67W hızlı şarj başarıyla test edildi.",
+      status: "tamamlandi",
+      estimated_cost: 750,
+      labor_cost: 350,
+      parts_total_cost: 400,
+      actual_cost: 750,
+      parts_used: [
+        { part_name: "Xiaomi 12 Type-C Şarj Alt Bordu", quantity: 1, unit_price: 400, total_price: 400 }
+      ],
+      assigned_to: "role-2",
+      completed_at: "2026-09-25T11:30:00Z",
+      delivered_at: null,
+      created_at: "2026-09-25T08:30:00Z",
+      updated_at: "2026-09-25T11:30:00Z"
+    },
+    {
+      id: "r4",
+      ticket_number: "SRV-20260925-004",
+      customer_id: "c4",
+      customerName: "Zeynep Çelik",
+      customerPhone: "0505 999 00 11",
+      device_brand: "Huawei",
+      device_model: "P30 Pro",
+      imei: "869911223344556",
+      serial_number: "HWP30PR9123",
+      device_password: "123456",
+      pattern_code: null,
+      physical_condition: "Sıvı göstergesi kırmızı renkte.",
+      has_accessories: "Kutu ve fatura",
+      issue_description: "Denize düşürüldü, tuzlu su teması oldu. Cihaz hiçbir şekilde açılmıyor.",
+      technician_notes: "Ultrasonik banyo yapıldı. PMIC güç entegresi ve CPU hatları yanmış. Onarım cihaz değerini aştığı için iade edildi.",
+      status: "iade",
+      estimated_cost: 4500,
+      labor_cost: 0,
+      parts_total_cost: 0,
+      actual_cost: 0,
+      parts_used: [],
+      assigned_to: "role-1",
+      completed_at: "2026-09-25T11:00:00Z",
+      delivered_at: null,
+      created_at: "2026-09-25T09:00:00Z",
+      updated_at: "2026-09-25T11:00:00Z"
+    }
+  ]
+
   // Filter products
   const filteredProducts = initialProducts.filter((product) => {
     const matchesSearch = 
@@ -339,8 +468,7 @@ export default function Home() {
 
   // Filter transactions
   const filteredTransactions = initialTransactions.filter((trx) => {
-    const matchesType = transactionTypeFilter === "all" || trx.type === transactionTypeFilter
-    return matchesType
+    return transactionTypeFilter === "all" || trx.type === transactionTypeFilter
   })
 
   // Filter customers
@@ -350,6 +478,19 @@ export default function Home() {
       cust.phone.includes(customerSearch) ||
       (cust.identity_number && cust.identity_number.includes(customerSearch))
     )
+  })
+
+  // Filter repairs
+  const filteredRepairs = initialRepairs.filter((rep) => {
+    const matchesStatus = repairStatusFilter === "all" || rep.status === repairStatusFilter
+    const matchesSearch = 
+      rep.ticket_number.toLowerCase().includes(repairSearch.toLowerCase()) ||
+      rep.device_model.toLowerCase().includes(repairSearch.toLowerCase()) ||
+      rep.device_brand.toLowerCase().includes(repairSearch.toLowerCase()) ||
+      rep.customerName.toLowerCase().includes(repairSearch.toLowerCase()) ||
+      (rep.imei && rep.imei.includes(repairSearch)) ||
+      (rep.device_password && rep.device_password.includes(repairSearch))
+    return matchesStatus && matchesSearch
   })
 
   const copyToClipboard = (text: string, label: string) => {
@@ -374,6 +515,12 @@ export default function Home() {
   const totalPurchases = initialTransactions
     .filter(t => t.type === "purchase")
     .reduce((acc, t) => acc + t.paid_amount, 0)
+
+  // Repair Status Summary counts
+  const countWaiting = initialRepairs.filter(r => r.status === "bekliyor").length
+  const countInProgress = initialRepairs.filter(r => r.status === "islemde").length
+  const countCompleted = initialRepairs.filter(r => r.status === "tamamlandi").length
+  const countReturned = initialRepairs.filter(r => r.status === "iade").length
 
   // SQL code snippets
   const sqlCodeUsersRoles = `-- 01_users_and_roles.sql
@@ -422,22 +569,19 @@ CREATE TABLE IF NOT EXISTS public.products (
 );
 CREATE UNIQUE INDEX idx_products_imei_unique ON public.products(imei) WHERE imei IS NOT NULL;`
 
-  const sqlCodeCustomersTransactions = `-- 03_customers_and_transactions.sql (Day 4 - Closes #43)
+  const sqlCodeCustomersTransactions = `-- 03_customers_and_transactions.sql (Day 4)
 CREATE TABLE IF NOT EXISTS public.customers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     full_name VARCHAR(150) NOT NULL,
     phone VARCHAR(20) NOT NULL,
     email VARCHAR(255),
-    identity_number VARCHAR(11), -- TCKN / Vergi No
+    identity_number VARCHAR(11),
     address TEXT,
-    notes TEXT,
-    balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00, -- Cari bakiye
+    balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
-CREATE INDEX idx_customers_phone ON public.customers(phone);
-CREATE INDEX idx_customers_full_name ON public.customers(full_name);
 
 CREATE TABLE IF NOT EXISTS public.transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -446,26 +590,44 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     type VARCHAR(30) NOT NULL CHECK (type IN ('sale', 'purchase', 'return', 'repair_payment')),
     payment_method VARCHAR(30) NOT NULL CHECK (payment_method IN ('cash', 'credit_card', 'bank_transfer', 'on_account', 'split')),
     total_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    discount_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     net_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     paid_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    status VARCHAR(20) NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'pending', 'cancelled')),
-    notes TEXT,
-    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
-);
-
-CREATE TABLE IF NOT EXISTS public.transaction_items (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    transaction_id UUID NOT NULL REFERENCES public.transactions(id) ON DELETE CASCADE,
-    product_id UUID NOT NULL REFERENCES public.products(id),
-    imei VARCHAR(15),
-    quantity INTEGER NOT NULL DEFAULT 1,
-    unit_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    total_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    notes TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+    status VARCHAR(20) NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'pending', 'cancelled'))
 );`
+
+  const sqlCodeRepairTickets = `-- 04_repair_tickets.sql (Day 5 - Closes #44)
+CREATE TABLE IF NOT EXISTS public.repair_tickets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_number VARCHAR(50) NOT NULL UNIQUE, -- SRV-20260925-001
+    customer_id UUID NOT NULL REFERENCES public.customers(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    device_brand VARCHAR(100) NOT NULL,
+    device_model VARCHAR(100) NOT NULL,
+    imei VARCHAR(15), -- 15 Haneli IMEI
+    serial_number VARCHAR(100),
+    device_password VARCHAR(100), -- Ekran Kilidi / PIN
+    pattern_code VARCHAR(50),
+    physical_condition TEXT,
+    has_accessories TEXT,
+    issue_description TEXT NOT NULL, -- Müşteri Şikayeti
+    technician_notes TEXT,
+    status VARCHAR(30) NOT NULL DEFAULT 'bekliyor' 
+        CHECK (status IN ('bekliyor', 'islemde', 'tamamlandi', 'iade', 'teslim_edildi', 'iptal')),
+    estimated_cost NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (estimated_cost >= 0),
+    labor_cost NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (labor_cost >= 0),
+    parts_total_cost NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (parts_total_cost >= 0),
+    actual_cost NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (actual_cost >= 0),
+    parts_used JSONB NOT NULL DEFAULT '[]'::jsonb, -- Kullanılan Parçalar (JSONB)
+    assigned_to UUID REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    completed_at TIMESTAMPTZ,
+    delivered_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    CONSTRAINT check_repair_imei_format CHECK (imei IS NULL OR (length(imei) = 15 AND imei ~ '^[0-9]+$'))
+);
+CREATE INDEX idx_repair_tickets_customer ON public.repair_tickets(customer_id);
+CREATE INDEX idx_repair_tickets_status ON public.repair_tickets(status);
+CREATE INDEX idx_repair_tickets_imei ON public.repair_tickets(imei) WHERE imei IS NOT NULL;
+CREATE INDEX idx_repair_tickets_parts_gin ON public.repair_tickets USING gin (parts_used);`
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500 selection:text-white">
@@ -499,69 +661,57 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Next.js 14 App Router
+              Faz 1: %100 Hazır (G1-G5)
             </span>
             <span className="px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-medium">
-              Tailwind CSS & Shadcn UI
+              Next.js 14 App Router
             </span>
             <span className="px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-medium">
-              @supabase/ssr Entegre
+              Supabase SSR & RLS
             </span>
           </div>
         </header>
 
-        {/* 4 Task Cards (G1 - G4) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-semibold text-slate-300">1. Altyapı & Supabase</CardTitle>
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              </div>
-            </CardHeader>
-            <CardContent className="text-xs text-slate-400 space-y-1">
-              <p className="text-slate-200 font-medium">Next.js 14 + Shadcn UI</p>
-              <p className="text-slate-400">SSR Client & Server yapıları hazırlandı.</p>
-            </CardContent>
+        {/* 5 Milestone / Task Cards (G1 - G5) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-slate-300">G1: Repo & Solution</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <p className="text-[11px] text-slate-400">.NET 8 & Native C++</p>
           </Card>
 
-          <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-semibold text-slate-300">2. Kullanıcılar & Roller</CardTitle>
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              </div>
-            </CardHeader>
-            <CardContent className="text-xs text-slate-400 space-y-1">
-              <p className="text-slate-200 font-medium">Admin & Personel Şeması</p>
-              <p className="text-slate-400">RLS politikaları & auth trigger&apos;ı kuruldu.</p>
-            </CardContent>
+          <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-slate-300">G2: Scrumban Panosu</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <p className="text-[11px] text-slate-400">WIP & DoD Kuralları</p>
           </Card>
 
-          <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-semibold text-slate-300">3. Ürünler & IMEI</CardTitle>
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              </div>
-            </CardHeader>
-            <CardContent className="text-xs text-slate-400 space-y-1">
-              <p className="text-slate-200 font-medium">15 Haneli Unique IMEI</p>
-              <p className="text-slate-400">Telefon, Aksesuar & Parça envanteri.</p>
-            </CardContent>
+          <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-slate-300">G3: C# EF Core & SQLite</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <p className="text-[11px] text-slate-400">Unique IMEI Doğrulama</p>
           </Card>
 
-          <Card className="bg-slate-900/60 border-cyan-500/40 backdrop-blur-md shadow-lg shadow-cyan-950/20">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-semibold text-cyan-400">4. Müşteri & Kasa (Day 4)</CardTitle>
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 animate-pulse" />
-              </div>
-            </CardHeader>
-            <CardContent className="text-xs text-slate-400 space-y-1">
-              <p className="text-slate-100 font-medium">Kasa, İşlem & Cari Takip</p>
-              <p className="text-slate-400">Transactions & Items ara tablosu (Closes #43).</p>
-            </CardContent>
+          <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-slate-300">G4: Next.js & Müşteri</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <p className="text-[11px] text-slate-400">Kasa & Cari Şeması (PR #75)</p>
+          </Card>
+
+          <Card className="bg-slate-900/60 border-cyan-500/50 backdrop-blur-md p-3 shadow-lg shadow-cyan-950/30">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-cyan-400">G5: Teknik Servis</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            </div>
+            <p className="text-[11px] text-slate-300 font-medium">Repair Tickets (Day 5)</p>
           </Card>
         </div>
 
@@ -578,16 +728,26 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
           </Button>
 
           <Button
+            variant={activeTab === "repairs" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setActiveTab("repairs")}
+            className={activeTab === "repairs" ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium" : "text-slate-400 hover:text-white"}
+          >
+            <Wrench className="w-4 h-4 mr-2 text-cyan-300" />
+            Teknik Servis (Repair Tickets)
+            <Badge className="ml-2 bg-cyan-500/20 text-cyan-300 border-none text-[10px] px-1.5 py-0">
+              G5
+            </Badge>
+          </Button>
+
+          <Button
             variant={activeTab === "transactions" ? "default" : "ghost"}
             size="sm"
             onClick={() => setActiveTab("transactions")}
             className={activeTab === "transactions" ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium" : "text-slate-400 hover:text-white"}
           >
-            <Receipt className="w-4 h-4 mr-2 text-cyan-400" />
+            <Receipt className="w-4 h-4 mr-2 text-indigo-400" />
             Kasa & İşlemler
-            <Badge className="ml-2 bg-cyan-500/20 text-cyan-300 border-none text-[10px] px-1.5 py-0">
-              G4
-            </Badge>
           </Button>
 
           <Button
@@ -598,9 +758,6 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
           >
             <Users className="w-4 h-4 mr-2 text-emerald-400" />
             Müşteriler & Cari
-            <Badge className="ml-2 bg-emerald-500/20 text-emerald-300 border-none text-[10px] px-1.5 py-0">
-              G4
-            </Badge>
           </Button>
 
           <Button
@@ -610,7 +767,7 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
             className={activeTab === "schema" ? "bg-cyan-600 hover:bg-cyan-500 text-white font-medium" : "text-slate-400 hover:text-white"}
           >
             <Database className="w-4 h-4 mr-2" />
-            SQL Şemaları
+            SQL Şemaları (G1-G5)
           </Button>
 
           <Button
@@ -637,7 +794,6 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
         {/* TAB 1: INVENTORY & PRODUCTS */}
         {activeTab === "inventory" && (
           <div className="space-y-6">
-            {/* Quick Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
                 <span className="text-xs text-slate-400">Toplam Ürün Çeşidi</span>
@@ -676,7 +832,6 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
               </div>
             </div>
 
-            {/* Filter & Search Bar */}
             <Card className="bg-slate-900/70 border-slate-800">
               <CardContent className="p-4 space-y-3">
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -716,7 +871,6 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
               </CardContent>
             </Card>
 
-            {/* Products Table */}
             <Card className="bg-slate-900/70 border-slate-800 overflow-hidden">
               <Table>
                 <TableHeader className="bg-slate-950/50">
@@ -786,10 +940,238 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
           </div>
         )}
 
-        {/* TAB 2: TRANSACTIONS & CASH REGISTER (Day 4) */}
+        {/* TAB 2: REPAIR TICKETS (Day 5 - Closes #44) */}
+        {activeTab === "repairs" && (
+          <div className="space-y-6">
+            {/* Status Summary Kanban Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div 
+                onClick={() => setRepairStatusFilter(repairStatusFilter === "bekliyor" ? "all" : "bekliyor")}
+                className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                  repairStatusFilter === "bekliyor" 
+                    ? "bg-amber-950/40 border-amber-500 shadow-md shadow-amber-950/30" 
+                    : "bg-slate-900/60 border-slate-800 hover:border-slate-700"
+                }`}
+              >
+                <span className="text-xs text-amber-400 flex items-center justify-between font-medium">
+                  Bekliyor
+                  <Clock className="w-3.5 h-3.5" />
+                </span>
+                <p className="text-2xl font-bold text-amber-400 mt-1">{countWaiting}</p>
+                <span className="text-[11px] text-slate-400 mt-1 block">Kabul Yapıldı / Sıra Bekliyor</span>
+              </div>
+
+              <div 
+                onClick={() => setRepairStatusFilter(repairStatusFilter === "islemde" ? "all" : "islemde")}
+                className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                  repairStatusFilter === "islemde" 
+                    ? "bg-cyan-950/40 border-cyan-500 shadow-md shadow-cyan-950/30" 
+                    : "bg-slate-900/60 border-slate-800 hover:border-slate-700"
+                }`}
+              >
+                <span className="text-xs text-cyan-400 flex items-center justify-between font-medium">
+                  İşlemde
+                  <Wrench className="w-3.5 h-3.5" />
+                </span>
+                <p className="text-2xl font-bold text-cyan-400 mt-1">{countInProgress}</p>
+                <span className="text-[11px] text-slate-400 mt-1 block">Teknisyende / Parça Montajı</span>
+              </div>
+
+              <div 
+                onClick={() => setRepairStatusFilter(repairStatusFilter === "tamamlandi" ? "all" : "tamamlandi")}
+                className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                  repairStatusFilter === "tamamlandi" 
+                    ? "bg-emerald-950/40 border-emerald-500 shadow-md shadow-emerald-950/30" 
+                    : "bg-slate-900/60 border-slate-800 hover:border-slate-700"
+                }`}
+              >
+                <span className="text-xs text-emerald-400 flex items-center justify-between font-medium">
+                  Tamamlandı
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </span>
+                <p className="text-2xl font-bold text-emerald-400 mt-1">{countCompleted}</p>
+                <span className="text-[11px] text-slate-400 mt-1 block">Test Edildi / Teslime Hazır</span>
+              </div>
+
+              <div 
+                onClick={() => setRepairStatusFilter(repairStatusFilter === "iade" ? "all" : "iade")}
+                className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                  repairStatusFilter === "iade" 
+                    ? "bg-rose-950/40 border-rose-500 shadow-md shadow-rose-950/30" 
+                    : "bg-slate-900/60 border-slate-800 hover:border-slate-700"
+                }`}
+              >
+                <span className="text-xs text-rose-400 flex items-center justify-between font-medium">
+                  İade
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </span>
+                <p className="text-2xl font-bold text-rose-400 mt-1">{countReturned}</p>
+                <span className="text-[11px] text-slate-400 mt-1 block">Onarılamadı / Maliyet Yüksek</span>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <Input
+                  placeholder="Fiş no (SRV-...), müşteri, cihaz modeli veya şifre ile ara..."
+                  value={repairSearch}
+                  onChange={(e) => setRepairSearch(e.target.value)}
+                  className="pl-9 bg-slate-950/70 border-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant={repairStatusFilter === "all" ? "default" : "outline"}
+                  onClick={() => setRepairStatusFilter("all")}
+                  className={repairStatusFilter === "all" ? "bg-cyan-600 text-white" : "border-slate-800 text-slate-300"}
+                >
+                  Tümü ({initialRepairs.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={repairStatusFilter === "bekliyor" ? "default" : "outline"}
+                  onClick={() => setRepairStatusFilter("bekliyor")}
+                  className={repairStatusFilter === "bekliyor" ? "bg-amber-600 text-white" : "border-slate-800 text-slate-300"}
+                >
+                  Bekleyenler
+                </Button>
+                <Button
+                  size="sm"
+                  variant={repairStatusFilter === "islemde" ? "default" : "outline"}
+                  onClick={() => setRepairStatusFilter("islemde")}
+                  className={repairStatusFilter === "islemde" ? "bg-cyan-600 text-white" : "border-slate-800 text-slate-300"}
+                >
+                  İşlemdekiler
+                </Button>
+                <Button
+                  size="sm"
+                  variant={repairStatusFilter === "tamamlandi" ? "default" : "outline"}
+                  onClick={() => setRepairStatusFilter("tamamlandi")}
+                  className={repairStatusFilter === "tamamlandi" ? "bg-emerald-600 text-white" : "border-slate-800 text-slate-300"}
+                >
+                  Tamamlananlar
+                </Button>
+                <Button
+                  size="sm"
+                  variant={repairStatusFilter === "iade" ? "default" : "outline"}
+                  onClick={() => setRepairStatusFilter("iade")}
+                  className={repairStatusFilter === "iade" ? "bg-rose-600 text-white" : "border-slate-800 text-slate-300"}
+                >
+                  İadeler
+                </Button>
+              </div>
+            </div>
+
+            {/* Repair Tickets Table */}
+            <Card className="bg-slate-900/70 border-slate-800 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-950/50">
+                  <TableRow className="border-slate-800 hover:bg-transparent">
+                    <TableHead className="text-slate-300 font-semibold">Fiş No & Müşteri</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">Cihaz & Model</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">Cihaz Şifresi</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">Şikayet & Teşhis</TableHead>
+                    <TableHead className="text-slate-300 font-semibold">Kullanılan Parçalar (JSONB)</TableHead>
+                    <TableHead className="text-slate-300 font-semibold text-center">Durum</TableHead>
+                    <TableHead className="text-slate-300 font-semibold text-right">Tahmini / Nihai</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRepairs.map((rep) => (
+                    <TableRow key={rep.id} className="border-slate-800/60 hover:bg-slate-800/30">
+                      <TableCell>
+                        <div className="font-mono text-xs font-semibold text-cyan-300">{rep.ticket_number}</div>
+                        <div className="text-xs font-medium text-slate-200 mt-0.5">{rep.customerName}</div>
+                        <div className="text-[11px] text-slate-500 font-mono">{rep.customerPhone}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-semibold text-slate-100 text-xs">{rep.device_brand} {rep.device_model}</div>
+                        {rep.imei && (
+                          <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
+                            <Hash className="w-2.5 h-2.5 text-cyan-400" /> {rep.imei}
+                          </div>
+                        )}
+                        {rep.physical_condition && (
+                          <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{rep.physical_condition}</div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {rep.device_password ? (
+                          <Badge variant="outline" className="border-amber-500/40 bg-amber-950/20 text-amber-300 font-mono text-xs flex items-center gap-1 w-fit">
+                            <KeyRound className="w-3 h-3 text-amber-400" />
+                            {rep.device_password}
+                          </Badge>
+                        ) : (
+                          <span className="text-slate-500 text-xs">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="max-w-xs">
+                        <div className="text-xs text-slate-200 line-clamp-2">{rep.issue_description}</div>
+                        {rep.technician_notes && (
+                          <div className="text-[11px] text-cyan-400/90 mt-1 line-clamp-1 italic">
+                            Teknisyen: {rep.technician_notes}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="max-w-[200px]">
+                        {rep.parts_used && rep.parts_used.length > 0 ? (
+                          <div className="space-y-1">
+                            {rep.parts_used.map((part, idx) => (
+                              <div key={idx} className="text-[11px] bg-slate-950/80 px-2 py-1 rounded border border-slate-800 text-slate-300 flex items-center justify-between">
+                                <span className="truncate mr-1">{part.part_name}</span>
+                                <span className="font-mono text-cyan-300">₺{part.unit_price}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-500 italic">Parça kullanılmadı</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {rep.status === "bekliyor" && (
+                          <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs">
+                            Bekliyor
+                          </Badge>
+                        )}
+                        {rep.status === "islemde" && (
+                          <Badge className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-xs">
+                            İşlemde
+                          </Badge>
+                        )}
+                        {rep.status === "tamamlandi" && (
+                          <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs">
+                            Tamamlandı
+                          </Badge>
+                        )}
+                        {rep.status === "iade" && (
+                          <Badge className="bg-rose-500/10 text-rose-400 border border-rose-500/30 text-xs">
+                            İade Edildi
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        <div className="text-xs font-bold text-slate-100">
+                          ₺{rep.actual_cost.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          Tahmini: ₺{rep.estimated_cost.toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </div>
+        )}
+
+        {/* TAB 3: TRANSACTIONS & CASH REGISTER */}
         {activeTab === "transactions" && (
           <div className="space-y-6">
-            {/* Financial Summary KPIs */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
                 <span className="text-xs text-slate-400 flex items-center gap-1.5">
@@ -836,7 +1218,6 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
               </div>
             </div>
 
-            {/* Filter */}
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex gap-2">
                 <Button
@@ -870,7 +1251,6 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
               </div>
             </div>
 
-            {/* Transactions Table */}
             <Card className="bg-slate-900/70 border-slate-800 overflow-hidden">
               <Table>
                 <TableHeader className="bg-slate-950/50">
@@ -932,7 +1312,7 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
           </div>
         )}
 
-        {/* TAB 3: CUSTOMERS & BALANCE (Day 4) */}
+        {/* TAB 4: CUSTOMERS & BALANCE */}
         {activeTab === "customers" && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between gap-4">
@@ -954,7 +1334,6 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
               </div>
             </div>
 
-            {/* Customers Table */}
             <Card className="bg-slate-900/70 border-slate-800 overflow-hidden">
               <Table>
                 <TableHeader className="bg-slate-950/50">
@@ -1013,7 +1392,7 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
           </div>
         )}
 
-        {/* TAB 4: SUPABASE SQL SCRIPTS */}
+        {/* TAB 5: SUPABASE SQL SCRIPTS */}
         {activeTab === "schema" && (
           <div className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -1027,11 +1406,19 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
+                  variant={selectedSqlTab === "04" ? "default" : "outline"}
+                  onClick={() => setSelectedSqlTab("04")}
+                  className={selectedSqlTab === "04" ? "bg-cyan-600 text-white font-medium" : "border-slate-800 text-slate-300"}
+                >
+                  04_repair_tickets.sql (Day 5)
+                </Button>
+                <Button
+                  size="sm"
                   variant={selectedSqlTab === "03" ? "default" : "outline"}
                   onClick={() => setSelectedSqlTab("03")}
                   className={selectedSqlTab === "03" ? "bg-cyan-600 text-white" : "border-slate-800 text-slate-300"}
                 >
-                  03_customers_and_transactions.sql (Day 4)
+                  03_customers_and_transactions.sql
                 </Button>
                 <Button
                   size="sm"
@@ -1056,11 +1443,13 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
               <CardHeader className="pb-3 border-b border-slate-800/80 flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-sm font-semibold text-slate-200">
+                    {selectedSqlTab === "04" && "supabase/04_repair_tickets.sql (Teknik Servis & Cihaz Şifresi)"}
                     {selectedSqlTab === "03" && "supabase/03_customers_and_transactions.sql (Müşteri, Kasa & Kalemler)"}
                     {selectedSqlTab === "02" && "supabase/02_categories_and_products.sql (15 Haneli IMEI & Ürünler)"}
                     {selectedSqlTab === "01" && "supabase/01_users_and_roles.sql (Roller & Kullanıcı Profilleri)"}
                   </CardTitle>
                   <CardDescription className="text-xs text-slate-400">
+                    {selectedSqlTab === "04" && "Day 5: Repair_Tickets tablosu, durumlar, şifre, JSONB parçalar ve RLS politikaları"}
                     {selectedSqlTab === "03" && "Day 4: Müşteri veritabanı, Kasa hareketleri, İşlem detayları ve RLS politikaları"}
                     {selectedSqlTab === "02" && "Day 3: Telefon, Aksesuar, Parça şeması ve UNIQUE IMEI indeksleri"}
                     {selectedSqlTab === "01" && "Day 2: Admin/Personel rolleri, profiles ve auth.users tetikleyicisi"}
@@ -1070,7 +1459,11 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    const code = selectedSqlTab === "03" ? sqlCodeCustomersTransactions : selectedSqlTab === "02" ? sqlCodeProductsCategories : sqlCodeUsersRoles
+                    const code = 
+                      selectedSqlTab === "04" ? sqlCodeRepairTickets :
+                      selectedSqlTab === "03" ? sqlCodeCustomersTransactions : 
+                      selectedSqlTab === "02" ? sqlCodeProductsCategories : 
+                      sqlCodeUsersRoles
                     copyToClipboard(code, `sql_${selectedSqlTab}`)
                   }}
                   className="text-xs border-slate-700 bg-slate-950 text-slate-300"
@@ -1081,6 +1474,7 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
               </CardHeader>
               <CardContent className="p-4">
                 <pre className="text-xs font-mono text-slate-300 bg-slate-950 p-4 rounded-lg overflow-x-auto max-h-[500px] border border-slate-800/60 leading-relaxed">
+                  {selectedSqlTab === "04" && sqlCodeRepairTickets}
                   {selectedSqlTab === "03" && sqlCodeCustomersTransactions}
                   {selectedSqlTab === "02" && sqlCodeProductsCategories}
                   {selectedSqlTab === "01" && sqlCodeUsersRoles}
@@ -1090,7 +1484,7 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
           </div>
         )}
 
-        {/* TAB 5: TYPESCRIPT INTERFACES */}
+        {/* TAB 6: TYPESCRIPT INTERFACES */}
         {activeTab === "types" && (
           <div className="space-y-6">
             <Card className="bg-slate-900/80 border-slate-800">
@@ -1105,56 +1499,50 @@ CREATE TABLE IF NOT EXISTS public.transaction_items (
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="border-cyan-500/30 text-cyan-400">
-                    Day 4 Genişletildi
+                    Day 5 Genişletildi
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
-                    <h4 className="text-xs font-semibold text-cyan-400 mb-2 font-mono">Customer & Transaction Modelleri (Day 4)</h4>
+                    <h4 className="text-xs font-semibold text-cyan-400 mb-2 font-mono">RepairTicket Modeli (Day 5)</h4>
+                    <pre className="text-xs font-mono text-slate-300 leading-relaxed overflow-x-auto">
+{`export interface RepairTicket {
+  id: string
+  ticket_number: string
+  customer_id: string
+  device_brand: string
+  device_model: string
+  imei: string | null
+  device_password: string | null // Cihaz Şifresi / PIN
+  issue_description: string // Müşteri Şikayeti
+  status: 'bekliyor' | 'islemde' | 'tamamlandi' | 'iade'
+  estimated_cost: number
+  actual_cost: number
+  parts_used: RepairPartItem[] // JSONB parçalar
+  created_at: string
+}`}
+                    </pre>
+                  </div>
+
+                  <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
+                    <h4 className="text-xs font-semibold text-emerald-400 mb-2 font-mono">Customer & Transaction Modelleri (Day 4)</h4>
                     <pre className="text-xs font-mono text-slate-300 leading-relaxed overflow-x-auto">
 {`export interface Customer {
   id: string
   full_name: string
   phone: string
-  email: string | null
-  identity_number: string | null
-  address: string | null
   balance: number // Cari bakiye
-  is_active: boolean
 }
 
 export interface Transaction {
   id: string
   transaction_number: string
   customer_id: string | null
-  type: 'sale' | 'purchase' | 'return' | 'repair_payment'
-  payment_method: 'cash' | 'credit_card' | 'bank_transfer' | 'on_account'
-  total_amount: number
-  discount_amount: number
+  type: 'sale' | 'purchase'
   net_amount: number
-  paid_amount: number
-  status: 'completed' | 'pending' | 'cancelled'
-}`}
-                    </pre>
-                  </div>
-
-                  <div className="p-4 rounded-lg bg-slate-950 border border-slate-800">
-                    <h4 className="text-xs font-semibold text-emerald-400 mb-2 font-mono">Product & IMEI Modeli</h4>
-                    <pre className="text-xs font-mono text-slate-300 leading-relaxed overflow-x-auto">
-{`export interface Product {
-  id: string
-  category_id: string
-  name: string
-  brand: string
-  imei: string | null // 15 haneli benzersiz IMEI
-  condition: 'sıfır' | 'ikinci el'
-  purchase_price: number
-  sale_price: number
-  stock_quantity: number
-  min_stock_level: number
-  is_active: boolean
+  status: 'completed'
 }`}
                     </pre>
                   </div>
@@ -1164,7 +1552,7 @@ export interface Transaction {
           </div>
         )}
 
-        {/* TAB 6: SSR CONFIG */}
+        {/* TAB 7: SSR CONFIG */}
         {activeTab === "config" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
