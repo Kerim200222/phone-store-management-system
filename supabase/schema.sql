@@ -356,3 +356,91 @@ VALUES
     ('c3333333-3333-3333-3333-333333333333', 'Mehmet Öztürk', '05557778899', 'mehmet.ozturk@example.com', '34567890123', 'Çankaya, Ankara', -1200.00),
     ('c4444444-4444-4444-4444-444444444444', 'Zeynep Çelik', '05059990011', 'zeynep.celik@example.com', '45678901234', 'Muratpaşa, Antalya', 500.00)
 ON CONFLICT (id) DO NOTHING;
+
+-- ------------------------------------------------------------------------------
+-- 14. TEKNİK SERVİS (REPAIR_TICKETS) TABLOSU (Day 5 - Closes #44)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.repair_tickets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_number VARCHAR(50) NOT NULL UNIQUE,
+    customer_id UUID NOT NULL REFERENCES public.customers(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    device_brand VARCHAR(100) NOT NULL,
+    device_model VARCHAR(100) NOT NULL,
+    imei VARCHAR(15),
+    serial_number VARCHAR(100),
+    device_password VARCHAR(100),
+    pattern_code VARCHAR(50),
+    physical_condition TEXT,
+    has_accessories TEXT,
+    issue_description TEXT NOT NULL,
+    technician_notes TEXT,
+    status VARCHAR(30) NOT NULL DEFAULT 'bekliyor' 
+        CHECK (status IN ('bekliyor', 'islemde', 'tamamlandi', 'iade', 'teslim_edildi', 'iptal')),
+    estimated_cost NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (estimated_cost >= 0),
+    labor_cost NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (labor_cost >= 0),
+    parts_total_cost NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (parts_total_cost >= 0),
+    actual_cost NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (actual_cost >= 0),
+    parts_used JSONB NOT NULL DEFAULT '[]'::jsonb,
+    assigned_to UUID REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE SET NULL,
+    completed_at TIMESTAMPTZ,
+    delivered_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    CONSTRAINT check_repair_imei_format CHECK (imei IS NULL OR (length(imei) = 15 AND imei ~ '^[0-9]+$'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_repair_tickets_customer_id ON public.repair_tickets(customer_id);
+CREATE INDEX IF NOT EXISTS idx_repair_tickets_status ON public.repair_tickets(status);
+CREATE INDEX IF NOT EXISTS idx_repair_tickets_imei ON public.repair_tickets(imei) WHERE imei IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_repair_tickets_ticket_number ON public.repair_tickets(ticket_number);
+CREATE INDEX IF NOT EXISTS idx_repair_tickets_created_at ON public.repair_tickets(created_at DESC);
+
+DROP TRIGGER IF EXISTS trigger_repair_tickets_updated_at ON public.repair_tickets;
+CREATE TRIGGER trigger_repair_tickets_updated_at
+    BEFORE UPDATE ON public.repair_tickets
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_updated_at();
+
+-- ------------------------------------------------------------------------------
+-- 15. TEKNİK SERVİS RLS VE SEED VERİLERİ (Day 5 - Closes #44)
+-- ------------------------------------------------------------------------------
+ALTER TABLE public.repair_tickets ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Yetkili kullanıcılar servis kayıtlarını görebilir" ON public.repair_tickets;
+CREATE POLICY "Yetkili kullanıcılar servis kayıtlarını görebilir" ON public.repair_tickets FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Yetkili kullanıcılar servis kayıtlarını yönetebilir" ON public.repair_tickets;
+CREATE POLICY "Yetkili kullanıcılar servis kayıtlarını yönetebilir" ON public.repair_tickets FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+INSERT INTO public.repair_tickets (
+    id, ticket_number, customer_id, device_brand, device_model, imei, device_password, 
+    issue_description, status, estimated_cost, labor_cost, parts_total_cost, actual_cost, parts_used
+)
+VALUES
+    (
+        'r1111111-1111-1111-1111-111111111111', 'SRV-20260925-001', 'c1111111-1111-1111-1111-111111111111',
+        'Apple', 'iPhone 13', '354892091234567', '1907',
+        'Cihaz sert zemine düştü. Ön cam ve iç OLED panel tamamen kırık, görüntü yok.',
+        'islemde', 3200.00, 750.00, 2450.00, 3200.00,
+        '[{"part_name": "iPhone 13 GX OLED Ekran Paneli", "quantity": 1, "unit_price": 2450.00, "total_price": 2450.00}]'::jsonb
+    ),
+    (
+        'r2222222-2222-2222-2222-222222222222', 'SRV-20260925-002', 'c2222222-2222-2222-2222-222222222222',
+        'Samsung', 'Galaxy S21 5G', '359876098765432', '2468',
+        'Batarya çok hızlı tükeniyor ve arka kapakta hafif şişme fark edildi.',
+        'bekliyor', 1450.00, 450.00, 1000.00, 1450.00,
+        '[{"part_name": "Samsung Galaxy S21 4000mAh Batarya", "quantity": 1, "unit_price": 1000.00, "total_price": 1000.00}]'::jsonb
+    ),
+    (
+        'r3333333-3333-3333-3333-333333333333', 'SRV-20260925-003', 'c3333333-3333-3333-3333-333333333333',
+        'Xiaomi', 'Xiaomi 12', '867543021984210', '0000',
+        'Kablo oynatılmadığı sürece şarj almıyor, soket temassızlık yapıyor.',
+        'tamamlandi', 750.00, 350.00, 400.00, 750.00,
+        '[{"part_name": "Xiaomi 12 Type-C Şarj Alt Bordu", "quantity": 1, "unit_price": 400.00, "total_price": 400.00}]'::jsonb
+    ),
+    (
+        'r4444444-4444-4444-4444-444444444444', 'SRV-20260925-004', 'c4444444-4444-4444-4444-444444444444',
+        'Huawei', 'P30 Pro', '869911223344556', '123456',
+        'Denize düşürüldü, tuzlu su teması oldu. Cihaz hiçbir şekilde açılmıyor.',
+        'iade', 4500.00, 0.00, 0.00, 0.00, '[]'::jsonb
+    )
+ON CONFLICT (id) DO NOTHING;
