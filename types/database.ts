@@ -12,6 +12,7 @@ export type CategoryName = 'Telefon' | 'Aksesuar' | 'Yedek Parça' | string
 export type TransactionType = 'sale' | 'purchase' | 'return' | 'repair_payment'
 export type PaymentMethod = 'cash' | 'credit_card' | 'bank_transfer' | 'on_account' | 'split'
 export type TransactionStatus = 'completed' | 'pending' | 'cancelled'
+export type RepairStatus = 'bekliyor' | 'islemde' | 'tamamlandi' | 'iade' | 'teslim_edildi' | 'iptal'
 
 export interface Database {
   public: {
@@ -51,10 +52,23 @@ export interface Database {
         Insert: TransactionItemInsert
         Update: TransactionItemUpdate
       }
+      repair_tickets: {
+        Row: RepairTicket
+        Insert: RepairTicketInsert
+        Update: RepairTicketUpdate
+      }
+      repair_ticket_parts: {
+        Row: RepairTicketPart
+        Insert: RepairTicketPartInsert
+        Update: RepairTicketPartUpdate
+      }
     }
     Views: {
       v_transactions_summary: {
         Row: TransactionSummaryView
+      }
+      v_repair_tickets_summary: {
+        Row: RepairTicketSummaryView
       }
     }
     Functions: {
@@ -66,6 +80,7 @@ export interface Database {
       transaction_type: TransactionType
       payment_method: PaymentMethod
       transaction_status: TransactionStatus
+      repair_status: RepairStatus
     }
   }
 }
@@ -412,4 +427,165 @@ export interface TransactionWithDetails extends Transaction {
   customer?: Customer | null
   items: TransactionItemWithProduct[]
   staff?: Profile | null
+}
+
+// ==========================================
+// 9. TEKNİK SERVİS (REPAIR_TICKETS) ARAYÜZLERİ (Day 5)
+// ==========================================
+export interface RepairPartItem {
+  product_id?: string
+  part_name: string
+  quantity: number
+  unit_price: number
+  total_price: number
+  notes?: string
+}
+
+export interface RepairTicket {
+  id: string
+  ticket_number: string
+  customer_id: string
+  device_brand: string
+  device_model: string
+  imei: string | null
+  serial_number: string | null
+  device_password: string | null // Müşteri ekran kilidi / PIN
+  pattern_code: string | null
+  physical_condition: string | null
+  has_accessories: string | null
+  issue_description: string // Müşteri arıza şikayeti
+  technician_notes: string | null
+  status: RepairStatus // 'bekliyor' | 'islemde' | 'tamamlandi' | 'iade' | 'teslim_edildi' | 'iptal'
+  estimated_cost: number
+  labor_cost: number
+  parts_total_cost: number
+  actual_cost: number
+  parts_used: RepairPartItem[] // JSONB formatında kullanılan yedek parçalar
+  assigned_to: string | null
+  completed_at: string | null
+  delivered_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RepairTicketInsert {
+  id?: string
+  ticket_number: string
+  customer_id: string
+  device_brand: string
+  device_model: string
+  imei?: string | null
+  serial_number?: string | null
+  device_password?: string | null
+  pattern_code?: string | null
+  physical_condition?: string | null
+  has_accessories?: string | null
+  issue_description: string
+  technician_notes?: string | null
+  status?: RepairStatus
+  estimated_cost?: number
+  labor_cost?: number
+  parts_total_cost?: number
+  actual_cost?: number
+  parts_used?: RepairPartItem[]
+  assigned_to?: string | null
+  completed_at?: string | null
+  delivered_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface RepairTicketUpdate {
+  id?: string
+  ticket_number?: string
+  customer_id?: string
+  device_brand?: string
+  device_model?: string
+  imei?: string | null
+  serial_number?: string | null
+  device_password?: string | null
+  pattern_code?: string | null
+  physical_condition?: string | null
+  has_accessories?: string | null
+  issue_description?: string
+  technician_notes?: string | null
+  status?: RepairStatus
+  estimated_cost?: number
+  labor_cost?: number
+  parts_total_cost?: number
+  actual_cost?: number
+  parts_used?: RepairPartItem[]
+  assigned_to?: string | null
+  completed_at?: string | null
+  delivered_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface RepairTicketPart {
+  id: string
+  repair_ticket_id: string
+  product_id: string | null
+  part_name: string
+  quantity: number
+  unit_price: number
+  total_price: number
+  notes: string | null
+  created_at: string
+}
+
+export interface RepairTicketPartInsert {
+  id?: string
+  repair_ticket_id: string
+  product_id?: string | null
+  part_name: string
+  quantity?: number
+  unit_price: number
+  total_price: number
+  notes?: string | null
+  created_at?: string
+}
+
+export interface RepairTicketPartUpdate {
+  id?: string
+  repair_ticket_id?: string
+  product_id?: string | null
+  part_name?: string
+  quantity?: number
+  unit_price?: number
+  total_price?: number
+  notes?: string | null
+  created_at?: string
+}
+
+export interface RepairTicketSummaryView {
+  id: string
+  ticket_number: string
+  customer_id: string
+  customer_name: string | null
+  customer_phone: string | null
+  device_brand: string
+  device_model: string
+  imei: string | null
+  device_password: string | null
+  issue_description: string
+  technician_notes: string | null
+  status: RepairStatus
+  estimated_cost: number
+  labor_cost: number
+  parts_total_cost: number
+  actual_cost: number
+  parts_used: RepairPartItem[]
+  assigned_to: string | null
+  technician_name: string | null
+  completed_at: string | null
+  delivered_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RepairTicketWithDetails extends RepairTicket {
+  customer?: Customer
+  technician?: Profile | null
+  parts_relational?: RepairTicketPart[]
 }
