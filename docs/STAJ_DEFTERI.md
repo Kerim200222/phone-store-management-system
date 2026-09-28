@@ -129,5 +129,44 @@
   - Supabase Auth istemcisinin `signInWithPassword` akışı ve oturum (session) yönetimi istemci tarafında ele alındı.
   - Form validasyonu ve hatalı şifre/kullanıcı durumlarında kullanıcıya doğru geri bildirim veren kullanıcı dostu arayüz tasarımı ilkeleri uygulandı.
   - Başarılı kimlik doğrulamasının ardından `next/navigation` kütüphanesinin `useRouter` kancası ile `/dashboard` rotasına pürüzsüz yönlendirme (client-side redirect) sağlandı.
-- **Referans:** `PR (İlgili Görev: Day 6 Issue #45, feature/G6-auth-login-interface)`
+- **Referans:** `PR #77 (İlgili Görev: Day 6 Issue #45, feature/G6-auth-login-interface)`
+
+---
+
+## 📅 Gün 7: Next.js Middleware, Korumalı Rotalar ve Yetki Tabanlı Erişim Kontrolü (RBAC)
+
+- **Tarih:** 29 Eylül 2026
+- **Konu:** Next.js `middleware.ts` Mimarisi, Korumalı Dashboard Rotaları, Supabase SSR Çerez Senkronizasyonu ve Rol Tabanlı (Admin/Personel) Yetkilendirme (Closes #46)
+- **Yapılan Çalışmalar:**
+  1. **Supabase SSR Middleware Entegrasyonu:** `@supabase/ssr` kütüphanesi kullanılarak `utils/supabase/middleware.ts` yardımcısı geliştirildi; çerez okuma/yazma/silme döngüsü sunucu katmanında güvenli hale getirildi.
+  2. **Next.js Kök `middleware.ts` Mimarisi:**
+     - Proje kök dizininde `middleware.ts` oluşturuldu.
+     - Matcher kuralları (`/dashboard/:path*`, `/login`) ile performanslı filtreleme tanımlandı.
+     - Oturum açmamış kullanıcıların `/dashboard` ve alt sayfalarına erişimi engellendi; kullanıcılar geldikleri rota bilgisi saklanarak `/login?redirectTo=...` adresine yönlendirildi.
+     - Halihazırda oturumu açık olan kullanıcıların tekrar `/login` sayfasına girmesi engellenerek doğrudan `/dashboard` paneline aktarılması sağlandı.
+  3. **Rol Tabanlı Erişim Kontrolü (Role-Based Access Control - RBAC):**
+     - Kullanıcının rolü (Supabase kullanıcı metadatası, oturum çerezi ve e-posta kuralları) tespit edildi.
+     - `/dashboard/settings` sayfası YALNIZCA **Admin** rolüne açıldı.
+     - Yetkisi olmayan (örn. Personel) kullanıcıların bu sayfaya girmesi middleware seviyesinde engellendi ve kullanıcı `/dashboard/unauthorized?from=/dashboard/settings&role=Personel` sayfasına yönlendirildi.
+  4. **Yönetici Sistem Ayarları Sayfası (`/dashboard/settings`):**
+     - Mağaza ve Şube Kimlik Bilgileri (Firma Ünvanı, Vergi No, İletişim, Adres).
+     - Kasa ve Finans Parametreleri (Varsayılan KDV Oranı: %20, TRY Para Birimi, Çift defter SQLite/PostgreSQL mutabakatı).
+     - Teknik Servis Parametreleri (Onarım Garanti Süresi, Cihaz PIN/Şifre politikası).
+     - Veritabanı ve Güvenlik (RLS Durumu, Oturum Zaman Aşımı).
+  5. **403 Yetkisiz Erişim Sayfası (`/dashboard/unauthorized`):**
+     - Amber/Rose uyarı temasıyla şık bir erişim engellendi arayüzü tasarlandı.
+     - Erişilmek istenen rota, gerekli yetki (Admin) ve kullanıcının mevcut yetkisi (Personel) açıkça belirtilerek kullanıcıya yönlendirici aksiyon butonları sunuldu.
+  6. **Giriş ve Panel Sayfaları İyileştirmeleri:**
+     - `/login` sayfasına `redirectTo` desteği ve `<Suspense>` yapısı kazandırıldı; başarılı girişte kullanıcının gitmek istediği sayfaya yönlendirilmesi sağlandı.
+     - `/dashboard` paneline doğrudan "Sistem Ayarları (Admin)" butonu ve hızlı işlem kartı yerleştirildi.
+     - Çıkış yapıldığında oturum çerezlerinin temizlenmesi garanti altına alındı.
+  7. **Ana Sayfa ve Derleme Doğrulaması:**
+     - `app/page.tsx` üzerindeki kilometre taşı panosuna 7. gün kartı (G7: Middleware & RBAC) eklendi.
+     - `npm run build` komutu çalıştırılarak tüm statik rotalar, Middleware eşleştirmeleri ve TypeScript tipleri sıfır hata ile doğrulandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Next.js Edge Middleware'in sayfa bileşenleri yüklenmeden önce sunucu tarafında HTTP isteklerini kesme yeteneği deneyimlendi.
+  - İstemci tarafı yönlendirmeler yerine sunucu tarafı `NextResponse.redirect` kullanılmasının güvenlik açıklarını (örneğin UI bileşenlerinin render edilip anlık görünmesi) tamamen ortadan kaldırdığı kavrandı.
+  - Role-Based Access Control (RBAC) mekanizmasının çok katmanlı olarak hem veritabanı (Supabase RLS) hem de sunucu yönlendirme (Next.js Middleware) katmanında uygulanmasının kurumsal yazılım mimarisindeki kritik rolü pekiştirildi.
+- **Referans:** `PR (İlgili Görev: Day 7 Issue #46, feature/G7-middleware-route-protection)`
+
 
