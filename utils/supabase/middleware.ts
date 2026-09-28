@@ -2,6 +2,10 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { Database } from '@/types/database'
 
+/**
+ * Supabase SSR Middleware Helper
+ * Gün 7: Next.js Middleware Rota Koruması ve Oturum Yönetimi
+ */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -9,9 +13,12 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co'
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key'
+
   const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         get(name: string) {
@@ -55,7 +62,14 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    // Supabase servisi erişilemez ise null döner
+    user = null
+  }
 
-  return response
+  return { supabase, user, response }
 }
