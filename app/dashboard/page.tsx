@@ -17,7 +17,8 @@ import {
   TrendingUp,
   Package,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Settings
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -38,8 +39,19 @@ export default function DashboardPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (user && user.email) {
           setUserEmail(user.email)
-          if (user.email.includes("personel")) {
-            setUserRole("Personel")
+          const role = user.user_metadata?.role || (user.email.includes("personel") ? "Personel" : "Admin")
+          setUserRole(role)
+        } else {
+          // Check document.cookie for demo/custom session
+          const match = document.cookie.match(/(?:^|; )phonestore_session=([^;]+)/)
+          if (match) {
+            try {
+              const parsed = JSON.parse(decodeURIComponent(match[1]))
+              if (parsed?.email) setUserEmail(parsed.email)
+              if (parsed?.role) setUserRole(parsed.role)
+            } catch {
+              // ignore
+            }
           }
         }
       } catch {
@@ -58,6 +70,8 @@ export default function DashboardPage() {
     } catch {
       // ignore
     }
+    // Oturum çerezini temizle
+    document.cookie = "phonestore_session=; path=/; max-age=0; SameSite=Lax"
     router.push("/login")
   }
 
@@ -93,11 +107,18 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link href="/dashboard/settings">
+              <Button variant="outline" size="sm" className="border-purple-800/60 bg-purple-950/30 text-purple-300 hover:bg-purple-900/40 hover:text-white text-xs">
+                <Settings className="w-3.5 h-3.5 mr-1.5 text-purple-400" />
+                Sistem Ayarları (Admin)
+              </Button>
+            </Link>
+
             <Link href="/">
               <Button variant="outline" size="sm" className="border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white text-xs">
                 <Layers className="w-3.5 h-3.5 mr-1.5 text-cyan-400" />
-                Tam Envanter & Şema
+                Tam Envanter
               </Button>
             </Link>
 
@@ -181,7 +202,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Action Shortcuts */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <Link href="/?tab=inventory" className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-cyan-500/50 hover:bg-slate-900 transition-all flex items-center justify-between group">
             <div>
               <div className="text-xs font-semibold text-slate-200 group-hover:text-cyan-300">Envanter & IMEI</div>
@@ -212,6 +233,17 @@ export default function DashboardPage() {
               <div className="text-[11px] text-slate-400">Müşteri borç ve alacak</div>
             </div>
             <Users className="w-4 h-4 text-cyan-400 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+
+          <Link href="/dashboard/settings" className="p-3.5 rounded-xl bg-purple-950/30 border border-purple-800/40 hover:border-purple-500 hover:bg-purple-950/50 transition-all flex items-center justify-between group col-span-2 sm:col-span-1">
+            <div>
+              <div className="text-xs font-semibold text-purple-200 group-hover:text-purple-100 flex items-center gap-1">
+                Ayarlar
+                <Badge className="bg-purple-500/20 text-purple-300 border-none text-[9px] px-1 py-0">Admin</Badge>
+              </div>
+              <div className="text-[11px] text-purple-300/70">RBAC Rota Korumalı</div>
+            </div>
+            <Settings className="w-4 h-4 text-purple-400 group-hover:rotate-45 transition-transform" />
           </Link>
         </div>
 
