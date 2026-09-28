@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState } from "react"
-import { useRouter } from "next/navigation"
+import React, { useState, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { 
   Smartphone, 
@@ -14,7 +14,8 @@ import {
   AlertCircle, 
   CheckCircle2, 
   Loader2,
-  Sparkles
+  Sparkles,
+  Info
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -30,8 +31,11 @@ import {
   CardTitle 
 } from "@/components/ui/card"
 
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get("redirectTo")
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -44,6 +48,10 @@ export default function LoginPage() {
     setErrorMessage(null)
     setSuccessMessage(null)
     setLoading(true)
+
+    const destination = (redirectTo && redirectTo.startsWith("/dashboard")) 
+      ? redirectTo 
+      : "/dashboard"
 
     try {
       const supabase = createClient()
@@ -61,10 +69,14 @@ export default function LoginPage() {
           (email.includes("admin") || email.includes("personel") || email.includes("truncgiller")) &&
           password.length >= 6
         ) {
+          const role = email.toLowerCase().includes("admin") ? "Admin" : "Personel"
+          // Next.js middleware için oturum çerezini ayarla
+          document.cookie = `phonestore_session=${encodeURIComponent(JSON.stringify({ email: email.trim(), role }))}; path=/; max-age=86400; SameSite=Lax`
+
           setSuccessMessage("Giriş başarılı! Yönetim paneline aktarılıyorsunuz...")
           setTimeout(() => {
-            router.push("/dashboard")
-          }, 800)
+            router.push(destination)
+          }, 600)
           return
         }
 
@@ -81,17 +93,23 @@ export default function LoginPage() {
       }
 
       if (data?.user) {
+        const role = data.user.user_metadata?.role || (email.toLowerCase().includes("admin") ? "Admin" : "Personel")
+        document.cookie = `phonestore_session=${encodeURIComponent(JSON.stringify({ email: email.trim(), role }))}; path=/; max-age=86400; SameSite=Lax`
+
         setSuccessMessage("Giriş başarılı! Yönlendiriliyorsunuz...")
         setTimeout(() => {
-          router.push("/dashboard")
+          router.push(destination)
         }, 600)
       }
     } catch {
       // Demo mod fallback
       if (email && password.length >= 6) {
+        const role = email.toLowerCase().includes("admin") ? "Admin" : "Personel"
+        document.cookie = `phonestore_session=${encodeURIComponent(JSON.stringify({ email: email.trim(), role }))}; path=/; max-age=86400; SameSite=Lax`
+
         setSuccessMessage("Demo oturumu açıldı! Yönlendiriliyorsunuz...")
         setTimeout(() => {
-          router.push("/dashboard")
+          router.push(destination)
         }, 600)
         return
       }
@@ -108,6 +126,208 @@ export default function LoginPage() {
   }
 
   return (
+    <div className="relative w-full max-w-md space-y-6">
+      
+      {/* Brand Header */}
+      <div className="flex flex-col items-center text-center space-y-2">
+        <Link href="/" className="group flex items-center gap-3 transition-transform hover:scale-105">
+          <div className="p-3 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl shadow-xl shadow-cyan-500/25 text-white">
+            <Smartphone className="w-8 h-8" />
+          </div>
+        </Link>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+          PhoneStore Pro
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-400">
+          Personel ve Yönetici Giriş Portalı
+        </p>
+      </div>
+
+      {/* Middleware Rota Koruması Bildirimi */}
+      {redirectTo && (
+        <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-800/60 flex items-start gap-2.5 text-xs text-cyan-200 animate-in fade-in duration-300">
+          <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold text-cyan-100">Korumalı Rota: </span>
+            <code className="bg-slate-900 px-1 py-0.5 rounded text-[11px] font-mono text-cyan-300">{redirectTo}</code> sayfasına erişmek için lütfen giriş yapınız.
+          </div>
+        </div>
+      )}
+
+      {/* Login Card */}
+      <Card className="bg-slate-900/70 border-slate-800 backdrop-blur-xl shadow-2xl">
+        <CardHeader className="space-y-1 pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold text-slate-100">
+              Giriş Yap
+            </CardTitle>
+            <Badge variant="outline" className="border-cyan-500/30 text-cyan-400 bg-cyan-500/10 text-[11px]">
+              Supabase Auth & RBAC
+            </Badge>
+          </div>
+          <CardDescription className="text-xs text-slate-400">
+            Telefon Mağazası Yönetim Sistemine erişmek için kimliğinizi doğrulayın.
+          </CardDescription>
+        </CardHeader>
+
+        <form onSubmit={handleLogin}>
+          <CardContent className="space-y-4">
+            
+            {/* Hata Bildirimi */}
+            {errorMessage && (
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-start gap-2 text-xs text-rose-300 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            {/* Başarı Bildirimi */}
+            {successMessage && (
+              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2 text-xs text-emerald-300 animate-in fade-in duration-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>{successMessage}</span>
+              </div>
+            )}
+
+            {/* E-posta Alanı */}
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs font-medium text-slate-300">
+                E-posta Adresi
+              </Label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="ornek@truncgiller.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="pl-9 bg-slate-950/60 border-slate-800 text-white placeholder:text-slate-600 focus-visible:ring-cyan-500 text-xs h-10"
+                />
+              </div>
+            </div>
+
+            {/* Şifre Alanı */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-xs font-medium text-slate-300">
+                  Şifre
+                </Label>
+                <span className="text-[11px] text-slate-500">
+                  Min. 6 karakter
+                </span>
+              </div>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="pl-9 pr-9 bg-slate-950/60 border-slate-800 text-white placeholder:text-slate-600 focus-visible:ring-cyan-500 text-xs h-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Güvenlik Hatırlatması */}
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 pt-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span>Next.js middleware ile korumalı güvenli oturum.</span>
+            </div>
+
+          </CardContent>
+
+          <CardFooter className="flex flex-col space-y-4 pt-1">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium shadow-lg shadow-cyan-500/25 h-10 text-xs transition-all"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Doğrulanıyor...
+                </>
+              ) : (
+                <>
+                  Giriş Yap
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </Button>
+
+            {/* Test Hesapları Kısayolu */}
+            <div className="w-full pt-3 border-t border-slate-800/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 flex items-center gap-1 font-medium">
+                  <Sparkles className="w-3 h-3 text-cyan-400" />
+                  Hızlı Test / Demo Hesaplar:
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount("admin@truncgiller.com", "Admin123!")}
+                  className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 hover:border-cyan-500/50 hover:bg-slate-900 text-left transition-all group"
+                >
+                  <div className="text-[11px] font-semibold text-cyan-300 group-hover:text-cyan-200">
+                    Yönetici (Admin)
+                  </div>
+                  <div className="text-[10px] text-slate-500 truncate">
+                    admin@truncgiller.com
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount("personel@truncgiller.com", "Personel123!")}
+                  className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900 text-left transition-all group"
+                >
+                  <div className="text-[11px] font-semibold text-emerald-300 group-hover:text-emerald-200">
+                    Mağaza Personeli
+                  </div>
+                  <div className="text-[10px] text-slate-500 truncate">
+                    personel@truncgiller.com
+                  </div>
+                </button>
+              </div>
+            </div>
+          </CardFooter>
+        </form>
+      </Card>
+
+      {/* Back Link */}
+      <div className="text-center">
+        <Link
+          href="/"
+          className="text-xs text-slate-400 hover:text-cyan-400 transition-colors inline-flex items-center gap-1"
+        >
+          ← Ana Envanter Paneline Geri Dön
+        </Link>
+      </div>
+
+    </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden selection:bg-cyan-500 selection:text-white">
       {/* Background Animated Gradients */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -116,185 +336,11 @@ export default function LoginPage() {
         <div className="absolute -bottom-32 left-1/3 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="relative w-full max-w-md space-y-6">
-        
-        {/* Brand Header */}
-        <div className="flex flex-col items-center text-center space-y-2">
-          <Link href="/" className="group flex items-center gap-3 transition-transform hover:scale-105">
-            <div className="p-3 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl shadow-xl shadow-cyan-500/25 text-white">
-              <Smartphone className="w-8 h-8" />
-            </div>
-          </Link>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-            PhoneStore Pro
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 max-w-xs">
-            Trunçgiller — Telefon Mağazası & Teknik Servis Yönetim Portalı
-          </p>
-          <div className="flex items-center gap-2 pt-1">
-            <Badge variant="outline" className="border-cyan-500/30 text-cyan-400 text-[11px] px-2.5 py-0.5">
-              <ShieldCheck className="w-3 h-3 mr-1" />
-              Supabase Auth SSR (Day 6)
-            </Badge>
-          </div>
-        </div>
-
-        {/* Login Card */}
-        <Card className="bg-slate-900/80 border-slate-800 backdrop-blur-xl shadow-2xl shadow-black/60">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-lg font-semibold text-slate-100">
-              Personel Girişi
-            </CardTitle>
-            <CardDescription className="text-xs text-slate-400">
-              Sisteme erişmek için kayıtlı e-posta adresinizi ve şifrenizi giriniz.
-            </CardDescription>
-          </CardHeader>
-
-          <form onSubmit={handleLogin}>
-            <CardContent className="space-y-4">
-              
-              {/* Error Banner */}
-              {errorMessage && (
-                <div className="p-3 rounded-lg bg-rose-950/40 border border-rose-500/40 text-rose-300 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
-                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                  <span>{errorMessage}</span>
-                </div>
-              )}
-
-              {/* Success Banner */}
-              {successMessage && (
-                <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>{successMessage}</span>
-                </div>
-              )}
-
-              {/* Email Input */}
-              <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-xs text-slate-300">
-                  E-Posta Adresi
-                </Label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                  <Input
-                    id="email"
-                    type="email"
-                    required
-                    placeholder="ornek@truncgiller.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-9 bg-slate-950/70 border-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500 text-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Password Input */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-xs text-slate-300">
-                    Şifre
-                  </Label>
-                  <span className="text-[11px] text-slate-500 hover:text-cyan-400 cursor-pointer">
-                    Şifremi unuttum?
-                  </span>
-                </div>
-                <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-9 pr-9 bg-slate-950/70 border-slate-800 text-slate-100 placeholder:text-slate-500 focus-visible:ring-cyan-500 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-slate-500 hover:text-slate-300 focus:outline-none"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-            </CardContent>
-
-            <CardFooter className="flex flex-col space-y-4 pt-2">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-medium shadow-lg shadow-cyan-600/20 transition-all duration-200"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Giriş Yapılıyor...
-                  </>
-                ) : (
-                  <>
-                    Giriş Yap
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </>
-                )}
-              </Button>
-
-              {/* Demo Accounts Quick Selector */}
-              <div className="w-full pt-3 border-t border-slate-800/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400 flex items-center gap-1 font-medium">
-                    <Sparkles className="w-3 h-3 text-cyan-400" />
-                    Hızlı Test / Demo Hesaplar:
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fillDemoAccount("admin@truncgiller.com", "Admin123!")}
-                    className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 hover:border-cyan-500/50 hover:bg-slate-900 text-left transition-all group"
-                  >
-                    <div className="text-[11px] font-semibold text-cyan-300 group-hover:text-cyan-200">
-                      Yönetici (Admin)
-                    </div>
-                    <div className="text-[10px] text-slate-500 truncate">
-                      admin@truncgiller.com
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => fillDemoAccount("personel@truncgiller.com", "Personel123!")}
-                    className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-900 text-left transition-all group"
-                  >
-                    <div className="text-[11px] font-semibold text-emerald-300 group-hover:text-emerald-200">
-                      Mağaza Personeli
-                    </div>
-                    <div className="text-[10px] text-slate-500 truncate">
-                      personel@truncgiller.com
-                    </div>
-                  </button>
-                </div>
-              </div>
-            </CardFooter>
-          </form>
-        </Card>
-
-        {/* Back Link */}
-        <div className="text-center">
-          <Link
-            href="/"
-            className="text-xs text-slate-400 hover:text-cyan-400 transition-colors inline-flex items-center gap-1"
-          >
-            ← Ana Envanter Paneline Geri Dön
-          </Link>
-        </div>
-
-      </div>
+      <Suspense fallback={
+        <div className="text-center text-xs text-slate-400">Giriş sayfası yükleniyor...</div>
+      }>
+        <LoginFormContent />
+      </Suspense>
     </div>
   )
 }
