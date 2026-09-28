@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import Link from "next/link"
 import { 
   Smartphone, 
   ShieldCheck, 
@@ -22,7 +23,9 @@ import {
   Wrench,
   KeyRound,
   Clock,
-  RotateCcw
+  RotateCcw,
+  LogIn,
+  LayoutDashboard
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -659,21 +662,30 @@ CREATE INDEX idx_repair_tickets_parts_gin ON public.repair_tickets USING gin (pa
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
+            <Link href="/login">
+              <Button size="sm" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-medium shadow-md shadow-cyan-500/20 gap-1.5 h-8">
+                <LogIn className="w-3.5 h-3.5" />
+                Giriş Yap (/login)
+              </Button>
+            </Link>
+            <Link href="/dashboard">
+              <Button size="sm" variant="outline" className="border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white font-medium gap-1.5 h-8">
+                <LayoutDashboard className="w-3.5 h-3.5 text-cyan-400" />
+                Panel (/dashboard)
+              </Button>
+            </Link>
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Faz 1: %100 Hazır (G1-G5)
+              Faz 2: Başladı (G6)
             </span>
             <span className="px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-medium">
-              Next.js 14 App Router
-            </span>
-            <span className="px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-medium">
-              Supabase SSR & RLS
+              Supabase Auth SSR
             </span>
           </div>
         </header>
 
-        {/* 5 Milestone / Task Cards (G1 - G5) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {/* 6 Milestone / Task Cards (G1 - G6) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md p-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[11px] font-semibold text-slate-300">G1: Repo & Solution</span>
@@ -700,18 +712,26 @@ CREATE INDEX idx_repair_tickets_parts_gin ON public.repair_tickets USING gin (pa
 
           <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md p-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] font-semibold text-slate-300">G4: Next.js & Müşteri</span>
+              <span className="text-[11px] font-semibold text-slate-300">G4: Next.js & Kasa</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             </div>
-            <p className="text-[11px] text-slate-400">Kasa & Cari Şeması (PR #75)</p>
+            <p className="text-[11px] text-slate-400">Cari & Kasa (PR #75)</p>
+          </Card>
+
+          <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-slate-300">G5: Teknik Servis</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <p className="text-[11px] text-slate-400">Repair Tickets (PR #76)</p>
           </Card>
 
           <Card className="bg-slate-900/60 border-cyan-500/50 backdrop-blur-md p-3 shadow-lg shadow-cyan-950/30">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] font-semibold text-cyan-400">G5: Teknik Servis</span>
+              <span className="text-[11px] font-semibold text-cyan-400">G6: Auth Arayüzü</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
             </div>
-            <p className="text-[11px] text-slate-300 font-medium">Repair Tickets (Day 5)</p>
+            <p className="text-[11px] text-slate-300 font-medium">/login & /dashboard</p>
           </Card>
         </div>
 
