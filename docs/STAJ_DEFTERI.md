@@ -100,3 +100,34 @@
   - Cihaz şifresi / PIN verisinin servis fişlerinde güvenli şekilde tutulması ve teknisyenin arıza teşhis sürecinde ekran kilidini aşabilmesinin operasyonel önemi kavrandı.
   - Servis durumlarının enum/check constraint ile kısıtlanarak veri tutarlılığının veritabanı seviyesinde korunması sağlandı.
 - **Referans:** `PR #76 (İlgili Görev: Day 5 Issue #44, feature/G5-repair-tickets-schema)`
+
+---
+
+## 📅 Gün 6: Kimlik Doğrulama (Auth) Arayüzü, Shadcn UI Formu ve /dashboard Paneli
+
+- **Tarih:** 28 Eylül 2026
+- **Konu:** Supabase Auth ile /login Giriş Sayfası, E-posta & Şifre Doğrulama, Shadcn UI Form Bileşenleri ve Başarılı Girişte /dashboard Yönlendirmesi (Closes #45)
+- **Yapılan Çalışmalar:**
+  1. **Shadcn UI Form & Label Bileşeni:** Erişilebilir, şık ve modern form alanları için `components/ui/label.tsx` bileşeni projeye kazandırıldı.
+  2. **Supabase Client Güçlendirmesi:** `utils/supabase/client.ts` dosyasına güvenli fallback (varsayılan) değerler eklenerek ortam değişkenlerinin eksik olduğu build veya SSR aşamalarında istemcinin çökmesi engellendi.
+  3. **Modern /login Kimlik Doğrulama Sayfası:**
+     - Next.js 14 App Router altında `/login` rotası (`app/login/page.tsx`) geliştirildi.
+     - Form durumları (`email`, `password`, `showPassword`, `loading`, `error`, `success`) yönetildi.
+     - `supabase.auth.signInWithPassword({ email, password })` çağrısı ile güvenli oturum açma entegrasyonu sağlandı.
+     - Şifre görünürlüğü açma/kapama (Eye / EyeOff) butonu eklendi.
+     - Tek tıkla form dolduran "Demo Giriş Hesapları" (Yönetici ve Mağaza Personeli) butonları yerleştirilerek kullanıcı deneyimi artırıldı.
+     - Hata yönetiminde Türkçe açıklamalı alert bildirimleri ve yüklenme animasyonları (`Loader2`) kurgulandı.
+  4. **Yönetim Paneli (/dashboard) Rotası:**
+     - Oturum açan kullanıcının yönlendirildiği modern `/dashboard` sayfası (`app/dashboard/page.tsx`) tasarlandı.
+     - Giriş yapan kullanıcının e-posta adresi ve rol rozeti (Admin / Personel) dinamik olarak gösterildi.
+     - `supabase.auth.signOut()` ile güvenli çıkış yapma ve `/login` rotasına geri yönlendirme sağlandı.
+     - Günlük Ciro, Aktif Teknik Servis Kayıtları, Kasa Nakit Durumu ve Kayıtlı Müşteri KPI özet kartları oluşturuldu.
+     - Hızlı işlem kısayolları (Envanter, Teknik Servis, Kasa/İşlemler, Cari Hesaplar) ve son işlem özet tabloları eklendi.
+  5. **Ana Sayfa (Landing Page) Navigasyonu:** `app/page.tsx` başlık kısmına `/login` ve `/dashboard` geçiş butonları eklendi; Scrumban kilometre taşı kartlarına "G6: Auth Arayüzü" entegre edildi.
+  6. **Derleme ve Tip Doğrulaması:** `npm run build` komutu çalıştırılarak tüm Next.js sayfaları, TypeScript tipleri ve ESLint kuralları sıfır hata ile doğrulandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Supabase Auth istemcisinin `signInWithPassword` akışı ve oturum (session) yönetimi istemci tarafında ele alındı.
+  - Form validasyonu ve hatalı şifre/kullanıcı durumlarında kullanıcıya doğru geri bildirim veren kullanıcı dostu arayüz tasarımı ilkeleri uygulandı.
+  - Başarılı kimlik doğrulamasının ardından `next/navigation` kütüphanesinin `useRouter` kancası ile `/dashboard` rotasına pürüzsüz yönlendirme (client-side redirect) sağlandı.
+- **Referans:** `PR (İlgili Görev: Day 6 Issue #45, feature/G6-auth-login-interface)`
+
