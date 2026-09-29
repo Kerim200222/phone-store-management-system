@@ -676,16 +676,16 @@ CREATE INDEX idx_repair_tickets_parts_gin ON public.repair_tickets USING gin (pa
             </Link>
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Faz 2: İlerliyor (G6-G8)
+              Faz 2: İlerliyor (G6-G9)
             </span>
             <span className="px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-medium">
-              Sidebar & Header Layout
+              KPI Özet Kartları
             </span>
           </div>
         </header>
 
-        {/* 8 Milestone / Task Cards (G1 - G8) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+        {/* 9 Milestone / Task Cards (G1 - G9) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-2">
           <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md p-2.5">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[11px] font-semibold text-slate-300">G1: Repo</span>
@@ -742,12 +742,20 @@ CREATE INDEX idx_repair_tickets_parts_gin ON public.repair_tickets USING gin (pa
             <p className="text-[10px] text-slate-400">RBAC (PR #78)</p>
           </Card>
 
+          <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md p-2.5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-slate-300">G8: Layout</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <p className="text-[10px] text-slate-400">Sidebar (PR #79)</p>
+          </Card>
+
           <Card className="bg-slate-900/60 border-cyan-500/50 backdrop-blur-md p-2.5 shadow-lg shadow-cyan-950/30">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] font-semibold text-cyan-400">G8: Layout</span>
+              <span className="text-[11px] font-semibold text-cyan-400">G9: Özet Kart</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
             </div>
-            <p className="text-[10px] text-slate-300 font-medium">Sidebar & Header</p>
+            <p className="text-[10px] text-slate-300 font-medium">4 KPI Metriği</p>
           </Card>
         </div>
 
