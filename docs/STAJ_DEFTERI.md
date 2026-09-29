@@ -167,6 +167,40 @@
   - Next.js Edge Middleware'in sayfa bileşenleri yüklenmeden önce sunucu tarafında HTTP isteklerini kesme yeteneği deneyimlendi.
   - İstemci tarafı yönlendirmeler yerine sunucu tarafı `NextResponse.redirect` kullanılmasının güvenlik açıklarını (örneğin UI bileşenlerinin render edilip anlık görünmesi) tamamen ortadan kaldırdığı kavrandı.
   - Role-Based Access Control (RBAC) mekanizmasının çok katmanlı olarak hem veritabanı (Supabase RLS) hem de sunucu yönlendirme (Next.js Middleware) katmanında uygulanmasının kurumsal yazılım mimarisindeki kritik rolü pekiştirildi.
-- **Referans:** `PR (İlgili Görev: Day 7 Issue #46, feature/G7-middleware-route-protection)`
+- **Referans:** `PR #78 (İlgili Görev: Day 7 Issue #46, feature/G7-middleware-route-protection)`
+
+---
+
+## 📅 Gün 8: Dashboard Layout (Ana İskelet), Responsive Sidebar ve Profil Header
+
+- **Tarih:** 30 Eylül 2026
+- **Konu:** Next.js `/dashboard/layout.tsx` Ana İskeleti, Sol Sidebar Menüsü (Ana Sayfa, Kasa, Stok, Teknik Servis, Müşteriler, Ayarlar), Profil & Çıkış Header'ı ve Mobil Uyumlu Çekmece (Closes #47)
+- **Yapılan Çalışmalar:**
+  1. **Dashboard Ana İskeleti (`app/dashboard/layout.tsx`):**
+     - Tüm yönetim paneli alt sayfalarını (`/dashboard/*`) kapsayan, tutarlı ve modern bir ana yerleşim şablonu (layout) geliştirildi.
+     - İstemci tarafı oturum ve kullanıcı profil verileri (`supabase.auth.getUser()`) dinlenerek aktif kullanıcı durumuna bağlandı.
+  2. **Gelişmiş Sol Sidebar Navigasyonu:**
+     - **Ana Sayfa** (`/dashboard`), **Kasa** (`/dashboard/transactions`), **Stok** (`/dashboard/inventory`), **Teknik Servis** (`/dashboard/repairs`), **Müşteriler** (`/dashboard/customers`) ve **Ayarlar** (`/dashboard/settings`) bağlantıları yerleştirildi.
+     - `usePathname()` kancası kullanılarak aktif sayfa otomatik olarak tespit edildi ve parlak cyan arka plan/kenarlık vurgulaması uygulandı.
+     - Sidebar öğelerine bilgilendirici rozetler (`₺ Kasa`, `IMEI`, `G5`, `Cari`, `Admin`) ve alt kısma sistem durumu ile Envanter Vitrini kısayolu eklendi.
+  3. **Responsive Mobil Çekmece (Drawer):**
+     - Küçük ekranlarda (`< lg`) sidebar gizlenerek alan tasarrufu sağlandı.
+     - Başlık çubuğundaki hamburger menü butonu ile açılan, karartılmış zemin (backdrop blur) ve yumuşak animasyonlu mobil gezinme çekmecesi kurgulandı.
+     - Rota değişimlerinde mobil menünün otomatik kapanması sağlandı.
+  4. **Kullanıcı Profili ve Çıkış Başlığı (Top Header):**
+     - Ekranın üst kısmında sticky pozisyonda çalışan, sayfa hiyerarşisi (breadcrumb) ve durum göstergeleri sunan modern bir header tasarlandı.
+     - Sağ bölümde dinamik kullanıcı avatarı (baş harfler), e-posta adresi, rol rozeti (*Admin* / *Personel*) ve kırmızı vurgulu **Çıkış Yap** butonu yerleştirildi.
+     - Çıkış yapıldığında Supabase oturumu sonlandırıldı, oturum çerezi temizlendi ve güvenli şekilde `/login` sayfasına yönlendirildi.
+  5. **Modüler Alt Panel Sayfaları:**
+     - Sidebar linklerinin her biri için zengin arama ve filtreleme kabiliyetine sahip müstakil gösterge sayfaları (`/dashboard/inventory`, `/dashboard/repairs`, `/dashboard/transactions`, `/dashboard/customers`) oluşturuldu.
+     - Mevcut `/dashboard`, `/dashboard/settings` ve `/dashboard/unauthorized` sayfaları ana iskelet ile kusursuz uyum sağlayacak şekilde optimize edildi.
+  6. **Ana Sayfa ve Derleme Doğrulaması:**
+     - `app/page.tsx` vitrinine 8. gün kilometre taşı kartı (G8: Layout) entegre edildi.
+     - `npm run build` çalıştırılarak tüm statik sayfalar ve `layout.tsx` sıfır hata ve sıfır uyarı ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Next.js 14 App Router mimarisinde `layout.tsx` dosyasının sayfa geçişlerinde yeniden render edilmeden (re-render optimizasyonu) state'i ve DOM ağacını nasıl koruduğu pekiştirildi.
+  - Mobil cihazlar için responsive tasarımda Flexbox ve CSS Grid ile masaüstü sabit (fixed) kenar çubuğu ve mobil çekmece (overlay drawer) mekanizmalarının entegrasyonu deneyimlendi.
+- **Referans:** `PR (İlgili Görev: Day 8 Issue #47, feature/G8-dashboard-layout-sidebar-header)`
+
 
 
