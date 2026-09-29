@@ -1,24 +1,21 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { 
-  Smartphone, 
   ShieldCheck, 
   Users, 
   Receipt, 
   Wrench, 
-  LogOut, 
   ArrowUpRight, 
   Banknote, 
   CreditCard, 
   Clock, 
-  TrendingUp,
-  Package,
-  Layers,
-  ArrowRight,
-  Settings
+  TrendingUp, 
+  Package, 
+  Layers, 
+  ArrowRight, 
+  Settings 
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -27,10 +24,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 export default function DashboardPage() {
-  const router = useRouter()
   const [userEmail, setUserEmail] = useState<string>("admin@truncgiller.com")
-  const [userRole, setUserRole] = useState<string>("Admin")
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function loadUser() {
@@ -39,8 +33,6 @@ export default function DashboardPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (user && user.email) {
           setUserEmail(user.email)
-          const role = user.user_metadata?.role || (user.email.includes("personel") ? "Personel" : "Admin")
-          setUserRole(role)
         } else {
           // Check document.cookie for demo/custom session
           const match = document.cookie.match(/(?:^|; )phonestore_session=([^;]+)/)
@@ -48,7 +40,6 @@ export default function DashboardPage() {
             try {
               const parsed = JSON.parse(decodeURIComponent(match[1]))
               if (parsed?.email) setUserEmail(parsed.email)
-              if (parsed?.role) setUserRole(parsed.role)
             } catch {
               // ignore
             }
@@ -56,83 +47,44 @@ export default function DashboardPage() {
         }
       } catch {
         // Fallback demo user
-      } finally {
-        setLoading(false)
       }
     }
     loadUser()
   }, [])
 
-  const handleSignOut = async () => {
-    try {
-      const supabase = createClient()
-      await supabase.auth.signOut()
-    } catch {
-      // ignore
-    }
-    // Oturum çerezini temizle
-    document.cookie = "phonestore_session=; path=/; max-age=0; SameSite=Lax"
-    router.push("/login")
-  }
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-cyan-500 selection:text-white">
-      {/* Background Glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-cyan-600/15 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        
-        {/* Navigation Bar */}
-        <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-slate-800/80">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="p-2.5 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-xl shadow-lg shadow-cyan-500/20 text-white hover:scale-105 transition-transform">
-              <Smartphone className="w-6 h-6" />
-            </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-                  Yönetim Paneli (Dashboard)
-                </h1>
-                <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs">
-                  Giriş Yapıldı
-                </Badge>
-              </div>
-              <p className="text-xs text-slate-400">
-                Oturum: <span className="font-mono text-cyan-300">{loading ? "Yükleniyor..." : userEmail}</span> • Rol: <span className="text-slate-200 font-semibold">{userRole}</span>
-              </p>
-            </div>
+    <div className="space-y-6">
+      {/* Dashboard Overview Welcome Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+              Genel Bakış & Raporlar
+            </h1>
+            <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px]">
+              Çevrimiçi
+            </Badge>
           </div>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            Hoş geldiniz <span className="text-cyan-300 font-medium">{userEmail}</span>. Telefon Mağazası ve Teknik Servis genel performans göstergeleri ve bekleyen işlemler.
+          </p>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Link href="/dashboard/settings">
-              <Button variant="outline" size="sm" className="border-purple-800/60 bg-purple-950/30 text-purple-300 hover:bg-purple-900/40 hover:text-white text-xs">
-                <Settings className="w-3.5 h-3.5 mr-1.5 text-purple-400" />
-                Sistem Ayarları (Admin)
-              </Button>
-            </Link>
-
-            <Link href="/">
-              <Button variant="outline" size="sm" className="border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white text-xs">
-                <Layers className="w-3.5 h-3.5 mr-1.5 text-cyan-400" />
-                Tam Envanter
-              </Button>
-            </Link>
-
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleSignOut}
-              className="border-rose-900/40 bg-rose-950/20 text-rose-300 hover:bg-rose-900/40 hover:text-rose-200 text-xs"
-            >
-              <LogOut className="w-3.5 h-3.5 mr-1.5" />
-              Çıkış Yap
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/settings">
+            <Button variant="outline" size="sm" className="border-purple-800/60 bg-purple-950/30 text-purple-300 hover:bg-purple-900/40 hover:text-white text-xs h-8">
+              <Settings className="w-3.5 h-3.5 mr-1.5 text-purple-400" />
+              Sistem Ayarları
             </Button>
-          </div>
-        </header>
+          </Link>
+          <Link href="/">
+            <Button variant="outline" size="sm" className="border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white text-xs h-8">
+              <Layers className="w-3.5 h-3.5 mr-1.5 text-cyan-400" />
+              Vitrini Aç
+            </Button>
+          </Link>
+        </div>
+      </div>
 
         {/* Overview Metrics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -406,7 +358,6 @@ export default function DashboardPage() {
 
         </div>
 
-      </div>
     </div>
   )
 }
