@@ -90,13 +90,7 @@ function UnauthorizedContent() {
 
 export default function UnauthorizedPage() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden selection:bg-cyan-500 selection:text-white">
-      {/* Background Animated Gradients */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-rose-600/15 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 -right-32 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl"></div>
-      </div>
-
+    <div className="py-6 flex flex-col justify-center items-center">
       <Suspense fallback={
         <div className="text-center text-xs text-slate-400">Yetkilendirme denetleniyor...</div>
       }>
