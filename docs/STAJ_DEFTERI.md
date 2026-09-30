@@ -264,7 +264,7 @@
 
 ---
 
-## 📅 Gün 11: Next.js Middleware Route Protection, RBAC Dinamik Menü Filtreleme ve Faz 3 Altyapı Hazırlığı
+## 📅 Gün 10+ (Ek Güvenlik Fazı): Next.js Middleware Route Protection, RBAC Dinamik Menü Filtreleme ve Faz 3 Altyapı Hazırlığı
 
 - **Tarih:** 3 Ekim 2026
 - **Konu:** Next.js Middleware Tabanlı Rota Koruması (Route Protection), Rol Tabanlı Erişim Kontrolü (RBAC) ile Dinamik Menü Filtrelemesi, `useRoleAccess` Özel Hook'u, Faz 3 Supabase `gte`/`lte` Tarih Sorgu Altyapısı (`lib/date-filters.ts`) ve Şifre Güvenlik Katmanı (Re-authentication)
@@ -293,5 +293,39 @@
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - Route Protection'ın yalnızca istemci tarafında değil, Next.js Edge Middleware seviyesinde sunucu tarafında yürütülmesinin güvenlik açıklarını (yetkisiz rota sızıntılarını) nasıl kesin olarak önlediği kavrandı.
   - Hassas kullanıcı işlemlerinde (şifre yenileme vb.) re-authentication mekanizmasının oturum çalınmalarına (session hijacking) karşı kritik bir savunma hattı oluşturduğu deneyimlendi.
-- **Referans:** `PR (feature/rbac-route-protection-phase3-prep)`
+- **Referans:** `PR #82 (Commit: 67f226b, feature/rbac-route-protection-phase3-prep)`
+
+---
+
+## 📅 Gün 11: Dükkan Envanteri Kategori ve Marka Yönetimi (CRUD, React Hook Form, Zod Validasyonu ve Supabase Entegrasyonu)
+
+- **Tarih:** 4 Ekim 2026
+- **Konu:** Dükkandaki cihazların, kılıfların ve yedek parçaların sisteme eklenmesi için Kategori ve Marka Yönetimi mimarisi (`/dashboard/inventory/categories`), React Hook Form + Zod şema validasyonu ve Supabase CRUD entegrasyonu.
+- **Yapılan Çalışmalar:**
+  1. **Zod Validasyon Şemaları ve Tip Mimarisi (`types/inventory.ts`):**
+     - Kategori formu için `categoryFormSchema`: İsim (min 2 karakter), slug (küçük harf, tireli format regex kontrolü), tür (Cihaz, Aksesuar, Yedek Parça, Hizmet), açıklama ve aktiflik durumu alanları strict Zod kurallarıyla tanımlandı.
+     - Marka formu için `brandFormSchema`: Marka ismi, web sitesi (`z.string().url()`) ve menşei ülke validasyonu yapılandırıldı.
+     - `CategoryItem`, `BrandItem`, `CategoryType` TypeScript tipleri ve yardımcı `slugify()` fonksiyonu geliştirildi.
+  2. **React Hook Form & Zod Resolver Entegrasyonu:**
+     - `@hookform/resolvers/zod` ve `react-hook-form` paketleri kurularak forma bağlandı.
+     - Gerçek zamanlı form validasyonu, dinamik hata mesajları (kırmızı uyarı rozetleri), otomatik slug üretimi (kategori ismi yazılırken canlı slug doldurma) sağlandı.
+  3. **Supabase CRUD İşlemleri:**
+     - **Create (Ekleme):** Yeni kategori formu doldurulduğunda `supabase.from('categories').insert(...)` ile veritabanına kayıt atılması sağlandı; yerel state anında güncellendi.
+     - **Read (Listeleme):** Supabase `categories` tablosundan alfabetik sıralı veri çekme (`select('*').order('name')`) ve bağlantı yoksa mock veri fallback mekanizması kuruldu.
+     - **Update (Düzenleme):** Kategori düzenleme modunda form alanları doldurularak `supabase.from('categories').update(...).eq('id', id)` ile senkronize edildi.
+     - **Delete (Silme):** Onay modalı ile `supabase.from('categories').delete().eq('id', id)` tetiklendi ve listeden anında kaldırıldı.
+  4. **Kategori ve Marka Yönetimi Sekmeli Arayüzü (`/dashboard/inventory/categories`):**
+     - **Özet Metrik Kartları:** Toplam Kategori, Aktif Kategori, Cihaz Kategorisi ve Yedek Parça/Kılıf Kategorisi sayılarını gösteren 4 adet KPI kartı eklendi.
+     - **Sekmeli Yapı:** "Kategoriler (CRUD)" ve "Marka Kataloğu" sekmeleri.
+     - **Kategori Türü Filtreleri:** Tümü, Cihazlar, Aksesuar & Kılıf, Yedek Parça ve Hizmet butonları ile dinamik liste filtrelemesi.
+     - **Marka Kataloğu:** Apple, Samsung, Xiaomi, Spigen, Baseus, Deji vb. popüler markaların model sayıları, menşeileri ve yeni marka ekleme formu oluşturuldu.
+  5. **Envanter Ana Sayfası Entegrasyonu (`/dashboard/inventory`):**
+     - Envanter ana sayfasına "Kategori & Marka Yönetimi" hızlı erişim butonu eklendi.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` ile tüm 14 sayfa, TypeScript tipleri ve ESLint kuralları sıfır hata ile doğrulandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - React Hook Form ile Zod validatörünün birlikte çalışmasında kontrollü bileşenlerin re-render optimizasyonunun getirdiği performans avantajı gözlemlendi.
+  - Supabase Database arayüzünde `Relationships: []` eksikliğinin yol açtığı tip çıkarım uyarısı ve `CategoryDbClient` tip adaptörü ile tip güvenliğinin nasıl sağlanacağı öğrenildi.
+- **Referans:** `PR (feature/G11-inventory-categories-crud)`
+
 
