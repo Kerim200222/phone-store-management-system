@@ -232,8 +232,32 @@
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - Yönetici gösterge panellerinde (Executive Dashboard) görsel hiyerarşi kurmanın, renk kodlamalarının (yeşil: gelir, kırmızı: kritik stok, mavi: servis) karar alma süreçlerini nasıl hızlandırdığı deneyimlendi.
   - Bileşen tabanlı mimaride `SummaryCard` gibi atomik bileşenlerin tekrar kullanılabilir (DRY prensibi) tasarlanmasının kod bakımını ve test edilebilirliğini nasıl kolaylaştırdığı pekiştirildi.
-- **Referans:** `PR (İlgili Görev: Day 9 Issue #48, feature/G9-dashboard-summary-cards)`
+- **Referans:** `PR #80 (Commit: 8aa8cef, İlgili Görev: Day 9 Issue #48, feature/G9-dashboard-summary-cards)`
 
+---
 
+## 📅 Gün 10: Ayarlar ve Profil Yönetimi (Supabase `auth.updateUser()`)
 
-
+- **Tarih:** 2 Ekim 2026
+- **Konu:** Profil Yönetimi, İletişim Bilgileri Güncelleme, Güvenli Şifre Değiştirme, Supabase `auth.updateUser()` Fonksiyon Entegrasyonu ve Mağaza Parametreleri (Closes #49)
+- **Yapılan Çalışmalar:**
+  1. **Supabase Auth Entegrasyonu (`app/dashboard/settings/page.tsx`):**
+     - `createClient()` istemcisi kullanılarak `supabase.auth.getUser()` ile giriş yapan kullanıcının oturum kimliği (`id`), e-posta adresi ve `user_metadata` bilgileri çekildi.
+     - `supabase.auth.updateUser({ data: { full_name, phone, title, store_branch } })` API çağrısı ile kullanıcının adı, iletişim telefonu ve unvanı güvenli şekilde Supabase kimlik sağlayıcısında güncellendi.
+  2. **Güvenli Şifre Değiştirme Formu:**
+     - `supabase.auth.updateUser({ password: newPassword })` entegrasyonu ile kullanıcının şifresini doğrudan veritabanı seviyesinde tuzlanmış (salted hash) biçimde güncellemesi sağlandı.
+     - Şifre göster/gizle (`Eye` / `EyeOff`) kontrolleri ve dinamik güç göstergesi barı (zayıf, orta, güçlü, çok güçlü) eklendi.
+     - Şifre eşleşme ve asgari 6 karakter uzunluk denetimleri form seviyesinde doğrulandı.
+  3. **Resmi Mağaza & Kasa Parametreleri:**
+     - Firma ticari ünvanı, vergi dairesi/VKN, müşteri destek hattı, şube adresi, varsayılan KDV oranı ve teknik servis onarım garanti süresi alanları oluşturuldu.
+  4. **Otomasyon & Bildirim Tercihleri:**
+     - Müşteri onarım SMS bilgilendirmesi, kritik stok eşik alarmları ve günlük kasa kapanış raporu e-postası tercihleri için interaktif açma/kapama butonları geliştirildi.
+  5. **UI & Rol Tabanlı Güvenlik (RBAC) Göstergeleri:**
+     - Yönetici (Admin) rol doğrulaması, aktif oturum ID etiketi, canlı yenileme (`RefreshCw`) butonu ve Next.js Middleware koruma bilgisi görselleştirildi.
+  6. **Kilometre Taşı Vitrini & Derleme:**
+     - `app/page.tsx` üzerindeki kilometre taşı tablosuna 10. gün kartı (G10: Profil - auth.updateUser) eklendi ve Faz 2 aşaması (G6-G10) güncellendi.
+     - `npm run build` ile tüm 13 sayfa, ESLint ve TypeScript tip doğrulamaları sıfır hata ile tamamlandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Supabase Auth'ta kullanıcı metadata'sının (`user_metadata`) profil özelleştirmelerinde sağladığı esneklik ve `auth.updateUser()` fonksiyonunun tek bir JWT token yenileme isteğiyle hem veriyi hem de kimlik durumunu senkronize etme yeteneği incelendi.
+  - Şifre değişikliklerinde istemci tarafında parola karmaşıklığı denetiminin kullanıcı güvenliği açısından önemi tecrübe edildi.
+- **Referans:** `PR (İlgili Görev: Day 10 Issue #49, feature/G10-settings-profile-management)`
