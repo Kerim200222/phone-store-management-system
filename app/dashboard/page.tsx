@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useState } from "react"
 import Link from "next/link"
 import { 
   Receipt, 
@@ -16,7 +16,8 @@ import {
   KeyRound, 
   TrendingUp
 } from "lucide-react"
-import { createClient } from "@/utils/supabase/client"
+import { useRoleAccess } from "@/hooks/use-role-access"
+import { getDateRange, DateFilterType } from "@/lib/date-filters"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,33 +25,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SummaryCard } from "@/components/dashboard/summary-card"
 
 export default function DashboardPage() {
-  const [userEmail, setUserEmail] = useState<string>("admin@truncgiller.com")
-  const [activeFilter, setActiveFilter] = useState<"today" | "week" | "month">("today")
+  const { userEmail, isAdmin } = useRoleAccess()
+  const [activeFilter, setActiveFilter] = useState<DateFilterType>("today")
 
-  useEffect(() => {
-    async function loadUser() {
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user && user.email) {
-          setUserEmail(user.email)
-        } else {
-          const match = document.cookie.match(/(?:^|; )phonestore_session=([^;]+)/)
-          if (match) {
-            try {
-              const parsed = JSON.parse(decodeURIComponent(match[1]))
-              if (parsed?.email) setUserEmail(parsed.email)
-            } catch {
-              // ignore
-            }
-          }
-        }
-      } catch {
-        // Fallback demo user
-      }
-    }
-    loadUser()
-  }, [])
+  // Faz 3 Supabase gte/lte sorgu hazırlığı
+  const dateRange = getDateRange(activeFilter)
 
   return (
     <div className="space-y-6">
@@ -71,8 +50,14 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Zaman Aralığı Filtresi & Hızlı Bağlantılar */}
+        {/* Zaman Aralığı Filtresi (Faz 3 gte/lte Uyumlu) & Hızlı Bağlantılar */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Aktif Tarih Aralığı Etiketi */}
+          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px] text-slate-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+            <span>Aralık: <strong className="text-slate-200">{dateRange.displayRange}</strong></span>
+          </div>
+
           <div className="p-1 rounded-lg bg-slate-900 border border-slate-800 flex items-center text-xs">
             <button
               type="button"
@@ -87,9 +72,9 @@ export default function DashboardPage() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveFilter("week")}
+              onClick={() => setActiveFilter("this_week")}
               className={`px-2.5 py-1 rounded-md transition-all ${
-                activeFilter === "week" 
+                activeFilter === "this_week" 
                   ? "bg-cyan-600 text-white font-semibold shadow-sm" 
                   : "text-slate-400 hover:text-slate-200"
               }`}
@@ -98,9 +83,9 @@ export default function DashboardPage() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveFilter("month")}
+              onClick={() => setActiveFilter("this_month")}
               className={`px-2.5 py-1 rounded-md transition-all ${
-                activeFilter === "month" 
+                activeFilter === "this_month" 
                   ? "bg-cyan-600 text-white font-semibold shadow-sm" 
                   : "text-slate-400 hover:text-slate-200"
               }`}
@@ -109,12 +94,16 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          <Link href="/dashboard/settings">
-            <Button variant="outline" size="sm" className="border-purple-800/60 bg-purple-950/30 text-purple-300 hover:bg-purple-900/40 hover:text-white text-xs h-8">
-              <Settings className="w-3.5 h-3.5 mr-1.5 text-purple-400" />
-              Ayarlar
-            </Button>
-          </Link>
+          {/* RBAC: Sadece Admin ise Ayarlar butonu gösterilir */}
+          {isAdmin && (
+            <Link href="/dashboard/settings">
+              <Button variant="outline" size="sm" className="border-purple-800/60 bg-purple-950/30 text-purple-300 hover:bg-purple-900/40 hover:text-white text-xs h-8">
+                <Settings className="w-3.5 h-3.5 mr-1.5 text-purple-400" />
+                Ayarlar
+              </Button>
+            </Link>
+          )}
+
           <Link href="/">
             <Button variant="outline" size="sm" className="border-slate-800 bg-slate-900/80 text-slate-300 hover:text-white text-xs h-8">
               <Layers className="w-3.5 h-3.5 mr-1.5 text-cyan-400" />
