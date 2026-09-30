@@ -1,12 +1,14 @@
 "use client"
 
 import React, { useState } from "react"
+import Link from "next/link"
 import { 
   Package, 
   Search, 
   Plus, 
   AlertCircle, 
-  Hash 
+  Hash,
+  FolderTree
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -121,10 +123,18 @@ export default function InventoryDashboardPage() {
           </p>
         </div>
 
-        <Button size="sm" className="bg-cyan-600 hover:bg-cyan-500 text-white font-medium gap-1.5 shadow-md shadow-cyan-600/20 text-xs h-8">
-          <Plus className="w-4 h-4" />
-          Yeni Ürün Ekle
-        </Button>
+        <div className="flex items-center gap-2.5">
+          <Link href="/dashboard/inventory/categories">
+            <Button variant="outline" size="sm" className="border-purple-800/60 bg-purple-950/30 text-purple-300 hover:bg-purple-900/40 hover:text-white text-xs h-8 gap-1.5 shadow-sm">
+              <FolderTree className="w-3.5 h-3.5 text-purple-400" />
+              Kategori & Marka Yönetimi
+            </Button>
+          </Link>
+          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-500 text-white font-medium gap-1.5 shadow-md shadow-cyan-600/20 text-xs h-8">
+            <Plus className="w-4 h-4" />
+            Yeni Ürün Ekle
+          </Button>
+        </div>
       </div>
 
       {/* KPI Stats */}
