@@ -21,54 +21,65 @@ export interface Database {
         Row: Role
         Insert: RoleInsert
         Update: RoleUpdate
+        Relationships: []
       }
       profiles: {
         Row: Profile
         Insert: ProfileInsert
         Update: ProfileUpdate
+        Relationships: []
       }
       categories: {
         Row: Category
         Insert: CategoryInsert
         Update: CategoryUpdate
+        Relationships: []
       }
       products: {
         Row: Product
         Insert: ProductInsert
         Update: ProductUpdate
+        Relationships: []
       }
       customers: {
         Row: Customer
         Insert: CustomerInsert
         Update: CustomerUpdate
+        Relationships: []
       }
       transactions: {
         Row: Transaction
         Insert: TransactionInsert
         Update: TransactionUpdate
+        Relationships: []
       }
       transaction_items: {
         Row: TransactionItem
         Insert: TransactionItemInsert
         Update: TransactionItemUpdate
+        Relationships: []
       }
       repair_tickets: {
         Row: RepairTicket
         Insert: RepairTicketInsert
         Update: RepairTicketUpdate
+        Relationships: []
       }
       repair_ticket_parts: {
         Row: RepairTicketPart
         Insert: RepairTicketPartInsert
         Update: RepairTicketPartUpdate
+        Relationships: []
       }
     }
     Views: {
       v_transactions_summary: {
         Row: TransactionSummaryView
+        Relationships: []
       }
       v_repair_tickets_summary: {
         Row: RepairTicketSummaryView
+        Relationships: []
       }
     }
     Functions: {
@@ -81,6 +92,9 @@ export interface Database {
       payment_method: PaymentMethod
       transaction_status: TransactionStatus
       repair_status: RepairStatus
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }
