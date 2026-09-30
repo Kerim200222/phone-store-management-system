@@ -3,18 +3,18 @@ import { updateSession } from '@/utils/supabase/middleware'
 
 /**
  * Next.js Middleware - Rota Koruması ve Yetki Tabanlı Erişim Kontrolü (RBAC)
- * Gün 7: Antigravity Görevi (#46)
+ * Mimari Güvenlik Katmanı:
  *
  * Kurallar:
- * 1. Oturum açmamış kullanıcılar /dashboard altındaki sayfalara erişemez -> /login sayfasına yönlendirilir.
- * 2. Oturum açmış kullanıcılar /login sayfasına gitmeye çalışırsa -> /dashboard sayfasına yönlendirilir.
- * 3. /dashboard/settings sayfası YALNIZCA 'Admin' rolüne açıktır.
- *    Personel veya yetkisiz kullanıcılar erişmeye çalıştığında -> /dashboard/unauthorized sayfasına yönlendirilir.
+ * 1. Korumalı rotalar (/dashboard/*, /settings/*, /admin/*) oturumsuz kullanıcılara kapalıdır -> /login sayfasına yönlendirilir.
+ * 2. Zaten oturum açmış kullanıcılar /login veya /register sayfalarına girmeye çalıştığında -> /dashboard sayfasına yönlendirilir.
+ * 3. Yalnızca 'Admin' erişimine açık rotalar (/dashboard/settings, /settings, /admin) 'Personel' rolü için 403 / yetkisiz sayfasına (/dashboard/unauthorized) yönlendirilir.
+ * 4. Statik dosyalar (_next/static, _next/image, favicon, resimler) matcher dışına alınarak yüksek performans ve sıfır gereksiz execution sağlanır.
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // 1. Supabase SSR oturumunu güncelle
+  // 1. Supabase SSR oturumunu yenile ve doğrula
   const { user, response } = await updateSession(request)
 
   // 2. Yedek/Demo oturum çerezini kontrol et
@@ -32,10 +32,10 @@ export async function middleware(request: NextRequest) {
   const isAuthenticated = Boolean(user || demoSession)
 
   // Kullanıcının rolünü tespit et (Öncelik: Supabase metadata -> demo session -> e-posta analizi)
-  let userRole: string = 'Personel'
-  if (user?.user_metadata?.role) {
+  let userRole: 'Admin' | 'Personel' = 'Personel'
+  if (user?.user_metadata?.role === 'Admin' || user?.user_metadata?.role === 'Personel') {
     userRole = user.user_metadata.role
-  } else if (demoSession?.role) {
+  } else if (demoSession?.role === 'Admin' || demoSession?.role === 'Personel') {
     userRole = demoSession.role
   } else if (user?.email) {
     userRole = user.email.toLowerCase().includes('admin') ? 'Admin' : 'Personel'
@@ -43,21 +43,32 @@ export async function middleware(request: NextRequest) {
     userRole = demoSession.email.toLowerCase().includes('admin') ? 'Admin' : 'Personel'
   }
 
-  // A. KORUMALI ROTA KONTROLÜ: /dashboard ve alt rotaları
-  const isDashboardRoute = pathname === '/dashboard' || pathname.startsWith('/dashboard/')
+  // -------------------------------------------------------------
+  // A. KORUMALI ROTA GRUBU: /dashboard, /settings, /admin
+  // -------------------------------------------------------------
+  const isProtectedPath = 
+    pathname.startsWith('/dashboard') || 
+    pathname.startsWith('/settings') || 
+    pathname.startsWith('/admin')
 
-  if (isDashboardRoute) {
-    // Oturum açılmamışsa /login sayfasına yönlendir (ve geri dönüş yolunu parametre olarak ekle)
+  if (isProtectedPath) {
+    // Oturum açılmamışsa -> /login sayfasına yönlendir
     if (!isAuthenticated) {
       const redirectUrl = new URL('/login', request.url)
       redirectUrl.searchParams.set('redirectTo', pathname)
       return NextResponse.redirect(redirectUrl)
     }
 
-    // B. YETKİ TABANLI ERİŞİM KONTROLÜ (RBAC): /dashboard/settings SADECE 'Admin' rolüne açıktır
-    const isAdminOnlyRoute = pathname === '/dashboard/settings' || pathname.startsWith('/dashboard/settings/')
+    // -----------------------------------------------------------
+    // B. YETKİ TABANLI ERİŞİM KONTROLÜ (RBAC): SADECE 'Admin' Rotaları
+    // -----------------------------------------------------------
+    const isAdminOnlyPath = 
+      pathname === '/dashboard/settings' ||
+      pathname.startsWith('/dashboard/settings/') ||
+      pathname.startsWith('/settings') ||
+      pathname.startsWith('/admin')
 
-    if (isAdminOnlyRoute && userRole !== 'Admin') {
+    if (isAdminOnlyPath && userRole !== 'Admin') {
       const unauthorizedUrl = new URL('/dashboard/unauthorized', request.url)
       unauthorizedUrl.searchParams.set('from', pathname)
       unauthorizedUrl.searchParams.set('role', userRole)
@@ -67,8 +78,12 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // C. GİRİŞ SAYFASI KONTROLÜ: Zaten oturum açmış kullanıcı /login sayfasına girerse /dashboard'a yönlendir
-  if (pathname === '/login' && isAuthenticated) {
+  // -------------------------------------------------------------
+  // C. AUTH SAYFALARI: /login ve /register
+  // Oturum açmış kullanıcı buralara girerse doğrudan panele yönlendir
+  // -------------------------------------------------------------
+  const isAuthPage = pathname === '/login' || pathname === '/register'
+  if (isAuthPage && isAuthenticated) {
     const redirectParam = request.nextUrl.searchParams.get('redirectTo')
     const destination = redirectParam && redirectParam.startsWith('/dashboard') ? redirectParam : '/dashboard'
     return NextResponse.redirect(new URL(destination, request.url))
@@ -80,11 +95,12 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Aşağıdaki yollarla başlayan istekleri eşleştir:
-     * - /dashboard (ve tüm alt rotaları)
-     * - /login
+     * Match all request paths except for:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - static images (svg, png, jpg, jpeg, gif, webp)
      */
-    '/dashboard/:path*',
-    '/login',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

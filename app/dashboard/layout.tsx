@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { 
   Smartphone, 
   LayoutDashboard, 
@@ -14,60 +14,60 @@ import {
   LogOut, 
   Menu, 
   X, 
-  ExternalLink,
-  Store,
-  ChevronRight
+  ExternalLink, 
+  Store, 
+  ChevronRight,
+  Shield,
+  ShieldAlert
 } from "lucide-react"
-import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { useRoleAccess } from "@/hooks/use-role-access"
+import { NavItemConfig } from "@/types/auth"
 
-interface NavItem {
-  title: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  badge?: string
-  badgeVariant?: "default" | "outline" | "secondary"
-  adminOnly?: boolean
-}
-
-const navItems: NavItem[] = [
+const navItems: NavItemConfig[] = [
   {
     title: "Ana Sayfa",
     href: "/dashboard",
-    icon: LayoutDashboard
+    icon: LayoutDashboard,
+    allowedRoles: ["Admin", "Personel"],
   },
   {
     title: "Kasa",
     href: "/dashboard/transactions",
     icon: Receipt,
-    badge: "₺ Kasa"
+    badge: "₺ Kasa",
+    allowedRoles: ["Admin", "Personel"],
   },
   {
     title: "Stok",
     href: "/dashboard/inventory",
     icon: Package,
-    badge: "IMEI"
+    badge: "IMEI",
+    allowedRoles: ["Admin", "Personel"],
   },
   {
     title: "Teknik Servis",
     href: "/dashboard/repairs",
     icon: Wrench,
-    badge: "G5"
+    badge: "G5",
+    allowedRoles: ["Admin", "Personel"],
   },
   {
     title: "Müşteriler",
     href: "/dashboard/customers",
     icon: Users,
-    badge: "Cari"
+    badge: "Cari",
+    allowedRoles: ["Admin", "Personel"],
   },
   {
     title: "Ayarlar",
     href: "/dashboard/settings",
     icon: Settings,
     badge: "Admin",
-    adminOnly: true
-  }
+    adminOnly: true,
+    allowedRoles: ["Admin"],
+  },
 ]
 
 export default function DashboardLayout({
@@ -76,60 +76,34 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [userEmail, setUserEmail] = useState<string>("admin@truncgiller.com")
-  const [userRole, setUserRole] = useState<string>("Admin")
-  const [loading, setLoading] = useState(true)
 
-  // Oturum ve profil bilgilerini yükle
-  useEffect(() => {
-    async function loadUser() {
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user && user.email) {
-          setUserEmail(user.email)
-          const role = user.user_metadata?.role || (user.email.includes("personel") ? "Personel" : "Admin")
-          setUserRole(role)
-        } else {
-          // Demo/Çerez oturumunu kontrol et
-          const match = document.cookie.match(/(?:^|; )phonestore_session=([^;]+)/)
-          if (match) {
-            try {
-              const parsed = JSON.parse(decodeURIComponent(match[1]))
-              if (parsed?.email) setUserEmail(parsed.email)
-              if (parsed?.role) setUserRole(parsed.role)
-            } catch {
-              // ignore
-            }
-          }
-        }
-      } catch {
-        // Fallback demo user
-      } finally {
-        setLoading(false)
+  // Use custom RBAC hook
+  const { 
+    userRole, 
+    userEmail, 
+    isAdmin, 
+    isLoading, 
+    signOut 
+  } = useRoleAccess()
+
+  // RBAC Navigation Filtering using useMemo
+  const filteredNavItems = useMemo(() => {
+    return navItems.filter((item) => {
+      if (item.adminOnly) {
+        return userRole === "Admin"
       }
-    }
-    loadUser()
-  }, [])
+      if (item.allowedRoles && item.allowedRoles.length > 0) {
+        return item.allowedRoles.includes(userRole)
+      }
+      return true
+    })
+  }, [userRole])
 
   // Sayfa değiştiğinde mobil menüyü otomatik kapat
   useEffect(() => {
     setIsMobileMenuOpen(false)
   }, [pathname])
-
-  // Çıkış yapma işlemi
-  const handleSignOut = async () => {
-    try {
-      const supabase = createClient()
-      await supabase.auth.signOut()
-    } catch {
-      // ignore
-    }
-    document.cookie = "phonestore_session=; path=/; max-age=0; SameSite=Lax"
-    router.push("/login")
-  }
 
   // Kullanıcı baş harfleri avatarı
   const userInitials = userRole === "Admin" ? "AD" : "PE"
@@ -167,14 +141,17 @@ export default function DashboardLayout({
           </Link>
         </div>
 
-        {/* Sidebar Navigasyon Linkleri */}
+        {/* Sidebar Navigasyon Linkleri - RBAC Filtrelenmiş Liste */}
         <div className="flex-1 flex flex-col justify-between overflow-y-auto px-3 py-4 space-y-6">
           <nav className="space-y-1">
-            <div className="px-3 pb-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              Yönetim Menüsü
+            <div className="flex items-center justify-between px-3 pb-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+              <span>Yönetim Menüsü</span>
+              <Badge variant="outline" className="text-[9px] px-1 py-0 border-slate-800 text-slate-400">
+                RBAC
+              </Badge>
             </div>
 
-            {navItems.map((item) => {
+            {filteredNavItems.map((item) => {
               const isActive = pathname === item.href
               const Icon = item.icon
 
@@ -218,14 +195,18 @@ export default function DashboardLayout({
           <div className="space-y-3 pt-4 border-t border-slate-800/80">
             <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold text-slate-400">Sistem Durumu</span>
-                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Aktif (v1.2)
+                <span className="text-[10px] font-semibold text-slate-400">Erişim Seviyesi</span>
+                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${
+                  isAdmin ? "text-purple-400" : "text-blue-400"
+                }`}>
+                  {isAdmin ? <Shield className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
+                  {userRole} Rolü
                 </span>
               </div>
               <p className="text-[10px] text-slate-500 leading-tight">
-                Supabase Auth & Next.js 14 Middleware korumalı mimari
+                {isAdmin 
+                  ? "Tam yönetici yetkisi ile tüm modüllere erişim açık." 
+                  : "Personel modu: Ayarlar paneli RBAC ile gizlenmiştir."}
               </p>
             </div>
 
@@ -277,9 +258,9 @@ export default function DashboardLayout({
                 </Button>
               </div>
 
-              {/* Mobil Navigasyon Linkleri */}
+              {/* Mobil Navigasyon Linkleri - RBAC Filtrelenmiş */}
               <nav className="space-y-1">
-                {navItems.map((item) => {
+                {filteredNavItems.map((item) => {
                   const isActive = pathname === item.href
                   const Icon = item.icon
 
@@ -314,13 +295,15 @@ export default function DashboardLayout({
               <div className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 text-xs">
                 <div className="text-slate-400 text-[10px]">Oturum Açan:</div>
                 <div className="font-mono text-cyan-300 font-semibold truncate text-[11px]">{userEmail}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Rol: <span className="text-white font-medium">{userRole}</span></div>
+                <div className="text-[10px] text-slate-400 mt-0.5">
+                  Rol: <span className="text-white font-medium">{userRole}</span>
+                </div>
               </div>
 
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleSignOut}
+                onClick={signOut}
                 className="w-full border-rose-900/50 bg-rose-950/30 text-rose-300 hover:bg-rose-900/50 text-xs justify-center gap-2"
               >
                 <LogOut className="w-4 h-4" />
@@ -355,7 +338,7 @@ export default function DashboardLayout({
               <ChevronRight className="w-3.5 h-3.5 text-slate-600 hidden sm:inline" />
               <span className="font-semibold text-white sm:text-sm">{currentTitle}</span>
               <Badge variant="outline" className="hidden md:inline-flex border-cyan-500/30 text-cyan-400 bg-cyan-500/10 text-[10px] ml-1">
-                Faz 2: Aktif
+                RBAC Aktif
               </Badge>
             </div>
           </div>
@@ -369,12 +352,12 @@ export default function DashboardLayout({
               </div>
               <div className="hidden sm:block text-left">
                 <div className="text-xs font-semibold text-slate-200 leading-tight truncate max-w-[150px]">
-                  {loading ? "Yükleniyor..." : userEmail}
+                  {isLoading ? "Yükleniyor..." : userEmail}
                 </div>
                 <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
                   <span>Rol:</span>
                   <Badge 
-                    className={`text-[9px] px-1 py-0 border-none font-semibold ${
+                    className={`text-[9px] px-1.5 py-0 border-none font-semibold ${
                       userRole === "Admin" 
                         ? "bg-purple-500/20 text-purple-300" 
                         : "bg-blue-500/20 text-blue-300"
@@ -390,7 +373,7 @@ export default function DashboardLayout({
             <Button
               variant="outline"
               size="sm"
-              onClick={handleSignOut}
+              onClick={signOut}
               className="border-rose-900/40 bg-rose-950/20 text-rose-300 hover:bg-rose-900/40 hover:text-white text-xs h-8 px-2.5 gap-1.5 shadow-sm"
               title="Oturumu Güvenli Şekilde Kapat"
             >

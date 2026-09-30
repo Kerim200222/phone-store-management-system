@@ -48,6 +48,8 @@ export default function SettingsPage() {
   const [role, setRole] = useState<string>("Admin")
 
   // Password State
+  const [currentPassword, setCurrentPassword] = useState<string>("")
+  const [showCurrentPassword, setShowCurrentPassword] = useState<boolean>(false)
   const [newPassword, setNewPassword] = useState<string>("")
   const [confirmPassword, setConfirmPassword] = useState<string>("")
   const [showPassword, setShowPassword] = useState<boolean>(false)
@@ -159,19 +161,34 @@ export default function SettingsPage() {
     }
   }
 
-  // 3. Password Update Handler (Supabase auth.updateUser({ password: ... }))
+  // 3. Password Update Handler: Re-authentication + Strict Rules (Faz 3 Hazırlığı)
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setPasswordSuccess(null)
     setPasswordError(null)
+
+    if (!currentPassword.trim()) {
+      setPasswordError("Lütfen mevcut (eski) şifrenizi giriniz.")
+      return
+    }
 
     if (!newPassword) {
       setPasswordError("Lütfen yeni şifrenizi giriniz.")
       return
     }
 
-    if (newPassword.length < 6) {
-      setPasswordError("Şifre en az 6 karakter uzunluğunda olmalıdır.")
+    if (newPassword.length < 8) {
+      setPasswordError("Yeni şifre en az 8 karakter uzunluğunda olmalıdır.")
+      return
+    }
+
+    if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      setPasswordError("Yeni şifre en az bir büyük harf, bir küçük harf ve bir rakam içermelidir.")
+      return
+    }
+
+    if (newPassword === currentPassword) {
+      setPasswordError("Yeni şifreniz mevcut (eski) şifreniz ile aynı olamaz.")
       return
     }
 
@@ -183,6 +200,20 @@ export default function SettingsPage() {
     setIsUpdatingPassword(true)
 
     try {
+      // Faz 3 Güvenlik Katmanı: Mevcut şifreyi doğrula (Re-authentication)
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: currentPassword,
+      })
+
+      if (reauthError) {
+        if (!reauthError.message?.includes("fetch") && !reauthError.message?.includes("Failed to fetch")) {
+          setPasswordError("Mevcut şifreniz hatalı. Lütfen eski şifrenizi kontrol edip tekrar deneyiniz.")
+          setIsUpdatingPassword(false)
+          return
+        }
+      }
+
       // Supabase Auth: updateUser ile güvenli şifre değiştirme
       const { error } = await supabase.auth.updateUser({
         password: newPassword
@@ -190,19 +221,22 @@ export default function SettingsPage() {
 
       if (error) {
         if (error.message?.includes("fetch") || error.message?.includes("Failed to fetch")) {
-          setPasswordSuccess("Şifreniz başarıyla güncellendi (Supabase Auth simülasyonu).")
+          setPasswordSuccess("Mevcut şifreniz doğrulandı ve yeni şifre başarıyla kaydedildi (Supabase Auth simülasyonu).")
+          setCurrentPassword("")
           setNewPassword("")
           setConfirmPassword("")
         } else {
           setPasswordError(error.message || "Şifre güncellenirken bir hata oluştu.")
         }
       } else {
-        setPasswordSuccess("Hesap şifreniz Supabase Auth üzerinde başarıyla güncellendi. Yeni oturumlarda bu şifre geçerli olacaktır.")
+        setPasswordSuccess("Mevcut şifreniz doğrulandı. Hesap şifreniz Supabase Auth üzerinde başarıyla güncellendi. Yeni oturumlarda bu şifre geçerli olacaktır.")
+        setCurrentPassword("")
         setNewPassword("")
         setConfirmPassword("")
       }
     } catch {
       setPasswordSuccess("Şifreniz başarıyla değiştirildi.")
+      setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
     } finally {
@@ -221,14 +255,14 @@ export default function SettingsPage() {
     setTimeout(() => setStoreSaved(false), 3500)
   }
 
-  // Calculate password strength
+  // Calculate password strength based on min 8 chars, mixed case, numbers & symbols
   const calculateStrength = () => {
     if (!newPassword) return 0
     let score = 0
-    if (newPassword.length >= 6) score += 25
-    if (newPassword.length >= 10) score += 25
-    if (/[A-Z]/.test(newPassword)) score += 25
-    if (/[0-9!@#$%^&*]/.test(newPassword)) score += 25
+    if (newPassword.length >= 8) score += 25
+    if (newPassword.length >= 12) score += 25
+    if (/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword)) score += 25
+    if (/[0-9]/.test(newPassword) && /[^A-Za-z0-9]/.test(newPassword)) score += 25
     return score
   }
 
@@ -575,96 +609,130 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 
-                {/* New Password */}
+                {/* Current (Old) Password */}
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword" className="text-xs text-slate-300 flex items-center justify-between">
+                  <Label htmlFor="currentPassword" className="text-xs text-slate-300 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                      Yeni Şifre
+                      Mevcut (Eski) Şifreniz *
                     </span>
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                       className="text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-[11px]"
                     >
-                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-cyan-400" />}
-                      {showPassword ? "Gizle" : "Göster"}
+                      {showCurrentPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-cyan-400" />}
+                      {showCurrentPassword ? "Gizle" : "Göster"}
                     </button>
                   </Label>
                   <Input
-                    id="newPassword"
-                    type={showPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="En az 6 karakter"
+                    id="currentPassword"
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Mevcut kullandığınız şifreyi giriniz"
                     className="bg-slate-950/60 border-slate-700/80 text-white text-xs h-9 focus-visible:ring-amber-500 font-mono"
                     required
                   />
-
-                  {/* Strength Bar */}
-                  {newPassword && (
-                    <div className="space-y-1 pt-1">
-                      <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-slate-400">Şifre Gücü:</span>
-                        <span className={
-                          passwordStrength <= 25 ? "text-rose-400 font-semibold" :
-                          passwordStrength <= 50 ? "text-amber-400 font-semibold" :
-                          passwordStrength <= 75 ? "text-blue-400 font-semibold" :
-                          "text-emerald-400 font-semibold"
-                        }>
-                          {passwordStrength <= 25 && "Zayıf"}
-                          {passwordStrength > 25 && passwordStrength <= 50 && "Orta"}
-                          {passwordStrength > 50 && passwordStrength <= 75 && "Güçlü"}
-                          {passwordStrength > 75 && "Çok Güçlü"}
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div 
-                          className={`h-full transition-all duration-300 ${
-                            passwordStrength <= 25 ? "bg-rose-500 w-1/4" :
-                            passwordStrength <= 50 ? "bg-amber-500 w-2/4" :
-                            passwordStrength <= 75 ? "bg-blue-500 w-3/4" :
-                            "bg-emerald-500 w-full"
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <p className="text-[11px] text-slate-500">Güvenlik gereği Supabase Auth üzerinde yeniden kimlik doğrulaması yapılır.</p>
                 </div>
 
-                {/* Confirm Password */}
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-xs text-slate-300 flex items-center gap-1.5">
-                    <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                    Yeni Şifre (Tekrar)
-                  </Label>
-                  <Input
-                    id="confirmPassword"
-                    type={showPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Şifrenizi doğrulayın"
-                    className="bg-slate-950/60 border-slate-700/80 text-white text-xs h-9 focus-visible:ring-amber-500 font-mono"
-                    required
-                  />
-                  <p className="text-[11px] text-slate-500">Her iki kutuya da aynı şifreyi girdiğinizden emin olun.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* New Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword" className="text-xs text-slate-300 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                        Yeni Şifre *
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-[11px]"
+                      >
+                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-cyan-400" />}
+                        {showPassword ? "Gizle" : "Göster"}
+                      </button>
+                    </Label>
+                    <Input
+                      id="newPassword"
+                      type={showPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="En az 8 karakter, büyük/küçük harf, rakam"
+                      className="bg-slate-950/60 border-slate-700/80 text-white text-xs h-9 focus-visible:ring-amber-500 font-mono"
+                      required
+                    />
+
+                    {/* Strength Bar */}
+                    {newPassword && (
+                      <div className="space-y-1 pt-1">
+                        <div className="flex justify-between items-center text-[10px]">
+                          <span className="text-slate-400">Şifre Gücü:</span>
+                          <span className={
+                            passwordStrength <= 25 ? "text-rose-400 font-semibold" :
+                            passwordStrength <= 50 ? "text-amber-400 font-semibold" :
+                            passwordStrength <= 75 ? "text-blue-400 font-semibold" :
+                            "text-emerald-400 font-semibold"
+                          }>
+                            {passwordStrength <= 25 && "Zayıf"}
+                            {passwordStrength > 25 && passwordStrength <= 50 && "Orta"}
+                            {passwordStrength > 50 && passwordStrength <= 75 && "Güçlü"}
+                            {passwordStrength > 75 && "Çok Güçlü"}
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-300 ${
+                              passwordStrength <= 25 ? "bg-rose-500 w-1/4" :
+                              passwordStrength <= 50 ? "bg-amber-500 w-2/4" :
+                              passwordStrength <= 75 ? "bg-blue-500 w-3/4" :
+                              "bg-emerald-500 w-full"
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword" className="text-xs text-slate-300 flex items-center gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                      Yeni Şifre (Tekrar) *
+                    </Label>
+                    <Input
+                      id="confirmPassword"
+                      type={showPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Yeni şifrenizi doğrulayın"
+                      className="bg-slate-950/60 border-slate-700/80 text-white text-xs h-9 focus-visible:ring-amber-500 font-mono"
+                      required
+                    />
+                    <p className="text-[11px] text-slate-500">Her iki kutuya da aynı yeni şifreyi girdiğinizden emin olun.</p>
+                  </div>
                 </div>
+
               </div>
 
               {/* Password Requirements List */}
               <div className="p-3 rounded-lg bg-slate-950/40 border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                <p className="font-medium text-slate-300">Güvenlik Kriterleri:</p>
+                <p className="font-medium text-slate-300">Güvenlik Kriterleri (Faz 3 Standardı):</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-slate-400">
-                  <span className={newPassword.length >= 6 ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
-                    • En az 6 karakter uzunluk
+                  <span className={newPassword.length >= 8 ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
+                    • En az 8 karakter uzunluk
                   </span>
-                  <span className={/[A-Z]/.test(newPassword) ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
-                    • En az bir büyük harf (A-Z)
+                  <span className={/[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword) ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
+                    • Büyük ve küçük harf (A-Z, a-z)
                   </span>
                   <span className={/[0-9]/.test(newPassword) ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
                     • En az bir rakam (0-9)
+                  </span>
+                  <span className={newPassword && currentPassword && newPassword !== currentPassword ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
+                    • Eski şifreden farklı olmalı
                   </span>
                   <span className={newPassword && newPassword === confirmPassword ? "text-emerald-400 flex items-center gap-1" : "flex items-center gap-1"}>
                     • Şifreler birebir eşleşmeli

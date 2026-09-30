@@ -260,4 +260,38 @@
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - Supabase Auth'ta kullanıcı metadata'sının (`user_metadata`) profil özelleştirmelerinde sağladığı esneklik ve `auth.updateUser()` fonksiyonunun tek bir JWT token yenileme isteğiyle hem veriyi hem de kimlik durumunu senkronize etme yeteneği incelendi.
   - Şifre değişikliklerinde istemci tarafında parola karmaşıklığı denetiminin kullanıcı güvenliği açısından önemi tecrübe edildi.
-- **Referans:** `PR (İlgili Görev: Day 10 Issue #49, feature/G10-settings-profile-management)`
+- **Referans:** `PR #81 (Commit: b60ff89, İlgili Görev: Day 10 Issue #49, feature/G10-settings-profile-management)`
+
+---
+
+## 📅 Gün 11: Next.js Middleware Route Protection, RBAC Dinamik Menü Filtreleme ve Faz 3 Altyapı Hazırlığı
+
+- **Tarih:** 3 Ekim 2026
+- **Konu:** Next.js Middleware Tabanlı Rota Koruması (Route Protection), Rol Tabanlı Erişim Kontrolü (RBAC) ile Dinamik Menü Filtrelemesi, `useRoleAccess` Özel Hook'u, Faz 3 Supabase `gte`/`lte` Tarih Sorgu Altyapısı (`lib/date-filters.ts`) ve Şifre Güvenlik Katmanı (Re-authentication)
+- **Yapılan Çalışmalar:**
+  1. **Next.js Middleware ile Sayfa Koruma (`middleware.ts`):**
+     - Korumalı rotalar (`/dashboard/*`, `/settings/*`, `/admin/*`) oturum açmamış kullanıcılar için engellenerek `redirectTo` parametresiyle `/login` sayfasına yönlendirildi.
+     - RBAC & Edge Cases: `/dashboard/settings` ve `/admin` rotalarına "Personel" rolündeki kullanıcıların erişimi sunucu tarafında kesilerek 403 / yetkisiz erişim sayfasına (`/dashboard/unauthorized`) yönlendirildi.
+     - Oturum açmış kullanıcıların tekrar `/login` veya `/register` sayfalarına gitmesi engellendi ve doğrudan `/dashboard` rotasına yönlendirildi.
+     - Matcher yapılandırması optimize edilerek `_next/static`, `_next/image`, `favicon.ico` ve resim dosyaları (`svg, png, jpg, webp`) middleware kapsamı dışına çıkarıldı; gereksiz execution'lar önlendi.
+  2. **Navigasyon Üzerinde Rol Tabanlı Filtreleme (RBAC UI - `app/dashboard/layout.tsx`):**
+     - Menü veri yapısındaki (`navItems`) öğelere `adminOnly?: boolean` ve `allowedRoles?: UserRole[]` tip tanımları eklendi.
+     - `useMemo` kancası kullanılarak kullanıcının rolü "Personel" olduğunda `adminOnly: true` olan "Ayarlar" sayfası hem masaüstü sidebar hem de mobil menü çekmecesinden dinamik olarak gizlendi.
+     - İstemci tarafında 403 yönlendirmeleri minimize edilerek temiz bir kullanıcı deneyimi (UX) sağlandı.
+  3. **Özel Hook Mimarisi (`hooks/use-role-access.ts` & `types/auth.ts`):**
+     - Auth ve rol kontrolü tek bir modüler hook'a taşındı. `userRole`, `isAdmin`, `isPersonel`, `canAccess`, `signOut` ve `isLoading` durumları strict TypeScript tipleriyle tanımlandı.
+  4. **Faz 3 - Tarih Aralığı Sorgu Altyapısının Mimari Hazırlığı (`lib/date-filters.ts`):**
+     - Supabase `gte` (büyük eşittir) ve `lte` (küçük eşittir) sorgularının gelecekte sorunsuz çalışabilmesi için izole yardımcı fonksiyon mimarisi kuruldu.
+     - `getDateRange(filter: 'today' | 'this_week' | 'this_month')` fonksiyonu UTC başlangıç ve bitiş ISO zaman damgalarını (`startDate`, `endDate`) ve arayüz etiketlerini üretecek şekilde tasarlandı.
+     - Gösterge paneline (`app/dashboard/page.tsx`) `DateFilterType` entegre edilerek aktif aralık etiketi arayüze yansıtıldı.
+  5. **Faz 3 - Şifre Değiştirme Güvenlik Katmanı (`app/dashboard/settings/page.tsx`):**
+     - Şifre değiştirme formuna `currentPassword` (Mevcut/Eski Şifre) alanı zorunlu olarak eklendi.
+     - Şifre güncelleme öncesinde Supabase Auth `signInWithPassword` API çağrısı ile mevcut şifrenin doğrulanması (re-authentication) sağlandı; hatalı eski şifre girişinde kullanıcıya açıklayıcı güvenlik uyarısı verildi.
+     - Yeni şifrenin eski şifre ile aynı olmaması denetimi ve güçlü parola kuralları (asgari 8 karakter, büyük harf, küçük harf, rakam) entegre edildi.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` çalıştırılarak tüm 13 sayfa ve middleware sıfır hata ve sıfır TypeScript uyarısı ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Route Protection'ın yalnızca istemci tarafında değil, Next.js Edge Middleware seviyesinde sunucu tarafında yürütülmesinin güvenlik açıklarını (yetkisiz rota sızıntılarını) nasıl kesin olarak önlediği kavrandı.
+  - Hassas kullanıcı işlemlerinde (şifre yenileme vb.) re-authentication mekanizmasının oturum çalınmalarına (session hijacking) karşı kritik bir savunma hattı oluşturduğu deneyimlendi.
+- **Referans:** `PR (feature/rbac-route-protection-phase3-prep)`
+

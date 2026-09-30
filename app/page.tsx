@@ -676,16 +676,16 @@ CREATE INDEX idx_repair_tickets_parts_gin ON public.repair_tickets USING gin (pa
             </Link>
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Faz 2: İlerliyor (G6-G10)
+              Faz 2: İlerliyor (G6-G11)
             </span>
             <span className="px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-medium">
-              Ayarlar & Profil (G10)
+              RBAC & Güvenlik (G11)
             </span>
           </div>
         </header>
 
-        {/* 10 Milestone / Task Cards (G1 - G10) */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
+        {/* 11 Milestone / Task Cards (G1 - G11) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-11 gap-2">
           <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md p-2.5">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[11px] font-semibold text-slate-300">G1: Repo</span>
@@ -758,12 +758,20 @@ CREATE INDEX idx_repair_tickets_parts_gin ON public.repair_tickets USING gin (pa
             <p className="text-[10px] text-slate-400">4 KPI (PR #80)</p>
           </Card>
 
+          <Card className="bg-slate-900/60 border-slate-800/80 backdrop-blur-md p-2.5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-slate-300">G10: Profil</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <p className="text-[10px] text-slate-400">auth (PR #81)</p>
+          </Card>
+
           <Card className="bg-slate-900/60 border-cyan-500/50 backdrop-blur-md p-2.5 shadow-lg shadow-cyan-950/30">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] font-semibold text-cyan-400">G10: Profil</span>
+              <span className="text-[11px] font-semibold text-cyan-400">G11: RBAC</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
             </div>
-            <p className="text-[10px] text-slate-300 font-medium">auth.updateUser</p>
+            <p className="text-[10px] text-slate-300 font-medium">Route Protect</p>
           </Card>
         </div>
 
