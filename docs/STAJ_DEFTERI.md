@@ -359,5 +359,41 @@
   - Barkod ve IMEI tanımlayıcılarının mağaza otomasyonunda fiziksel raf takibi ve garanti yönetimi ile nasıl entegre çalıştığı kavrandı.
 - **Referans:** `PR (feature/G12-inventory-product-add)`
 
+---
+
+## 📅 Gün 13: Cihaz (Telefon) Ekleme ve Dinamik IMEI Takip Mimarisi
+
+- **Tarih:** 6 Ekim 2026
+- **Konu:** Ürün ekleme formuna (`/dashboard/inventory/new`) "Telefon / Cihaz" varyasyonunun eklenmesi, telefon seçildiğinde stok adedi yerine 15 haneli IMEI Numarası, Batarya Sağlığı (%) ve Kozmetik Durum derecelendirmesini (Sıfır / A+ / A / B / C) zorunlu tutan dinamik form mantığı, Zod `superRefine` validasyonu ve Luhn algoritması ile IMEI doğrulama.
+- **Yapılan Çalışmalar:**
+  1. **Zod Dinamik Koşullu Validasyon Mimarisi (`types/inventory.ts`):**
+     - `productFormSchema` genişletildi: `productType` ("phone" | "accessory_part") alanı eklendi.
+     - `.superRefine` kullanılarak dinamik iş mantığı kuruldu:
+       - Eğer ürün bir **Telefon** ise; 15 haneli geçerli IMEI numarası, batarya sağlığı (%1 - %100) ve kozmetik durum seçimi (Sıfır, A+, A, B, C) zorunlu kılındı.
+       - Eğer ürün bir **Aksesuar / Parça** ise; IMEI ve batarya opsiyonel bırakılarak stok adedi girişi zorunlu tutuldu.
+     - 15 haneli TAC ve kontrol toplamı (checksum) içeren **Luhn Algoritmalı IMEI Üretici** (`generateLuhnIMEI`) fonksiyonu yazıldı.
+  2. **Dinamik Form Arayüzü & Segmented Varyasyon Switcher (`/dashboard/inventory/new`):**
+     - Formun en üstüne interaktif "📱 Telefon / Cihaz (IMEI Takipli)" ve "📦 Aksesuar & Yedek Parça (Stok Sayımlı)" varyasyon seçicisi yerleştirildi.
+     - **Telefon Varyasyonu Seçildiğinde:**
+       - "Cihaz IMEI, Batarya Sağlığı ve Kozmetik Takibi" kartı açıldı.
+       - 15 haneli IMEI girişi, karakter sayacı (`15/15`), "🎲 Geçerli IMEI Üret" butonu ve yeşil format doğrulama rozeti eklendi.
+       - İnteraktif batarya sağlığı slider'ı (renk kodlu: %90+ yeşil, %80-%89 sarı, <%80 kırmızı) ve sayısal kutusu oluşturuldu.
+       - Kozmetik durum seçimi (Sıfır, A+, A, B, C), dahili depolama (64GB, 128GB, 256GB, 512GB, 1TB), kasa rengi ve resmi garanti durumu seçenekleri entegre edildi.
+       - **Stok Adedi Mantığı:** Telefonlar tekil cihazlar olduğu için klasik stok kutusu gizlenerek yerine "🔒 Tekil Cihaz Stok Kaydı: 1 Adet" sabit rozeti getirildi.
+     - **Aksesuar / Parça Varyasyonu Seçildiğinde:**
+       - Klasik barkod, çoklu stok adedi (`stockQuantity`) ve kritik stok seviyesi (`minStockLevel`) alanları aktif tutuldu.
+  3. **Canlı Önizleme & IMEI Kartı:**
+     - Sağ kolondaki canlı önizleme kartı telefon varyasyonunda "Cihaz Etiket Kartı" moduna geçerek barkod çizgileri altında 15 haneli IMEI numarasını, batarya sağlığı göstergesini ve kozmetik derecesini anlık simüle etti.
+  4. **Veritabanı Şeması & Supabase Entegrasyonu:**
+     - `types/database.ts` üzerindeki `Product`, `ProductInsert` ve `ProductUpdate` arayüzlerine `battery_health`, `cosmetic_condition`, `storage` ve `color` alanları eklendi.
+     - `db.from('products').insert([payload])` fonksiyonu telefon varyasyonuna ait IMEI ve donanım parametrelerini Supabase veritabanına işleyecek şekilde güncellendi.
+  5. **Derleme & Kalite Kontrolü:**
+     - `npm run build` ile Next.js 14 derlemesi tüm 15 sayfa için sıfır hata ve sıfır ESLint uyarısı ile başarıyla tamamlandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Tekil seri numaralı (IMEI) yüksek değerli ürünler ile çoklu adetli sarf malzemelerinin (kılıf/kablo) aynı envanter tablosunda dinamik form validasyonları (`z.superRefine`) ile nasıl pürüzsüz yönetilebileceği deneyimlendi.
+  - IMEI numaralarının doğrulamasında kullanılan Luhn algoritmasının matematiksel yapısı incelendi.
+- **Referans:** `PR (feature/G13-device-imei-tracking)`
+
+
 
 
