@@ -211,6 +211,10 @@ export interface Product {
   model: string | null
   barcode: string | null
   imei: string | null // Telefonlar için 15 haneli benzersiz IMEI
+  battery_health?: number | null // Batarya Sağlığı (%)
+  cosmetic_condition?: string | null // Kozmetik Durum (A+, A, B, C)
+  storage?: string | null // Dahili Depolama (128GB, 256GB vb.)
+  color?: string | null // Renk
   condition: ProductCondition // 'sıfır' | 'ikinci el'
   purchase_price: number // Alış Fiyatı (TL)
   sale_price: number // Satış Fiyatı (TL)
@@ -231,6 +235,10 @@ export interface ProductInsert {
   model?: string | null
   barcode?: string | null
   imei?: string | null
+  battery_health?: number | null
+  cosmetic_condition?: string | null
+  storage?: string | null
+  color?: string | null
   condition?: ProductCondition
   purchase_price: number
   sale_price: number
@@ -251,6 +259,10 @@ export interface ProductUpdate {
   model?: string | null
   barcode?: string | null
   imei?: string | null
+  battery_health?: number | null
+  cosmetic_condition?: string | null
+  storage?: string | null
+  color?: string | null
   condition?: ProductCondition
   purchase_price?: number
   sale_price?: number
