@@ -326,6 +326,38 @@
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - React Hook Form ile Zod validatörünün birlikte çalışmasında kontrollü bileşenlerin re-render optimizasyonunun getirdiği performans avantajı gözlemlendi.
   - Supabase Database arayüzünde `Relationships: []` eksikliğinin yol açtığı tip çıkarım uyarısı ve `CategoryDbClient` tip adaptörü ile tip güvenliğinin nasıl sağlanacağı öğrenildi.
-- **Referans:** `PR (feature/G11-inventory-categories-crud)`
+- **Referans:** `PR #83 (Commit: a0c0a01, feature/G11-inventory-categories-crud)`
+
+---
+
+## 📅 Gün 12: Aksesuar ve Yedek Parça Ekleme (Yeni Ürün Ekle Formu, Barkod / IMEI Yönetimi, Finansal Marj Analizi ve Supabase Entegrasyonu)
+
+- **Tarih:** 5 Ekim 2026
+- **Konu:** Dükkandaki cihazların, kılıfların, şarj aletlerinin, ekran ve bataryaların barkodlu olarak sisteme kaydedilmesi için "Yeni Ürün Ekle" modülü (`/dashboard/inventory/new`), React Hook Form + Zod validasyonu, otomatik EAN-13 barkod üretim algoritması ve Supabase veri ekleme fonksiyonu.
+- **Yapılan Çalışmalar:**
+  1. **Zod Validasyon Şeması & Tip Tasarımı (`types/inventory.ts`):**
+     - `productFormSchema` tanımlandı: Ürün Adı (2-100 karakter), Barkod (3-50 karakter), Kategori ID & Adı, Marka (zorunlu), Model, Kondisyon (sıfır | ikinci el), Alış Fiyatı (min 0 TL), Satış Fiyatı (min 0 TL), Stok Adedi (tamsayı, min 0), Kritik Stok Seviyesi (tamsayı, min 0), 15 Haneli Cihaz IMEI (regex kontrolü), Raf/Kutu Konumu, Açıklama ve Aktiflik durumu.
+     - Türkiye GS1 standartlarına uygun 13 haneli kontrol toplamlı (checksum) EAN-13 barkod üretici yardımcı fonksiyonu (`generateEAN13Barcode`) geliştirildi.
+  2. **Yeni Ürün Ekle Sayfası Tasarımı (`/dashboard/inventory/new`):**
+     - **3 Aşamalı Form Kartları:**
+       - 1. Temel Ürün & Kategori Bilgileri (Ürün Adı, Kategori dropdown, Popüler marka hızlı seçim rozetleri, Model, Sıfır/İkinci El kondisyon düğmeleri).
+       - 2. Barkod, IMEI ve Fiziksel Depo Konumu (EAN-13 barkod okuma/üretme, 15 haneli IMEI, dükkan raf/kutu konumu).
+       - 3. Alış, Satış Fiyatı & Stok Sayımı (Alış fiyatı, Satış fiyatı, Başlangıç stok adedi, Kritik stok alarm eşiği, Garanti/Teknik notlar).
+     - **Hızlı Test Şablonları:** Tek tıkla otomatik form dolduran butonlar (📱 MagSafe Kılıf, 🔌 20W Hızlı Şarj, 🔋 Deji Batarya, 🖥️ GX OLED Ekran).
+  3. **Canlı Etiket Önizleme & Finansal Marj Analizi Paneli:**
+     - Sağ kolonda gerçek zamanlı SVG çizgili barkod simülasyonu, kondisyon rozeti, fiyat ve raf konumu önizlemesi.
+     - Dinamik finansal metrikler: Birim net kar (₺), Kar marjı (% renk kodlu rozet), Toplam satın alma maliyeti (₺), Tahmini brüt ciro (₺), Toplam beklenen kar ve zarar satışı uyarı mekanizması.
+  4. **Supabase Veri Ekleme Fonksiyonu:**
+     - `db.from('products').insert([payload])` fonksiyonu yazılarak form verileri Supabase `products` tablosuna başarıyla kaydedildi.
+     - Kayıt sonrasında kullanıcıya canlı yeşil geri bildirim banner'ı ("Envanterde Gör" ve yeni barkodla formu bir sonraki ürün için hazırlama) sunuldu.
+  5. **Envanter Ana Sayfası Entegrasyonu:**
+     - `/dashboard/inventory` sayfasındaki "Yeni Ürün Ekle" butonu doğrudan `/dashboard/inventory/new` rotasına bağlandı.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` ile Next.js 14 derlemesi tüm 15 sayfa için sıfır hata ve sıfır ESLint uyarısı ile başarıyla tamamlandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - React Hook Form'da sayısal form alanlarının `register` edilirken `{ valueAsNumber: true }` seçeneği ile bağlanmasının, Zod `z.number()` tipi ile senkronizasyonunu nasıl pürüzsüz sağladığı tecrübe edildi.
+  - Barkod ve IMEI tanımlayıcılarının mağaza otomasyonunda fiziksel raf takibi ve garanti yönetimi ile nasıl entegre çalıştığı kavrandı.
+- **Referans:** `PR (feature/G12-inventory-product-add)`
+
 
 

@@ -130,10 +130,12 @@ export default function InventoryDashboardPage() {
               Kategori & Marka Yönetimi
             </Button>
           </Link>
-          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-500 text-white font-medium gap-1.5 shadow-md shadow-cyan-600/20 text-xs h-8">
-            <Plus className="w-4 h-4" />
-            Yeni Ürün Ekle
-          </Button>
+          <Link href="/dashboard/inventory/new">
+            <Button size="sm" className="bg-cyan-600 hover:bg-cyan-500 text-white font-medium gap-1.5 shadow-md shadow-cyan-600/20 text-xs h-8">
+              <Plus className="w-4 h-4" />
+              Yeni Ürün Ekle
+            </Button>
+          </Link>
         </div>
       </div>
 
