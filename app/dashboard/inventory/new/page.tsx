@@ -4,20 +4,20 @@ import React, { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { 
-  PackagePlus, 
-  Barcode, 
-  Tag, 
-  Boxes, 
-  ArrowLeft, 
-  CheckCircle2, 
-  AlertCircle, 
-  Sparkles, 
-  TrendingUp, 
-  RefreshCw, 
-  Smartphone, 
-  Wrench, 
-  Headphones, 
+import {
+  PackagePlus,
+  Barcode,
+  Tag,
+  Boxes,
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle,
+  Sparkles,
+  TrendingUp,
+  RefreshCw,
+  Smartphone,
+  Wrench,
+  Headphones,
   Info,
   FolderTree,
   MapPin,
@@ -28,9 +28,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { 
-  productFormSchema, 
-  ProductFormData, 
+import {
+  productFormSchema,
+  ProductFormData,
   generateEAN13Barcode,
   CategoryType
 } from "@/types/inventory"
@@ -143,10 +143,10 @@ export default function NewProductPage() {
           const mapped: CategoryOption[] = data.map((c) => ({
             id: c.id,
             name: c.name,
-            type: c.description?.includes("Parça") 
-              ? "Yedek Parça" 
-              : c.description?.includes("Aksesuar") 
-                ? "Aksesuar" 
+            type: c.description?.includes("Parça")
+              ? "Yedek Parça"
+              : c.description?.includes("Aksesuar")
+                ? "Aksesuar"
                 : "Cihaz"
           }))
           setCategories(mapped)
@@ -237,7 +237,7 @@ export default function NewProductPage() {
     const buy = Number(watchedPurchasePrice) || 0
     const sell = Number(watchedSalePrice) || 0
     const qty = Number(watchedStockQuantity) || 0
-    
+
     const unitProfit = sell - buy
     const marginPercent = buy > 0 ? Math.round((unitProfit / buy) * 100) : 0
     const totalCost = buy * qty
@@ -276,7 +276,7 @@ export default function NewProductPage() {
         sale_price: Number(data.salePrice),
         stock_quantity: Number(data.stockQuantity),
         min_stock_level: Number(data.minStockLevel),
-        description: data.description 
+        description: data.description
           ? `${data.description} (Konum: ${data.shelfLocation || "Depo"})`
           : (data.shelfLocation ? `Konum: ${data.shelfLocation}` : null),
         image_url: null,
@@ -410,11 +410,10 @@ export default function NewProductPage() {
 
       {/* Success / Error Notification */}
       {feedback && (
-        <div className={`p-4 rounded-xl border flex items-start justify-between gap-3 animate-in fade-in duration-200 ${
-          feedback.type === "success" 
-            ? "bg-emerald-950/40 border-emerald-800/60 text-emerald-200" 
+        <div className={`p-4 rounded-xl border flex items-start justify-between gap-3 animate-in fade-in duration-200 ${feedback.type === "success"
+            ? "bg-emerald-950/40 border-emerald-800/60 text-emerald-200"
             : "bg-rose-950/40 border-rose-800/60 text-rose-200"
-        }`}>
+          }`}>
           <div className="flex items-center gap-2.5">
             {feedback.type === "success" ? (
               <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
@@ -436,9 +435,9 @@ export default function NewProductPage() {
                 Envanterde Gör
               </Button>
             </Link>
-            <button 
-              type="button" 
-              onClick={() => setFeedback(null)} 
+            <button
+              type="button"
+              onClick={() => setFeedback(null)}
               className="text-xs text-slate-400 hover:text-white"
             >
               ✕
@@ -449,10 +448,10 @@ export default function NewProductPage() {
 
       {/* Main Grid: Form (Left) & Preview/Analytics (Right) */}
       <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+
         {/* LEFT COLUMN: Input Fields (8 Cols) */}
         <div className="lg:col-span-8 space-y-6">
-          
+
           {/* Card 1: Temel Ürün Bilgileri */}
           <Card className="bg-slate-900/60 border-slate-800 shadow-sm">
             <CardHeader className="pb-3 border-b border-slate-800/60">
@@ -465,7 +464,7 @@ export default function NewProductPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
-              
+
               {/* Ürün Adı */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-200 flex items-center justify-between">
@@ -487,7 +486,7 @@ export default function NewProductPage() {
 
               {/* Kategori ve Marka Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
+
                 {/* Kategori Seçimi */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-slate-200 flex items-center justify-between">
@@ -529,11 +528,10 @@ export default function NewProductPage() {
                         key={b}
                         type="button"
                         onClick={() => setValue("brand", b, { shouldValidate: true })}
-                        className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
-                          watchedBrand === b 
+                        className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${watchedBrand === b
                             ? "bg-cyan-600/30 border-cyan-500 text-cyan-200 font-semibold"
                             : "bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200"
-                        }`}
+                          }`}
                       >
                         {b}
                       </button>
@@ -548,7 +546,7 @@ export default function NewProductPage() {
 
               {/* Model Uyumluluğu ve Durum Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
+
                 {/* Uyumlu Model */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-slate-200 flex items-center justify-between">
@@ -571,11 +569,10 @@ export default function NewProductPage() {
                     <button
                       type="button"
                       onClick={() => setValue("condition", "sıfır", { shouldValidate: true })}
-                      className={`text-xs rounded-md border flex items-center justify-center gap-1.5 transition-colors ${
-                        watchedCondition === "sıfır"
+                      className={`text-xs rounded-md border flex items-center justify-center gap-1.5 transition-colors ${watchedCondition === "sıfır"
                           ? "bg-emerald-950/40 border-emerald-600 text-emerald-300 font-semibold shadow-sm"
                           : "bg-slate-950/50 border-slate-800 text-slate-400 hover:text-slate-200"
-                      }`}
+                        }`}
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Sıfır (Yeni)
@@ -583,11 +580,10 @@ export default function NewProductPage() {
                     <button
                       type="button"
                       onClick={() => setValue("condition", "ikinci el", { shouldValidate: true })}
-                      className={`text-xs rounded-md border flex items-center justify-center gap-1.5 transition-colors ${
-                        watchedCondition === "ikinci el"
+                      className={`text-xs rounded-md border flex items-center justify-center gap-1.5 transition-colors ${watchedCondition === "ikinci el"
                           ? "bg-amber-950/40 border-amber-600 text-amber-300 font-semibold shadow-sm"
                           : "bg-slate-950/50 border-slate-800 text-slate-400 hover:text-slate-200"
-                      }`}
+                        }`}
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                       İkinci El / Çıkma
@@ -612,7 +608,7 @@ export default function NewProductPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
-              
+
               {/* Barkod ve Otomatik Üret Butonu */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-200 flex items-center justify-between">
@@ -645,7 +641,7 @@ export default function NewProductPage() {
 
               {/* IMEI ve Raf Konumu Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
+
                 {/* 15 Haneli IMEI (Cihazlar için) */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-slate-200 flex items-center justify-between">
@@ -693,10 +689,10 @@ export default function NewProductPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
-              
+
               {/* Fiyatlar Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
+
                 {/* Alış Fiyatı */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-slate-200 flex items-center justify-between">
@@ -745,7 +741,7 @@ export default function NewProductPage() {
 
               {/* Stok Adedi ve Kritik Stok Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
+
                 {/* Stok Adedi */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-slate-200">
@@ -841,7 +837,7 @@ export default function NewProductPage() {
 
         {/* RIGHT COLUMN: Canlı Önizleme & Finansal Analiz (4 Cols) */}
         <div className="lg:col-span-4 space-y-6">
-          
+
           {/* Kart 1: Canlı Ürün Kartı Önizlemesi */}
           <Card className="bg-gradient-to-b from-slate-900 to-slate-950 border-slate-800 shadow-md relative overflow-hidden">
             <div className="absolute top-0 right-0 w-28 h-28 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
@@ -851,7 +847,7 @@ export default function NewProductPage() {
                   Canlı Etiket Önizleme
                 </span>
                 <Badge className={
-                  watchedCondition === "sıfır" 
+                  watchedCondition === "sıfır"
                     ? "bg-emerald-950/80 border-emerald-600 text-emerald-300 text-[10px]"
                     : "bg-amber-950/80 border-amber-600 text-amber-300 text-[10px]"
                 }>
@@ -867,14 +863,14 @@ export default function NewProductPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-2">
-              
+
               {/* Barkod Görsel Temsili (SVG Barcode simulation) */}
               <div className="bg-white rounded-lg p-3 text-slate-950 flex flex-col items-center justify-center space-y-1 shadow-sm">
                 <div className="flex items-center justify-center space-x-1 h-10 w-full overflow-hidden px-2">
                   {Array.from({ length: 32 }).map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={`h-full ${i % 3 === 0 ? "w-1 bg-black" : i % 5 === 0 ? "w-1.5 bg-black" : "w-0.5 bg-black"}`} 
+                    <div
+                      key={i}
+                      className={`h-full ${i % 3 === 0 ? "w-1 bg-black" : i % 5 === 0 ? "w-1.5 bg-black" : "w-0.5 bg-black"}`}
                     />
                   ))}
                 </div>
@@ -932,7 +928,7 @@ export default function NewProductPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 pt-2">
-              
+
               {/* Birim Kar Rozeti */}
               <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-800/70">
                 <div className="flex items-center justify-between mb-1">
