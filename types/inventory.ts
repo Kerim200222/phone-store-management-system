@@ -130,6 +130,7 @@ export const productFormSchema = z
 
     shelfLocation: z.string().max(50).optional().or(z.literal("")),
     description: z.string().max(500, { message: "Açıklama 500 karakterden uzun olamaz." }).optional().or(z.literal("")),
+    imageUrl: z.string().url({ message: "Geçerli bir görsel URL adresi olmalıdır." }).optional().or(z.literal("")),
     isActive: z.boolean(),
   })
   .superRefine((data, ctx) => {
@@ -243,6 +244,7 @@ export interface InventoryItem {
   min_stock_level: number
   shelf_location?: string | null
   description?: string | null
+  image_url?: string | null
   is_active: boolean
   created_at?: string
 }
@@ -252,4 +254,62 @@ export function calculateStockStatus(quantity: number, minLevel: number): "in_st
   if (quantity <= minLevel) return "critical"
   return "in_stock"
 }
+
+// ==========================================
+// SUPABASE STORAGE GÖRSEL YÜKLEME SABİTLERİ & YARDIMCILARI
+// ==========================================
+export const STORAGE_BUCKET_NAME = "product-images"
+
+export const IMAGE_UPLOAD_RULES = {
+  MAX_FILE_SIZE_MB: 5,
+  MAX_FILE_SIZE_BYTES: 5 * 1024 * 1024,
+  ALLOWED_MIME_TYPES: ["image/jpeg", "image/png", "image/webp", "image/jpg", "image/gif"] as const,
+  ALLOWED_EXTENSIONS: [".jpg", ".jpeg", ".png", ".webp", ".gif"] as const
+}
+
+export interface SampleProductImage {
+  id: string
+  title: string
+  category: "phone" | "accessory" | "part"
+  url: string
+}
+
+export const SAMPLE_PRODUCT_IMAGES: SampleProductImage[] = [
+  {
+    id: "img-iphone",
+    title: "iPhone 15 Pro Titanyum",
+    category: "phone",
+    url: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80"
+  },
+  {
+    id: "img-samsung",
+    title: "Galaxy S23 Ultra Siyah",
+    category: "phone",
+    url: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=80"
+  },
+  {
+    id: "img-case",
+    title: "Spigen MagSafe Kılıf",
+    category: "accessory",
+    url: "https://images.unsplash.com/photo-1601593346740-925612772716?auto=format&fit=crop&w=600&q=80"
+  },
+  {
+    id: "img-charger",
+    title: "20W Type-C Hızlı Şarj",
+    category: "accessory",
+    url: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=600&q=80"
+  },
+  {
+    id: "img-screen",
+    title: "GX OLED Ekran Paneli",
+    category: "part",
+    url: "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=600&q=80"
+  },
+  {
+    id: "img-battery",
+    title: "Deji Yüksek Kapasite Batarya",
+    category: "part",
+    url: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=600&q=80"
+  }
+]
 
