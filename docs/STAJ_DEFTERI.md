@@ -357,7 +357,7 @@
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - React Hook Form'da sayısal form alanlarının `register` edilirken `{ valueAsNumber: true }` seçeneği ile bağlanmasının, Zod `z.number()` tipi ile senkronizasyonunu nasıl pürüzsüz sağladığı tecrübe edildi.
   - Barkod ve IMEI tanımlayıcılarının mağaza otomasyonunda fiziksel raf takibi ve garanti yönetimi ile nasıl entegre çalıştığı kavrandı.
-- **Referans:** `PR (feature/G12-inventory-product-add)`
+- **Referans:** `PR #84 (Commit: ae122de, feature/G12-inventory-product-add)`
 
 ---
 
@@ -392,7 +392,48 @@
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - Tekil seri numaralı (IMEI) yüksek değerli ürünler ile çoklu adetli sarf malzemelerinin (kılıf/kablo) aynı envanter tablosunda dinamik form validasyonları (`z.superRefine`) ile nasıl pürüzsüz yönetilebileceği deneyimlendi.
   - IMEI numaralarının doğrulamasında kullanılan Luhn algoritmasının matematiksel yapısı incelendi.
-- **Referans:** `PR (feature/G13-device-imei-tracking)`
+- **Referans:** `PR #85 (Commit: b5eb61e, feature/G13-device-imei-tracking)`
+
+---
+
+## 📅 Gün 14: Envanter Tablosu, Arama, Sayfalama (Pagination) ve Çok Boyutlu Filtreleme
+
+- **Tarih:** 7 Ekim 2026
+- **Konu:** Mağaza envanterindeki tüm telefonların, aksesuarların ve yedek parçaların listelendiği `/dashboard/inventory` sayfasında Shadcn Table tabanlı Data Table mimarisi, anlık arama (search), dinamik sayfalama (pagination), kategori, stok durumu (stokta var, kritik, tükendi) ve kondisyon filtreleri ile hızlı ürün detay görüntüleme modalı.
+- **Yapılan Çalışmalar:**
+  1. **Envanter Tablosu & Veri Mimarisi (`types/inventory.ts` & `app/dashboard/inventory/page.tsx`):**
+     - `InventoryItem`, `StockStatusType`, `SortField`, `SortOrder` tipleri ve `calculateStockStatus()` yardımcı fonksiyonu tanımlandı.
+     - Supabase `products` tablosundan canlı veri çekme ve zengin mağaza mock veri kümesi (12 farklı telefon, aksesuar ve yedek parça) ile hibrit veri besleme mekanizması kuruldu.
+  2. **Gelişmiş Çok Boyutlu Filtreleme & Arama:**
+     - **Serbest Arama:** Ürün adı, marka, model, barkod ve 15 haneli IMEI içinde büyük/küçük harf duyarsız arama + tek tıkla arama temizleme.
+     - **Kategori Filtresi:** Tümü, 📱 Telefonlar, 🔌 Aksesuar, 🔧 Yedek Parça hap butonları.
+     - **Stok Durumu Filtresi:** Tümü, 🟢 Stokta Var, ⚠️ Kritik Stok (min seviye altı), 🔴 Tükendi.
+     - **Kondisyon Filtresi:** Tümü, Sıfır, İkinci El.
+     - Filtreleri Sıfırla ("✕ Sıfırla") butonu.
+  3. **Çift Yönlü Sıralama (Sorting):**
+     - En Yeniler, Satış Fiyatı, Stok Adedi ve Ürün Adı (A-Z) alanlarına göre artan (↑) ve azalan (↓) dinamik sıralama.
+  4. **Dinamik Sayfalama (Pagination):**
+     - Sayfa boyutu seçici (5, 10, 20 kayıt).
+     - İlk Sayfa («), Önceki (<), Akıllı Sayfa Numaraları, Sonraki (>), Son Sayfa (») kontrolleri.
+     - Kayıt aralığı gösterimi (*"Toplam 12 üründen 1 - 5 arası gösteriliyor"*).
+     - Arama veya filtreleme yapıldığında otomatik 1. sayfaya dönme mimarisi.
+  5. **Zengin Tablo Sütunları & Hızlı Eylemler (Shadcn Table):**
+     - Ürün Adı, Marka, Model, Depolama ve Renk bilgileri.
+     - Renk kodlu Kategori rozetleri.
+     - IMEI / Barkod alanı ve tek tıkla panoya kopyalama bildirimi (Toast/Check ikonu).
+     - Telefonlar için Batarya Sağlığı (%) ve Kozmetik Derece (A+) göstergeleri.
+     - Alış / Satış Fiyatı ve hesaplanan dinamik kar marjı (+%...).
+     - Stok Seviyesi (Yeşil yeterli, Sarı kritik alarm, Kırmızı tükendi rozetleri).
+     - Göz ikonu ile açılan **Hızlı Ürün Detay Modalı (Quick View Drawer)**.
+  6. **Canlı KPI İstatistik Kartları:**
+     - Toplam Model Çeşidi, Kayıtlı IMEI Sayısı, Kritik Stok Uyarı Adedi ve Toplam Envanter Piyasa Satış Değeri dinamik olarak hesaplandı.
+  7. **Derleme & Kalite Kontrolü:**
+     - `npm run build` ile Next.js 14 derlemesi tüm 15 sayfa için sıfır hata ve sıfır ESLint uyarısı ile doğrulandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - İstemci tarafında çalışan çok filtreli (kategori, stok durumu, kondisyon, arama metni) liste operasyonlarında `useMemo` kancasının re-render maliyetlerini nasıl minimize ettiği kavrandı.
+  - Sayfalama state'inin arama ve filtre değişikliklerinde 1. sayfaya sıfırlanmasının (edge-case UX optimizasyonu) önemi tecrübe edildi.
+- **Referans:** `PR (feature/G14-inventory-table-filtering)`
+
 
 
 
