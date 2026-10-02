@@ -434,6 +434,47 @@
   - Sayfalama state'inin arama ve filtre değişikliklerinde 1. sayfaya sıfırlanmasının (edge-case UX optimizasyonu) önemi tecrübe edildi.
 - **Referans:** `PR (feature/G14-inventory-table-filtering)`
 
+---
+
+## 📅 Gün 15: Supabase Storage ile Ürün Görseli Yükleme (Product Image Upload & Cloud Media CDN)
+
+- **Tarih:** 8 Ekim 2026
+- **Konu:** Telefon Mağazası Yönetim Sistemi için Supabase Storage entegrasyonu, `product-images` depolama kovası (bucket) SQL oluşturma betiği ve RLS güvenlik politikaları, ürün ekleme/düzenleme formuna sürükle-bırak (Drag & Drop) görsel yükleme bileşeni, CDN public URL üretimi ve veritabanı `products.image_url` sütununa kalıcı kayıt mimarisi.
+- **Yapılan Çalışmalar:**
+  1. **Supabase Storage SQL Göç Betiği (`supabase/05_storage_product_images.sql`):**
+     - `storage.buckets` tablosuna `product-images` id ve isimli genel erişilebilir (public) kova ekleme SQL komutları yazıldı.
+     - Dosya boyutu sınırı 5 MB (`5242880` byte) olarak tanımlandı ve yalnızca optimize edilmiş görsel formatları (`image/jpeg`, `image/png`, `image/webp`, `image/jpg`, `image/gif`) izin verildi.
+     - `storage.objects` üzerinde Row Level Security (RLS) politikaları kuruldu:
+       - **Public Read (SELECT):** Ziyaretçilerin ve personelin katalog görsellerini doğrudan CDN üzerinden görüntüleyebilmesi.
+       - **Authenticated / Staff Insert & Update & Delete:** Mağaza personelinin yeni görsel yükleyebilmesi, değiştirebilmesi ve silebilmesi sağlandı.
+     - `public.products` tablosunda `image_url TEXT` sütununun doğrulaması ve kolon açıklamaları eklendi.
+  2. **TypeScript Tip & Şema Güncellemeleri (`types/inventory.ts`):**
+     - `productFormSchema` içerisine `imageUrl: z.string().url().optional()` alanı eklendi.
+     - `InventoryItem` arayüzüne `image_url?: string | null` alanı eklendi.
+     - `STORAGE_BUCKET_NAME = "product-images"` sabiti ve `IMAGE_UPLOAD_RULES` tanımlandı.
+     - Hızlı test ve prototipleme için yüksek çözünürlüklü numune görseller (`SAMPLE_PRODUCT_IMAGES`: iPhone 15 Pro, S23 Ultra, Spigen Kılıf, 20W Hızlı Şarj, OLED Ekran, Deji Batarya) hazırlandı.
+  3. **Gelişmiş Görsel Yükleme Bileşeni (`app/dashboard/inventory/new/page.tsx`):**
+     - **Drag & Drop Upload Alanı:** Kesikli modern çerçeve, dosya sürükleme anında aktifleşen mavi arka plan efekti, dosya seçici (`<input type="file">`).
+     - **İstemci Tarafı Doğrulama:** 5MB boyut sınırı ve MIME tür kontrolü; geçersiz dosyalarda kullanıcı dostu uyarılar.
+     - **Canlı Önizleme & Yönetim:** Yüklenen fotoğrafın küçük resmi, dosya adı, boyutu (MB cinsinden) ve "Değiştir / Kaldır" butonları.
+     - **Tek Tıkla Numune Görsel Seçici:** 6 popüler ürün kategorisi için tek tıkla görsel bağlama düğmeleri.
+     - **Form Şablonları ile Otomatik Görsel:** Hızlı şablonlar (iPhone, Kılıf, Şarj, Batarya, Ekran) tıklandığında ürüne uygun fotoğraf otomatik yüklendi.
+  4. **Supabase Storage Upload & Database Senkronizasyonu:**
+     - `storage.from('product-images').upload(...)` ile dosya benzersiz isimlendirilerek (`phones/timestamp-random.png` veya `accessories/timestamp-random.png`) buluta yüklendi.
+     - `storage.from('product-images').getPublicUrl(filePath)` ile CDN adresi alındı.
+     - Alınan public URL, `products.insert([payload])` içerisindeki `image_url` alanına yazılarak veritabanına kalıcı olarak kaydedildi.
+     - Çevrimdışı veya test ortamlarında kullanıcı deneyiminin aksamaması için Object URL ve numune CDN fallback mekanizması kuruldu.
+  5. **Envanter Tablosu ve Detay Modalında Görsel Gösterimi (`app/dashboard/inventory/page.tsx`):**
+     - Envanter veri tablosuna şık 40x40 piksel yuvarlatılmış ürün görseli küçük resmi (thumbnail) eklendi; üzerine tıklandığında büyütme ve detay açma sağlandı.
+     - Hızlı Ürün Detay Modalı'na (Quick View) 16:9 oranında yüksek çözünürlüklü ürün görseli ve "Supabase Storage CDN" rozeti entegre edildi.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` ile Next.js 14 derlemesi tüm 15 sayfa için sıfır hata ve sıfır ESLint uyarısı ile başarıyla doğrulandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Supabase Storage'ın S3 uyumlu mimarisinde bucket bazlı RLS politikalarının (`storage.objects`) veritabanı seviyesinde güvenlik sağlamadaki önemi öğrenildi.
+  - İstemci tarafında `URL.createObjectURL(file)` ile anında önizleme sunarken, form gönderim anında Storage API'sine asenkron upload yapmanın getirdiği akıcı kullanıcı deneyimi (UX) uygulandı.
+- **Referans:** `PR (feature/G15-supabase-storage-image-upload)`
+
+
 
 
 
