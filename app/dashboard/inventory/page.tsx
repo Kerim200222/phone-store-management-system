@@ -61,6 +61,7 @@ interface InventoryDbClient {
           stock_quantity: number
           min_stock_level: number
           description: string | null
+          image_url?: string | null
           created_at: string
         }> | null
         error: unknown
@@ -90,6 +91,7 @@ const initialInventoryProducts: InventoryItem[] = [
     min_stock_level: 1,
     shelf_location: "Kasa Arkası Çelik Kasa A-1",
     description: "Apple Türkiye 2 Yıl Resmi Distribütör Garantili, Orijinal Kutu",
+    image_url: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=600&q=80",
     is_active: true,
     created_at: "2026-10-01T10:00:00.000Z"
   },
@@ -112,6 +114,7 @@ const initialInventoryProducts: InventoryItem[] = [
     min_stock_level: 1,
     shelf_location: "İkinci El Teşhir Vitrini B-2",
     description: "Kılcal çiziksiz, kasada ezik yok, S-Pen eksiksiz, 6 ay servis garantili",
+    image_url: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=80",
     is_active: true,
     created_at: "2026-10-01T11:30:00.000Z"
   },
@@ -134,6 +137,7 @@ const initialInventoryProducts: InventoryItem[] = [
     min_stock_level: 1,
     shelf_location: "İkinci El Vitrin A-3",
     description: "Kutulu, faturalı, TrueTone ve FaceID sorunsuz",
+    image_url: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=80",
     is_active: true,
     created_at: "2026-09-30T14:20:00.000Z"
   },
@@ -156,6 +160,7 @@ const initialInventoryProducts: InventoryItem[] = [
     min_stock_level: 2,
     shelf_location: "Giriş Seviye Cihaz Standı",
     description: "Genpa Garantili, 67W Turbo Şarj Adaptörü Kutuda",
+    image_url: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=600&q=80",
     is_active: true,
     created_at: "2026-09-29T09:15:00.000Z"
   },
@@ -174,6 +179,7 @@ const initialInventoryProducts: InventoryItem[] = [
     min_stock_level: 8,
     shelf_location: "Kasa Arkası Çekmece 1",
     description: "Orijinal Apple Türkiye Distribütör bandrollü kutu",
+    image_url: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=600&q=80",
     is_active: true,
     created_at: "2026-09-28T16:00:00.000Z"
   },
@@ -192,6 +198,7 @@ const initialInventoryProducts: InventoryItem[] = [
     min_stock_level: 5,
     shelf_location: "Kılıf Standı Askı 4",
     description: "Air Cushion Teknolojili Darbe Emici Şeffaf Kılıf",
+    image_url: "https://images.unsplash.com/photo-1601593346740-925612772716?auto=format&fit=crop&w=600&q=80",
     is_active: true,
     created_at: "2026-09-27T11:45:00.000Z"
   },
@@ -210,6 +217,7 @@ const initialInventoryProducts: InventoryItem[] = [
     min_stock_level: 5,
     shelf_location: "Kablo Standı B-1",
     description: "Örgülü yıpranmaz kablo, 5A E-Marker çip destekli",
+    image_url: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=600&q=80",
     is_active: true,
     created_at: "2026-09-26T13:10:00.000Z"
   },
@@ -228,6 +236,7 @@ const initialInventoryProducts: InventoryItem[] = [
     min_stock_level: 3,
     shelf_location: "Kulaklık Vitrini C-2",
     description: "10mm sürücüler, 30 saat pil ömrü, AI gürültü engelleme",
+    image_url: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=600&q=80",
     is_active: true,
     created_at: "2026-09-25T15:30:00.000Z"
   },
@@ -246,6 +255,7 @@ const initialInventoryProducts: InventoryItem[] = [
     min_stock_level: 3,
     shelf_location: "Teknik Servis Çekmece 4",
     description: "True Tone ve 3D Touch destekli A+ Revize Ekran",
+    image_url: "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=600&q=80",
     is_active: true,
     created_at: "2026-09-24T10:00:00.000Z"
   },
@@ -264,6 +274,7 @@ const initialInventoryProducts: InventoryItem[] = [
     min_stock_level: 4,
     shelf_location: "Servis Rafı Bataryalar C-1",
     description: "%30 daha uzun kullanım süresi, montaj bandı kutuda",
+    image_url: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=600&q=80",
     is_active: true,
     created_at: "2026-09-23T12:00:00.000Z"
   },
@@ -363,6 +374,7 @@ export default function InventoryDashboardPage() {
               min_stock_level: p.min_stock_level,
               shelf_location: null,
               description: p.description,
+              image_url: p.image_url || null,
               is_active: true,
               created_at: p.created_at
             }
@@ -836,20 +848,45 @@ export default function InventoryDashboardPage() {
                     return (
                       <TableRow key={product.id} className="border-slate-800/60 hover:bg-slate-800/40 transition-colors">
                         
-                        {/* 1. Ürün Adı & Marka & Donanım */}
-                        <TableCell className="max-w-[280px]">
-                          <div className="font-semibold text-xs text-white line-clamp-1">
-                            {product.name}
-                          </div>
-                          <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-                            <span className="text-slate-300 font-medium">{product.brand}</span>
-                            {product.model && <span>• {product.model}</span>}
-                            {product.storage && (
-                              <span className="text-purple-300 font-mono">• {product.storage}</span>
-                            )}
-                            {product.color && (
-                              <span className="text-slate-400">• {product.color}</span>
-                            )}
+                        {/* 1. Ürün Görseli, Adı & Marka */}
+                        <TableCell className="max-w-[320px]">
+                          <div className="flex items-center gap-3">
+                            <div
+                              onClick={() => setSelectedProductForDetail(product)}
+                              className="w-10 h-10 rounded-lg overflow-hidden bg-slate-950 border border-slate-800/80 flex-shrink-0 flex items-center justify-center cursor-pointer group/img hover:border-cyan-500 transition-colors"
+                              title="Detay & Görseli İncele"
+                            >
+                              {product.image_url ? (
+                                <img
+                                  src={product.image_url}
+                                  alt={product.name}
+                                  className="w-full h-full object-contain p-0.5 group-hover/img:scale-110 transition-transform duration-200"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-slate-600 bg-slate-900/50">
+                                  {isPhone ? <Smartphone className="w-5 h-5 text-slate-500" /> : <Package className="w-5 h-5 text-slate-500" />}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div
+                                onClick={() => setSelectedProductForDetail(product)}
+                                className="font-semibold text-xs text-white line-clamp-1 hover:text-cyan-400 cursor-pointer transition-colors"
+                              >
+                                {product.name}
+                              </div>
+                              <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                <span className="text-slate-300 font-medium">{product.brand}</span>
+                                {product.model && <span className="truncate max-w-[130px]">• {product.model}</span>}
+                                {product.storage && (
+                                  <span className="text-purple-300 font-mono">• {product.storage}</span>
+                                )}
+                                {product.color && (
+                                  <span className="text-slate-400">• {product.color}</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </TableCell>
 
@@ -1171,6 +1208,31 @@ export default function InventoryDashboardPage() {
             {/* Modal Body */}
             <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
               
+              {/* Ürün Görseli (Supabase Storage) */}
+              <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center group shadow-inner">
+                {selectedProductForDetail.image_url ? (
+                  <>
+                    <img
+                      src={selectedProductForDetail.image_url}
+                      alt={selectedProductForDetail.name}
+                      className="w-full h-full object-contain p-2"
+                    />
+                    <div className="absolute top-2 right-2 bg-slate-900/85 backdrop-blur-sm text-[10px] text-cyan-300 font-mono px-2 py-0.5 rounded-full border border-cyan-500/30">
+                      Supabase Storage CDN
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-slate-500 gap-1.5 p-4 text-center">
+                    {selectedProductForDetail.imei ? (
+                      <Smartphone className="w-8 h-8 text-slate-600 stroke-[1.5]" />
+                    ) : (
+                      <Package className="w-8 h-8 text-slate-600 stroke-[1.5]" />
+                    )}
+                    <span className="text-xs text-slate-400">Ürün Görseli Bulunmuyor</span>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
                   {selectedProductForDetail.category}
