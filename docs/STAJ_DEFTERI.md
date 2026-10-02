@@ -479,3 +479,31 @@
 
 
 
+
+
+---
+
+## 📅 Gün 16: Medya ve Görsel Optimizasyonu (Next/Image, Core Web Vitals LCP & CLS İyileştirmeleri, Supabase Remote Patterns ve Yeniden Kullanılabilir CustomImage / CustomAvatar Mimarisi)
+
+- **Tarih:** 9 Ekim 2026
+- **Konu:** Projedeki tüm standart HTML `<img>` etiketlerinin `next/image` (`<Image />`) bileşeni ile refactor edilmesi, Core Web Vitals (LCP - Largest Contentful Paint ve CLS - Cumulative Layout Shift) performans metriklerinin optimize edilmesi, Supabase Storage ve harici CDN domainleri için `remotePatterns` konfigürasyonu, responsive `sizes`, `priority`, skeleton shimmer ve tip güvenli fallback mekanizmalarına sahip `<CustomImage />` ve `<CustomAvatar />` soyutlamalarının geliştirilmesi.
+- **Yapılan Çalışmalar:**
+  1. **Dış Kaynak (Remote Images) & Format Konfigürasyonu (`next.config.mjs`):**
+     - Modern görsel sıkıştırma formatları (`image/avif`, `image/webp`) etkinleştirildi.
+     - Supabase Storage endpoint'i (`**.supabase.co/storage/v1/object/public/**`), Unsplash (`images.unsplash.com`), Google/GitHub avatarları ve yerel placeholder servisleri için `remotePatterns` tanımlandı.
+  2. **Yeniden Kullanılabilir `<CustomImage />` Bileşeni (`components/ui/custom-image.tsx`):**
+     - Next.js `<Image />` bileşenini sarmalayan, SVG shimmer efektli `blurDataURL` ve animasyonlu Skeleton loader mimarisi kuruldu.
+     - Yerel `blob:` ve `data:` URL'leri (kullanıcının dosya seçtiği anlık önizlemeler) otomatik tespit edilerek `unoptimized={true}` ile Next.js sunucu optimizasyon hatası alması önlendi.
+     - Hatalı veya yüklenemeyen görseller için `onError` dinleyicisi ile zarif fallback (varsayılan resim/ikon) gösterimi sağlandı.
+  3. **Yeniden Kullanılabilir `<CustomAvatar />` Bileşeni (`components/ui/custom-avatar.tsx`):**
+     - Kullanıcı profilleri için `sm`, `md`, `lg`, `xl` boyutlandırma, online/offline durum gösterge rozeti ve kırık resimlerde otomatik baş harf (initials) veya kullanıcı ikonu fallback desteği kodlandı.
+  4. **HTML `<img>` Etiketlerinin Eksiksiz Refactor Edilmesi:**
+     - **Yeni Ürün Formu (`app/dashboard/inventory/new/page.tsx`):** Seçilen görsel önizlemesi, numune görsel butonları ve canlı etiket önizleme kartındaki `<img>` etiketleri `<CustomImage />` ile değiştirildi. Ekran üstü (Above-the-Fold) önizleme için `priority` ve responsive `sizes` eklendi; CLS sıfırlandı.
+     - **Envanter Tablosu & Detay Modalı (`app/dashboard/inventory/page.tsx`):** Tablo satırlarındaki küçük resimler (thumbnail) ve Hızlı Önizleme Modalı'ndaki 16:9 oranlı görsel `<CustomImage fill ...>` ile optimize edildi.
+     - **Layout ve Ayarlar:** Header profil alanı ve ayarlar sayfası `<CustomAvatar />` ile modernize edildi.
+  5. **Core Web Vitals & Kalite Doğrulaması:**
+     - `npm run build` komutu çalıştırılarak tüm 15 statik rota sıfır hata ve sıfır ESLint uyarısı ile doğrulandı; `@next/next/no-img-element` uyarıları tamamen giderildi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Modern web standartlarında `next/image` kullanımının otomatik AVIF/WebP dönüşümü, lazy loading ve doğru boyutlandırma ile LCP ve CLS skorlarını nasıl dramatik şekilde iyileştirdiği deneyimlendi.
+  - Tarayıcıda oluşturulan geçici `blob:` URL'lerinin Next.js Image Optimization API'si tarafından doğrudan işlenemeyeceği ve bu durum için `unoptimized` özelliğinin akıllıca dinamik olarak uygulanması gerektiği tecrübe edildi.
+- **Referans:** `PR (feature/next-image-optimization-core-web-vitals)`
