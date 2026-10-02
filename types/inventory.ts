@@ -215,3 +215,41 @@ export function generateLuhnIMEI(): string {
   const checkDigit = (10 - (sum % 10)) % 10
   return imei14 + checkDigit.toString()
 }
+
+// ==========================================
+// ENVANTER LİSTELEME & TABLO FİLTRELEME TİPLERİ
+// ==========================================
+export type StockStatusType = "all" | "in_stock" | "critical" | "out_of_stock"
+export type SortField = "name" | "sale_price" | "stock_quantity" | "created_at"
+export type SortOrder = "asc" | "desc"
+
+export interface InventoryItem {
+  id: string
+  name: string
+  brand: string
+  model: string | null
+  category: string
+  category_id?: string
+  barcode: string | null
+  imei: string | null
+  condition: "sıfır" | "ikinci el"
+  battery_health?: number | null
+  cosmetic_condition?: string | null
+  storage?: string | null
+  color?: string | null
+  purchase_price: number
+  sale_price: number
+  stock_quantity: number
+  min_stock_level: number
+  shelf_location?: string | null
+  description?: string | null
+  is_active: boolean
+  created_at?: string
+}
+
+export function calculateStockStatus(quantity: number, minLevel: number): "in_stock" | "critical" | "out_of_stock" {
+  if (quantity <= 0) return "out_of_stock"
+  if (quantity <= minLevel) return "critical"
+  return "in_stock"
+}
+
