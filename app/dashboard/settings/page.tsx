@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { CustomAvatar } from "@/components/ui/custom-avatar"
 
 export default function SettingsPage() {
   const supabase = createClient()
@@ -311,9 +312,12 @@ export default function SettingsPage() {
       {/* User Summary Mini Banner */}
       <div className="p-4 rounded-xl bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-blue-950/40 border border-slate-800 backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-cyan-500/20">
-            {fullName ? fullName.charAt(0).toUpperCase() : "A"}
-          </div>
+          <CustomAvatar 
+            name={fullName || "Kullanıcı"} 
+            size={48} 
+            showBadge={true} 
+            badgeColor="emerald" 
+          />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-white text-sm sm:text-base">{fullName}</span>

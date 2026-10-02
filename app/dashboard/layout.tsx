@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useRoleAccess } from "@/hooks/use-role-access"
 import { NavItemConfig } from "@/types/auth"
+import { CustomAvatar } from "@/components/ui/custom-avatar"
 
 const navItems: NavItemConfig[] = [
   {
@@ -104,9 +105,6 @@ export default function DashboardLayout({
   useEffect(() => {
     setIsMobileMenuOpen(false)
   }, [pathname])
-
-  // Kullanıcı baş harfleri avatarı
-  const userInitials = userRole === "Admin" ? "AD" : "PE"
 
   // Aktif sayfa başlığı
   const currentTitle = navItems.find((item) => item.href === pathname)?.title || "Yönetim Paneli"
@@ -347,9 +345,12 @@ export default function DashboardLayout({
           <div className="flex items-center gap-3">
             {/* Kullanıcı Profil Bilgisi */}
             <div className="flex items-center gap-2.5 pl-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center font-bold text-xs text-white shadow-md shadow-cyan-500/20">
-                {userInitials}
-              </div>
+              <CustomAvatar 
+                name={userEmail || userRole} 
+                size={32} 
+                showBadge={true} 
+                badgeColor={isAdmin ? "cyan" : "emerald"} 
+              />
               <div className="hidden sm:block text-left">
                 <div className="text-xs font-semibold text-slate-200 leading-tight truncate max-w-[150px]">
                   {isLoading ? "Yükleniyor..." : userEmail}
