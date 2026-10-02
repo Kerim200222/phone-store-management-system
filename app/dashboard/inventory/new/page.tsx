@@ -47,6 +47,7 @@ import {
   PhoneWarrantyOptions
 } from "@/types/inventory"
 import { createClient } from "@/utils/supabase/client"
+import { CustomImage } from "@/components/ui/custom-image"
 
 interface CategoryOption {
   id: string
@@ -902,10 +903,12 @@ export default function NewProductPage() {
                 {imagePreviewUrl ? (
                   <div className="flex flex-col sm:flex-row items-center gap-4 w-full text-left" onClick={(e) => e.stopPropagation()}>
                     <div className="relative w-28 h-28 rounded-lg overflow-hidden bg-slate-900 border border-slate-700/80 flex-shrink-0 flex items-center justify-center">
-                      <img
+                      <CustomImage
                         src={imagePreviewUrl}
                         alt="Seçilen Ürün Görseli"
-                        className="w-full h-full object-contain p-1"
+                        fill
+                        sizes="112px"
+                        className="object-contain p-1"
                       />
                     </div>
                     <div className="flex-1 space-y-2">
@@ -984,11 +987,13 @@ export default function NewProductPage() {
                           : "bg-slate-950/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900"
                       }`}
                     >
-                      <div className="w-full aspect-square rounded bg-slate-900 overflow-hidden">
-                        <img
+                      <div className="w-full aspect-square rounded bg-slate-900 overflow-hidden relative">
+                        <CustomImage
                           src={sample.url}
                           alt={sample.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          fill
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 15vw"
+                          className="object-cover group-hover:scale-105 transition-transform duration-200"
                         />
                       </div>
                       <span className="text-[10px] text-slate-300 font-medium truncate w-full text-center">
@@ -1398,12 +1403,15 @@ export default function NewProductPage() {
               <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950/90 border border-slate-800/80 flex items-center justify-center group my-2 shadow-inner">
                 {imagePreviewUrl || watchedImageUrl ? (
                   <>
-                    <img
+                    <CustomImage
                       src={imagePreviewUrl || watchedImageUrl || ""}
                       alt={watchedName || "Ürün Önizleme"}
-                      className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                      fill
+                      priority
+                      sizes="(max-width: 1024px) 100vw, 350px"
+                      className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-slate-900/85 backdrop-blur-sm text-[10px] text-cyan-300 font-mono px-2 py-0.5 rounded-full border border-cyan-500/30">
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-slate-900/85 backdrop-blur-sm text-[10px] text-cyan-300 font-mono px-2 py-0.5 rounded-full border border-cyan-500/30 z-10">
                       <CheckCircle2 className="w-3 h-3 text-cyan-400" />
                       <span>Supabase Storage CDN</span>
                     </div>
