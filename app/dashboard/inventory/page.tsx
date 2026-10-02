@@ -38,6 +38,7 @@ import {
   calculateStockStatus 
 } from "@/types/inventory"
 import { createClient } from "@/utils/supabase/client"
+import { CustomImage } from "@/components/ui/custom-image"
 
 interface InventoryDbClient {
   from(table: string): {
@@ -853,14 +854,16 @@ export default function InventoryDashboardPage() {
                           <div className="flex items-center gap-3">
                             <div
                               onClick={() => setSelectedProductForDetail(product)}
-                              className="w-10 h-10 rounded-lg overflow-hidden bg-slate-950 border border-slate-800/80 flex-shrink-0 flex items-center justify-center cursor-pointer group/img hover:border-cyan-500 transition-colors"
+                              className="relative w-10 h-10 rounded-lg overflow-hidden bg-slate-950 border border-slate-800/80 flex-shrink-0 flex items-center justify-center cursor-pointer group/img hover:border-cyan-500 transition-colors"
                               title="Detay & Görseli İncele"
                             >
                               {product.image_url ? (
-                                <img
+                                <CustomImage
                                   src={product.image_url}
                                   alt={product.name}
-                                  className="w-full h-full object-contain p-0.5 group-hover/img:scale-110 transition-transform duration-200"
+                                  fill
+                                  sizes="40px"
+                                  className="object-contain p-0.5 group-hover/img:scale-110 transition-transform duration-200"
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-slate-600 bg-slate-900/50">
@@ -1212,12 +1215,15 @@ export default function InventoryDashboardPage() {
               <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center group shadow-inner">
                 {selectedProductForDetail.image_url ? (
                   <>
-                    <img
+                    <CustomImage
                       src={selectedProductForDetail.image_url}
                       alt={selectedProductForDetail.name}
-                      className="w-full h-full object-contain p-2"
+                      fill
+                      priority
+                      sizes="(max-width: 768px) 100vw, 500px"
+                      className="object-contain p-2"
                     />
-                    <div className="absolute top-2 right-2 bg-slate-900/85 backdrop-blur-sm text-[10px] text-cyan-300 font-mono px-2 py-0.5 rounded-full border border-cyan-500/30">
+                    <div className="absolute top-2 right-2 bg-slate-900/85 backdrop-blur-sm text-[10px] text-cyan-300 font-mono px-2 py-0.5 rounded-full border border-cyan-500/30 z-10">
                       Supabase Storage CDN
                     </div>
                   </>
