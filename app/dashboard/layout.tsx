@@ -34,6 +34,13 @@ const navItems: NavItemConfig[] = [
     allowedRoles: ["Admin", "Personel"],
   },
   {
+    title: "POS Satış",
+    href: "/dashboard/pos",
+    icon: Store,
+    badge: "Hızlı",
+    allowedRoles: ["Admin", "Personel"],
+  },
+  {
     title: "Kasa",
     href: "/dashboard/transactions",
     icon: Receipt,
