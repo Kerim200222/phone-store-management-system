@@ -539,4 +539,41 @@
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - Tek bir `full_name` sütununa sahip veritabanı şemalarının kullanıcı dostu `Ad` ve `Soyad` form alanları ile çift yönlü (`splitFullName` / `${first_name} ${last_name}`) nasıl senkronize edildiği kavrandı.
   - Zod şemalarında `.default()` kullanımı ile `react-hook-form` input/output tip çıkarım farklarının giderilmesi ve tip adaptörleri ile Supabase sorgularının tip güvenliğinin sağlanması tecrübe edildi.
-- **Referans:** `PR (feature/G16-customer-database-crud)`
+- **Referans:** `PR #89 (feature/G16-customer-database-crud)`
+
+
+---
+
+## 📅 Gün 17: POS (Satış Noktası) Arayüzü, Hızlı Kategori Filtreleme ve İstemci Taraflı Alışveriş Sepeti (Cart) Mimarisi
+
+- **Tarih:** 11 Ekim 2026
+- **Konu:** Telefon mağazasının kalbi olan hızlı satış ve kasa operasyonları için modern POS (Point of Sale) Arayüzü (`/dashboard/pos`), dinamik ürün arama ve hızlı kategori filtreleri, istemci taraflı alışveriş sepeti (Client-side Cart State), stok kontrollü miktar değiştirme, anlık KDV/indirim/genel toplam hesaplamaları, müşteri atama ve satış fişi (`SaleReceipt`) üretim mimarisi (Closes #56).
+- **Yapılan Çalışmalar:**
+  1. **POS Tip & Sepet Hesaplama Mimarisi (`types/pos.ts`):**
+     - `POSProduct`, `CartItem`, `CartSummary`, `POSPaymentMethod`, `SaleReceipt` TypeScript arayüzleri tasarlandı.
+     - `calculateCartSummary(items, discount, taxRate)` fonksiyonu geliştirildi; perakende standartlarına uygun %20 KDV matrahı, satır/genel indirimler, ara toplam ve genel toplam dinamik hesaplandı.
+     - Telefon, Aksesuar ve Yedek Parça kategorilerini kapsayan zengin başlangıç POS ürün kataloğu (`INITIAL_POS_PRODUCTS`) tanımlandı.
+  2. **İnteraktif Ürün Kartı Bileşeni (`components/pos/pos-product-card.tsx`):**
+     - `CustomImage` ile optimize edilmiş görsel, marka, model, sıfır/2. el durumu ve batarya sağlığı rozeti.
+     - Stok durumu (Stokta var / Kritik stok / Tükendi) kontrolleri ve tükenen ürünler için sepet engeli.
+     - Tek tıkla sepete ekleme ve ürün zaten sepetteyse anlık adet bildirim rozeti.
+  3. **İstemci Taraflı Alışveriş Sepeti (`components/pos/pos-cart.tsx`):**
+     - **Adet Kontrolleri:** `+` ve `-` butonları ile adet artırma/azaltma, doğrudan sayısal giriş; ürünün fiziksel depo stok sınırını aşmasını engelleyen clamp mekanizması.
+     - **Müşteri Atama:** Kayıtlı cari müşteriler arasından seçim yapabilme veya ayaküstü (perakende) müşteriyle devam edebilme.
+     - **İndirim Yönetimi:** Satış anında sepete özel TL indirim tanımlama.
+     - **Çoklu Ödeme Yöntemleri:** Nakit, Kredi Kartı (POS), Parçalı (Nakit + Kart) ve Veresiye/Cari (yalnızca seçili müşteri varsa aktifleşen akıllı kural).
+  4. **Satış Fişi / Makbuz Modalı (`components/pos/pos-receipt-modal.tsx`):**
+     - Satış tamamlandığında açılan, mağaza kimlik bilgileri, benzersiz fiş numarası, tarih/saat, kasiyer, müşteri, kalem listesi, KDV kırılımı, ödeme türü ve barkod simülasyonu içeren termal fiş şablonu.
+     - Tek tıkla yazdırma (`window.print()`) ve bir sonraki satış için sepeti sıfırlayan "Yeni Satış" aksiyonu.
+  5. **POS Ana Sayfası (`app/dashboard/pos/page.tsx`):**
+     - Sol tarafta optik barkod okuyucu / IMEI giriş inputu (Enter'a basıldığında doğrudan sepete ekleme), serbest metin arama, hızlı kategori hapları (Tümü, 📱 Telefonlar, 🔌 Aksesuar, 🔧 Yedek Parça) ve marka filtreleri.
+     - Sağ tarafta yapışkan (sticky) alışveriş sepeti ve anlık kasa paneli.
+     - Supabase `products` ve `customers` tablolarından canlı veri çekme + offline fallback hibrit yapısı.
+  6. **Navigasyon Entegrasyonu (`app/dashboard/layout.tsx`):**
+     - Dashboard sol sidebar menüsüne ve mobil çekmecesine "Hızlı" rozetli **POS Satış** rotası eklendi.
+  7. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm 16 statik rota sıfır hata ve sıfır ESLint uyarısı ile doğrulandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - İstemci tarafında çalışan sepet state'inin (re-render optimizasyonu, `useMemo` ve `useCallback`) yüksek performanslı perakende satış süreçlerindeki önemi kavrandı.
+  - Fiziksel mağazalarda barkod okuyucuların klavye öykünümü (keyboard emulation) ile girdi gönderme mantığı ve IMEI takiplerinin sepet düzeyinde tekilleştirilmesi deneyimlendi.
+- **Referans:** `PR (feature/G17-pos-interface-cart)`
