@@ -506,4 +506,37 @@
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - Modern web standartlarında `next/image` kullanımının otomatik AVIF/WebP dönüşümü, lazy loading ve doğru boyutlandırma ile LCP ve CLS skorlarını nasıl dramatik şekilde iyileştirdiği deneyimlendi.
   - Tarayıcıda oluşturulan geçici `blob:` URL'lerinin Next.js Image Optimization API'si tarafından doğrudan işlenemeyeceği ve bu durum için `unoptimized` özelliğinin akıllıca dinamik olarak uygulanması gerektiği tecrübe edildi.
-- **Referans:** `PR (feature/next-image-optimization-core-web-vitals)`
+- **Referans:** `PR #88 (feature/next-image-optimization-core-web-vitals)`
+
+
+---
+
+## 📅 Gün 16: Müşteri Veritabanı ve Cari Hesap Yönetimi (POS Entegrasyonu, Ad, Soyad, Telefon, Notlar ve Supabase CRUD)
+
+- **Tarih:** 10 Ekim 2026
+- **Konu:** Dükkanın kalbi olan POS sistemi ve müşteri işlemleri için Müşteri Veritabanı (`/dashboard/customers`), müşteri ekleme ve düzenleme modalları (`CustomerModal`), müşteri detay kartı (`CustomerDetailModal`), güvenli silme onay diyaloğu (`DeleteConfirmModal`), Ad, Soyad, Telefon ve Notlar alanları ile Supabase CRUD operasyonlarının tamamlanması (Closes #55).
+- **Yapılan Çalışmalar:**
+  1. **Zod Validasyon Şeması & Tip Mimarisi (`types/customer.ts`):**
+     - `customerFormSchema` tanımlandı: Ad (min 2 karakter), Soyad (min 2 karakter), İletişim Telefonu (TR format regex doğrulama), Notlar (1000 karaktere kadar cihaz arıza/garanti geçmişi), E-posta, T.C. Kimlik / Vergi No, Adres, Cari Bakiye (sayısal TL) ve Müşteri Türü (Bireysel / Kurumsal).
+     - Telefon numarası formatlama (`formatPhoneNumber`), isim ayrıştırma (`splitFullName`) ve para birimi formatlayıcı (`formatCurrency`) yardımcı fonksiyonları geliştirildi.
+     - Çevrimdışı ve ilk yüklemeler için zengin telefon mağazası müşteri veri kümesi (`INITIAL_CUSTOMERS`) oluşturuldu.
+  2. **Yeniden Kullanılabilir Müşteri Ekleme ve Düzenleme Modalı (`components/customers/customer-modal.tsx`):**
+     - React Hook Form ve Zod Resolver entegrasyonu ile dinamik çift modlu (`create` ve `edit`) form diyaloğu kodlandı.
+     - Tek tıkla otomatik form dolduran hızlı şablonlar (👤 Bireysel Müşteri, 🏢 Kurumsal Bayi, 🔧 Tamir & Servis Kaydı) entegre edildi.
+     - ESC tuşu ile kapatma, backdrop blur, yükleme animasyonu ve gerçek zamanlı hata uyarı rozetleri eklendi.
+  3. **Müşteri Detay Modalı ve Hızlı Eylemler (`components/customers/customer-detail-modal.tsx`):**
+     - Tek tıkla arama (`tel:`), doğrudan WhatsApp mesajı başlatma (`wa.me`) ve e-posta gönderme aksiyon butonları.
+     - Cari hesap borç/alacak durumunu renk kodlarıyla görselleştiren bakiye kartı.
+     - Dükkan hafızası niteliğindeki arıza ve cihaz notları alanı.
+  4. **Güvenli Silme Onay Modalı (`components/customers/delete-confirm-modal.tsx`):**
+     - Müşterinin açık borç veya alacağı varsa kullanıcıyı uyaran ve veri kaybını önleyen onay mekanizması.
+  5. **Müşteriler Yönetim Sayfası ve Supabase CRUD (`app/dashboard/customers/page.tsx`):**
+     - **KPI Özet Kartları:** Toplam Kayıtlı Müşteri, Müşteri Alacağı (Avans), Açık Veresiye (Borç) ve Cari Hesap Sağlığı.
+     - **Arama & Çok Boyutlu Filtreleme:** İsim, telefon, TCKN, adres ve arıza notlarında serbest metin araması; Bireysel/Kurumsal tür ve Borç/Alacak durum filtreleri.
+     - **Supabase Entegrasyonu:** `supabase.from('customers')` üzerinden `SELECT`, `INSERT`, `UPDATE` ve `DELETE` operasyonları tamamlandı; yerel state ile anında reaktif senkronizasyon sağlandı.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm 15 statik rota sıfır hata ve sıfır ESLint uyarısı ile doğrulandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Tek bir `full_name` sütununa sahip veritabanı şemalarının kullanıcı dostu `Ad` ve `Soyad` form alanları ile çift yönlü (`splitFullName` / `${first_name} ${last_name}`) nasıl senkronize edildiği kavrandı.
+  - Zod şemalarında `.default()` kullanımı ile `react-hook-form` input/output tip çıkarım farklarının giderilmesi ve tip adaptörleri ile Supabase sorgularının tip güvenliğinin sağlanması tecrübe edildi.
+- **Referans:** `PR (feature/G16-customer-database-crud)`
