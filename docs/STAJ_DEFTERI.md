@@ -687,6 +687,6 @@
      - `npm run build` komutu çalıştırılarak tüm 17 statik rota sıfır hata ve sıfır ESLint uyarısı ile doğrulandı.
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - Perakende mağazacılık donanımlarında (Epson TM-T20, Bixolon, Sewoo vb. 80mm ESC/POS rulo yazıcılar) web standartları (`@media print`, `@page`) ile sürücüsüz, doğrudan tarayıcı üzerinden piksel hassasiyetinde termal fiş yazdırma mimarisi deneyimlendi.
-- **Referans:** `PR (feature/G20-thermal-receipt-invoice-printing)`
+- **Referans:** `PR #93 (feature/G20-thermal-receipt-invoice-printing)`
 
 
