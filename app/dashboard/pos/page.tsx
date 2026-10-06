@@ -30,6 +30,7 @@ import {
 } from "@/types/pos"
 import { INITIAL_CUSTOMERS } from "@/types/customer"
 import { createClient } from "@/utils/supabase/client"
+import { processPOSTransaction } from "@/lib/pos-checkout"
 
 type CategoryFilter = "all" | "Telefon" | "Aksesuar" | "Yedek Parça"
 
@@ -254,33 +255,89 @@ export default function POSPage() {
     setTimeout(() => setScanNotification(null), 3500)
   }
 
-  // Satışı Tamamlama ve Fiş Kesme
-  const handleCheckout = () => {
+  // Satışı Tamamlama ve Fiş Kesme (Supabase Transaction & Stok Düşümü)
+  const handleCheckout = async () => {
     if (cart.length === 0) return
     setIsCheckingOut(true)
 
-    const randomNum = Math.floor(1000 + Math.random() * 9000)
-    const dateStr = new Date().toLocaleDateString("tr-TR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
+    try {
+      // Supabase Transaction:
+      // 1) transactions tablosuna satış fişi kaydı
+      // 2) transaction_items tablosuna sepetteki kalemler
+      // 3) products tablosunda satılan ürünlerin stok miktarını düşürme
+      // 4) Veresiye satışında müşteri bakiyesi güncelleme
+      const result = await processPOSTransaction({
+        items: cart,
+        summary: cartSummary,
+        customer: selectedCustomer,
+        paymentMethod,
+        notes: selectedCustomer 
+          ? `Müşteri: ${selectedCustomer.full_name} (${selectedCustomer.phone})`
+          : "Hızlı POS Ayaküstü Perakende Satışı",
+      })
 
-    const newReceipt: SaleReceipt = {
-      receipt_no: `FIS-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}${String(new Date().getDate()).padStart(2, "0")}-${randomNum}`,
-      date: dateStr,
-      cashier_name: "Yönetici (Admin)",
-      customer: selectedCustomer,
-      items: [...cart],
-      summary: { ...cartSummary },
-      payment_method: paymentMethod,
+      if (result.success) {
+        // 1. Yerel Ürün Stoklarını Canlı Güncelle (Stok anında düşer)
+        setProducts((prev) =>
+          prev.map((p) => {
+            const updatedMatch = result.updatedProducts.find((u) => u.id === p.id)
+            if (updatedMatch) {
+              return {
+                ...p,
+                stock_quantity: updatedMatch.newStock,
+              }
+            }
+            return p
+          })
+        )
+
+        // 2. Veresiye durumunda müşteri bakiyesini güncelle
+        if (result.updatedCustomerBalance !== undefined && selectedCustomer) {
+          setCustomers((prev) =>
+            prev.map((c) =>
+              c.id === selectedCustomer.id
+                ? { ...c, balance: result.updatedCustomerBalance! }
+                : c
+            )
+          )
+        }
+
+        const dateStr = new Date().toLocaleDateString("tr-TR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+
+        // 3. Fiş Verisini Oluştur
+        const newReceipt: SaleReceipt = {
+          receipt_no: result.transactionNumber,
+          transaction_id: result.transactionId,
+          date: dateStr,
+          cashier_name: "Yönetici (Admin)",
+          customer: selectedCustomer,
+          items: [...cart],
+          summary: { ...cartSummary },
+          payment_method: paymentMethod,
+        }
+
+        setReceipt(newReceipt)
+        setIsReceiptOpen(true)
+        setCart([])
+        setDiscountAmount(0)
+        setScanNotification(
+          `✅ Satış Tamamlandı! ${result.transactionNumber} veritabanına kaydedildi ve ${result.itemsCount} ürünün stoğu düşürüldü.`
+        )
+      } else {
+        setScanNotification(`❌ Satış işlemi başarısız: ${result.error || "Bilinmeyen hata"}`)
+      }
+    } catch (err) {
+      console.error("Satış işlemi sırasında beklenmeyen hata:", err)
+      setScanNotification("❌ Satış işlemi tamamlanırken bir hata oluştu.")
+    } finally {
+      setIsCheckingOut(false)
     }
-
-    setReceipt(newReceipt)
-    setIsReceiptOpen(true)
-    setIsCheckingOut(false)
   }
 
   // Yeni Satış Başlatma (Sepeti Sıfırla)

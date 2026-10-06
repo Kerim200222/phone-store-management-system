@@ -69,6 +69,7 @@ export interface POSCustomerSelect {
  */
 export interface SaleReceipt {
   receipt_no: string
+  transaction_id?: string
   date: string
   cashier_name: string
   customer?: POSCustomerSelect | null

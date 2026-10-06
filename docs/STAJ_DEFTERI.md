@@ -576,4 +576,39 @@
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - İstemci tarafında çalışan sepet state'inin (re-render optimizasyonu, `useMemo` ve `useCallback`) yüksek performanslı perakende satış süreçlerindeki önemi kavrandı.
   - Fiziksel mağazalarda barkod okuyucuların klavye öykünümü (keyboard emulation) ile girdi gönderme mantığı ve IMEI takiplerinin sepet düzeyinde tekilleştirilmesi deneyimlendi.
-- **Referans:** `PR (feature/G17-pos-interface-cart)`
+- **Referans:** `PR #90 (feature/G17-pos-interface-cart)`
+
+
+---
+
+## 📅 Gün 18: Satış İşlemini Tamamlama (Checkout) ve Supabase Çok Katmanlı Transaction Mimarisi
+
+- **Tarih:** 12 Ekim 2026
+- **Konu:** POS ekranındaki "Satışı Tamamla" butonuna Supabase Transaction mantığının entegre edilmesi: 1) `transactions` tablosuna kasa satış kaydı açılması, 2) `transaction_items` tablosuna sepetteki ürünlerin (ve IMEI'lerin) toplu eklenmesi, 3) `products` tablosunda satılan ürünlerin stok miktarının anında düşürülmesi ve 4) Veresiye satışlarda müşteri cari borcunun güncellenmesi (Closes #57).
+- **Yapılan Çalışmalar:**
+  1. **Supabase PostgreSQL Stored Function (`supabase/06_pos_checkout_transaction.sql`):**
+     - `public.process_pos_checkout(...)` PostgreSQL PL/pgSQL fonksiyonu yazıldı.
+     - Fonksiyon tek bir atomik transaction içinde:
+       - `transactions` tablosuna satış kaydını ekler ve benzersiz UUID döner.
+       - `transaction_items` tablosuna ürün ID, miktar, birim fiyat, satır toplamı ve 15 haneli IMEI bilgilerini kaydeder.
+       - `products` tablosundaki ürünleri `FOR UPDATE` ile kilitleyerek eşzamanlı satışlarda yarış durumlarını (Race Condition) önler ve stok miktarını düşürür (`GREATEST(0, stock_quantity - quantity)`).
+       - Ödeme türü `on_account` (veresiye) ise `customers.balance` alanını borç tutarı kadar günceller.
+       - Herhangi bir hata veya yetersiz stok durumunda otomatik `ROLLBACK` ile veri bütünlüğünü garanti eder.
+  2. **TypeScript POS Checkout Servisi (`lib/pos-checkout.ts`):**
+     - `processPOSTransaction({ items, summary, customer, paymentMethod, notes })` servisi geliştirildi.
+     - Çift katmanlı hibrit mimari:
+       - Öncelikli olarak Supabase RPC (`process_pos_checkout`) fonksiyonunu çağırır.
+       - RPC mevcut değilse veya istemci fallback modundaysa adım adım Supabase CRUD operasyonlarını (`transactions` -> `transaction_items` -> `products.update` -> `customers.update`) çalıştırır.
+       - Çevrimdışı/geliştirme ortamlarında yerel simülasyon ile kesintisiz kullanıcı deneyimi sağlar.
+     - Standart işlem kodu algoritması (`generateTransactionNumber()`: `TRX-YYYYMMDD-XXXX`) entegre edildi.
+  3. **POS Sayfası ve Sepet Entegrasyonu (`app/dashboard/pos/page.tsx` & `components/pos/pos-cart.tsx`):**
+     - "Satışı Tamamla" butonu asenkron hale getirildi ve işlem esnasında `Loader2` animasyonlu yükleme durumu eklendi.
+     - Satış tamamlandığında yerel `products` state'indeki ürünlerin stok miktarları anında düşürüldü; böylece sol katalogdaki stok sayaçları canlı olarak güncellendi.
+     - Veresiye satışlarda seçili müşterinin bakiyesi güncellendi.
+     - Satış fişi (`SaleReceipt`) resmi işlem numarası (`TRX-...`) ve stok doğrulama rozeti ile oluşturularak termal fiş modalında gösterildi.
+  4. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm 16 statik rota sıfır hata ve sıfır ESLint uyarısı ile doğrulandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Dağıtık ilişkisel veritabanlarında (Supabase/PostgreSQL) çok tablolu finansal işlemlerin (Kasa + Kalemler + Stok + Cari Bakiye) tek bir ACID transaction altında yürütülmesinin önemi ve faydaları kavrandı.
+  - İstemci tarafında optimistik veya anlık state güncellemesi ile sunucu tarafı veri mutasyonunun eşzamanlı yürütülmesi sayesinde kasiyere gecikmesiz ve güvenli bir POS deneyimi sunuldu.
+- **Referans:** `PR (feature/G18-pos-checkout-transactions)`
