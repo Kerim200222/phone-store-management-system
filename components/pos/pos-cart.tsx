@@ -14,7 +14,8 @@ import {
   Receipt,
   RotateCcw,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -395,11 +396,20 @@ export function POSCart({
             type="button"
             disabled={isCheckingOut || items.length === 0}
             onClick={onCheckout}
-            className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
+            className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 gap-2 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-75"
           >
-            <Receipt className="w-4 h-4" />
-            Satışı Tamamla & Fiş Kes ({formatCurrency(summary.grand_total)})
-            <ArrowRight className="w-4 h-4 ml-auto" />
+            {isCheckingOut ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>İşleniyor (Supabase Transaction)...</span>
+              </>
+            ) : (
+              <>
+                <Receipt className="w-4 h-4" />
+                <span>Satışı Tamamla & Fiş Kes ({formatCurrency(summary.grand_total)})</span>
+                <ArrowRight className="w-4 h-4 ml-auto" />
+              </>
+            )}
           </Button>
         </div>
       )}
