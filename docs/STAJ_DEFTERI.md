@@ -653,3 +653,40 @@
   - Alım anında çift yönlü muhasebe mantığı (envanter artışı + kasa nakit çıkışı) Supabase üzerinde ACID prensipleriyle başarıyla uygulandı.
 - **Referans:** `PR #92 (feature/G19-secondhand-purchase-workflow)`
 
+
+---
+
+## 📅 Gün 20: Fatura ve Fiş Çıktısı (80mm ESC/POS Termal Yazıcı Mimarisi)
+
+- **Tarih:** 14 Ekim 2026
+- **Konu:** Başarılı bir alış/satış işlemi sonrasında ekranda beliren evrensel "Fiş/Makbuz" (Universal Receipt) bileşeni ve tarayıcının yazdırma (`window.print()`) özelliğini kullanarak fiş yazıcılarına uygun (80mm formatında) CSS yazdırılabilir görünüm mimarisinin kurulması (Closes #59).
+- **Yapılan Çalışmalar:**
+  1. **Evrensel Fiş Veri Modeli ve Tipleri (`types/receipt.ts`):**
+     - Hem satış (POS bilgi fişi) hem alış (ikinci el gider pusulası) hem de teknik servis teslimatları için ortak `UniversalReceiptData`, `ReceiptItem`, `ReceiptTaxSummary`, `StoreInfo` ve `CustomerReceiptInfo` arayüzleri geliştirildi.
+     - Örnek satış (`SAMPLE_SALE_RECEIPT`) ve alış (`SAMPLE_PURCHASE_RECEIPT`) test veri setleri oluşturuldu.
+  2. **80mm ESC/POS Termal Yazıcı CSS Modülü (`app/globals.css`):**
+     - `@media print` ve `@page { size: 80mm auto; margin: 0; }` kuralları tanımlandı.
+     - Termal yazıcı kafa genişliği (`76mm` / `80mm`) ile birebir uyumlu `.thermal-receipt-printable` sınıfı inşa edildi.
+     - Sayfa kırılmalarını önleyen `break-inside: avoid`, termal kafaya uygun yüksek kontrastlı monospaced fontlar (`font-mono`) ve donanım kesim çizgisi (`.thermal-cut-line`) eklendi.
+     - Ekran arayüzü (menüler, butonlar, modallar, arka planlar) yazdırma anında otomatik gizlendi (`print:hidden`).
+  3. **80mm Termal Fiş Görsel Bileşeni (`components/receipt/thermal-receipt-view.tsx`):**
+     - Gerçekçi termal rulo kağıt dokusu, mağaza başlığı (VKN, vergi dairesi, mersis no), işlem/fiş numarası, tarih/saat, kasiyer ve satıcı/müşteri blokları.
+     - Satılan/alınan ürünlerin miktar, birim fiyat, satır toplamı ve telefonlar için 15 haneli tekil IMEI satırları.
+     - Ara toplam, KDV matrahı, %20 KDV tutarı ve genel toplam dökümü.
+     - Code128 algoritmasını simüle eden vektörel dinamik barkod ve e-Belge doğrulama QR kodu.
+     - İkinci el alımlarda yasal satıcı beyanı ve imza alanları; satışlarda ise 14 gün iade/değişim ve garanti bilgilendirme metinleri.
+  4. **Universal Fiş & Makbuz Modalı (`components/receipt/universal-receipt-modal.tsx`):**
+     - 80mm Termal Fiş ile A4 Fatura görünümü arasında tek tıkla geçiş yapabilme.
+     - Yazı boyutu ayarlayıcı (Kompakt / Normal / Geniş) ve Barkod / QR gösterim anahtarları.
+     - Tek tıkla yazdırma (`window.print()`) ve ESC/POS ham metin kopyalama (`handleCopyRawText`) aksiyonları.
+  5. **Sayfa Entegrasyonları ve Test Kolaylığı:**
+     - **Kasa İşlemleri (`app/dashboard/transactions/page.tsx`):** Tablodaki her işlem satırına "Fiş Yazdır" butonu eklendi; başlığa "80mm Satış Fişi Örneği" ve "80mm 2. El Alım Fişi Örneği" hızlı test butonları yerleştirildi.
+     - **İkinci El Alım Sözleşmesi (`components/purchases/purchase-contract-modal.tsx`):** A4 Sözleşme ile 80mm Termal Alım Fişi arasında çift yönlü mod geçişi sağlandı.
+     - **POS Satış Makbuzu (`components/pos/pos-receipt-modal.tsx`):** Termal 80mm yazıcı sınıfı ile uyumlu hale getirildi.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm 17 statik rota sıfır hata ve sıfır ESLint uyarısı ile doğrulandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Perakende mağazacılık donanımlarında (Epson TM-T20, Bixolon, Sewoo vb. 80mm ESC/POS rulo yazıcılar) web standartları (`@media print`, `@page`) ile sürücüsüz, doğrudan tarayıcı üzerinden piksel hassasiyetinde termal fiş yazdırma mimarisi deneyimlendi.
+- **Referans:** `PR (feature/G20-thermal-receipt-invoice-printing)`
+
+
