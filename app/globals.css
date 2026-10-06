@@ -74,3 +74,78 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ==============================================================================
+ * 80mm TERMAL FİŞ VE FATURA YAZICI CSS MODÜLÜ (GÜN 20)
+ * Standart ESC/POS 80mm termal rulo yazıcılar (Epson, Bixolon, Sewoo vb.) için
+ * ============================================================================== */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0mm;
+  }
+
+  /* Tarayıcının standart başlık ve altbilgilerini kaldır */
+  html, body {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  }
+
+  /* Yazdırma esnasında ekran arayüzünü (sidebar, navbar, modal arka planı, butonlar) gizle */
+  .print-hidden,
+  .print\:hidden,
+  nav,
+  aside,
+  header,
+  footer,
+  button:not(.thermal-receipt-printable button) {
+    display: none !important;
+  }
+
+  /* Termal Fiş Yazdırılabilir Konteyneri */
+  .thermal-receipt-printable {
+    display: block !important;
+    visibility: visible !important;
+    width: 76mm !important;
+    max-width: 80mm !important;
+    min-width: 72mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 2.5mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+    overflow: visible !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .thermal-receipt-printable * {
+    visibility: visible !important;
+    color: #000000 !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border-color: #000000 !important;
+  }
+
+  /* Yazdırmada zorunlu siyah-beyaz barkod ve kesim çizgileri */
+  .thermal-barcode-line {
+    background-color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .thermal-cut-line {
+    border-bottom: 1px dashed #000000 !important;
+  }
+}
+
