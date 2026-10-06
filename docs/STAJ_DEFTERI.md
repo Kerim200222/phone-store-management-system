@@ -611,4 +611,45 @@
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - Dağıtık ilişkisel veritabanlarında (Supabase/PostgreSQL) çok tablolu finansal işlemlerin (Kasa + Kalemler + Stok + Cari Bakiye) tek bir ACID transaction altında yürütülmesinin önemi ve faydaları kavrandı.
   - İstemci tarafında optimistik veya anlık state güncellemesi ile sunucu tarafı veri mutasyonunun eşzamanlı yürütülmesi sayesinde kasiyere gecikmesiz ve güvenli bir POS deneyimi sunuldu.
-- **Referans:** `PR (feature/G18-pos-checkout-transactions)`
+- **Referans:** `PR #91 (feature/G18-pos-checkout-transactions)`
+
+
+---
+
+## 📅 Gün 19: İkinci El Cihaz Alım İşlemi, Kasa Para Çıkışı ve Alım Sözleşmesi Mimarisi
+
+- **Tarih:** 13 Ekim 2026
+- **Konu:** Müşteriden ikinci el cihaz satın alma operasyonu için `/dashboard/purchases/new` sayfasının inşası. Satıcı müşteriyi seçtiren, cihazın IMEI'sini (15 haneli Luhn algoritması doğrulamalı), modelini, batarya sağlığını, kozmetik durumunu ve alış/satış fiyatlarını alarak envantere tekil cihaz (`stock_quantity = 1`, `condition = 'ikinci el'`) olarak ekleyen ve kasadan/bankadan alım bedeli çıkışı yapan Supabase atomik transaction mantığı (Closes #58).
+- **Yapılan Çalışmalar:**
+  1. **İkinci El Alım Validasyon ve Veri Modeli (`types/purchase.ts`):**
+     - `purchaseFormSchema` Zod şeması tanımlandı (müşteri seçimi, marka, model, 15 haneli Luhn geçerli IMEI, batarya sağlığı slider'ı, kozmetik sınıflandırma [A+, A, B, C], depolama, renk, alış fiyatı, hedef satış fiyatı, ödeme yöntemi [nakit, havale, cari mahsup], kutu/fatura/şarj varlık kontrolleri).
+     - Hızlı test ve tek tıkla form doldurma için gerçekçi cihaz şablonları (`PURCHASE_PRESETS` - iPhone 13, Galaxy S23 Ultra, Redmi Note 12 Pro) kurgulandı.
+     - Resmi İkinci El Alım Sözleşmesi ve Gider Pusulası veri modeli (`PurchaseContractData`) oluşturuldu.
+  2. **Supabase PostgreSQL Alım Transaction Fonksiyonu (`supabase/07_secondhand_purchase_transaction.sql`):**
+     - `public.process_secondhand_purchase(...)` saklı yordamı (stored procedure) geliştirildi:
+       - 1) `products` tablosuna cihazı `condition = 'ikinci el'`, `stock_quantity = 1` ve benzersiz IMEI ile ekler.
+       - 2) `transactions` tablosuna `type = 'purchase'` (kasa gider/çıkış) ve ilgili ödeme yöntemi (`cash` / `bank_transfer` / `on_account`) ile para çıkış fişi keser.
+       - 3) `transaction_items` tablosuna satın alınan cihazın kalem kaydını (alış fiyatı ve IMEI ile) bağlar.
+       - 4) Ödeme cari mahsup ise müşterinin bakiyesini günceller.
+       - Tek bir ACID transaction bloğunda çalışır, herhangi bir arıza durumunda otomatik geri alma (ROLLBACK) sağlar.
+  3. **TypeScript Hibrit Alım Servis Katmanı (`lib/purchase-service.ts`):**
+     - `processSecondhandDevicePurchase(values, customer)` fonksiyonu yazıldı.
+     - Öncelikli olarak PostgreSQL RPC `process_secondhand_purchase` fonksiyonunu dener; RPC yoksa istemci çok adımlı Supabase CRUD operasyonlarını yürütür; ağ yoksa yerel simülasyon fallback'i sağlar.
+  4. **Yazdırılabilir Gider Pusulası & Alım Sözleşmesi Modalı (`components/purchases/purchase-contract-modal.tsx`):**
+     - Yasal mevzuata uygun "Gider Pusulası & İkinci El Cihaz Alım Sözleşmesi" şablonu oluşturuldu.
+     - Satıcı müşteri bilgileri (TC Kimlik No, telefon, adres), alınan cihaz donanımı, 15 haneli IMEI, pil sağlığı, kutu/fatura varlığı, ödenen nakit tutar, yasal çalıntı/kaçak olmama taahhüt metni ve ıslak imza/kaşe alanları eklendi.
+     - `window.print()` ile doğrudan PDF ve fiziksel A4 yazdırma desteği sağlandı.
+  5. **İkinci El Alım Arayüzü (`app/dashboard/purchases/new/page.tsx`):**
+     - **Sol Sütun (4 Adımlı Form):** 1) Satıcı müşteri seçimi ve modal ile hızlı yeni müşteri açma, 2) Marka, model, Luhn doğrulamalı 15 haneli IMEI girişi + rastgele geçerli IMEI üretim butonu, 3) Batarya sağlığı (%1-100) interaktif slider'ı, kozmetik sınıflandırma ve aksesuar onay kutuları, 4) Alış fiyatı (kasa çıkışı), hedef satış fiyatı ve ödeme yöntemi seçimi.
+     - **Sağ Sütun (Canlı Önizleme & Kasa Analizi):** Canlı cihaz kimlik kartı, tahmini brüt kâr (₺) ve marj (%) hesaplayıcı, kasa etki bildirimi ve asenkron işlem onay butonu.
+     - Hızlı şablonlar çubuğu ile tek tıkla test verisi doldurma olanağı sunuldu.
+  6. **Navigasyon ve Entegrasyon:**
+     - `app/dashboard/layout.tsx` menüsüne "2. El Alım" rotası eklendi.
+     - `app/dashboard/inventory/page.tsx` başlık alanına "2. El Cihaz Satın Al" hızlı erişim butonu eklendi.
+  7. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm 17 statik rota sıfır hata ve sıfır ESLint uyarısı ile doğrulandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - İkinci el telefon alım süreçlerinde yasal zorunluluk olan 15 haneli tekil IMEI takibi, T.C. Kimlik Numaralı satıcı sözleşmesi ve Gider Pusulası tanziminin yazılımsal iş akışı tasarlandı.
+  - Alım anında çift yönlü muhasebe mantığı (envanter artışı + kasa nakit çıkışı) Supabase üzerinde ACID prensipleriyle başarıyla uygulandı.
+- **Referans:** `PR #92 (feature/G19-secondhand-purchase-workflow)`
+

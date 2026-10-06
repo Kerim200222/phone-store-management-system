@@ -62,6 +62,9 @@ export interface POSCustomerSelect {
   phone: string
   balance: number
   customer_type?: "bireysel" | "kurumsal"
+  tckn?: string | null
+  city?: string | null
+  address?: string | null
 }
 
 /**

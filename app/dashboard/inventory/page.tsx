@@ -532,7 +532,13 @@ export default function InventoryDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Link href="/dashboard/purchases/new">
+            <Button variant="outline" size="sm" className="border-emerald-800/60 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/40 hover:text-white text-xs h-9 gap-1.5 shadow-sm">
+              <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+              2. El Cihaz Satın Al
+            </Button>
+          </Link>
           <Link href="/dashboard/inventory/categories">
             <Button variant="outline" size="sm" className="border-purple-800/60 bg-purple-950/30 text-purple-300 hover:bg-purple-900/40 hover:text-white text-xs h-9 gap-1.5 shadow-sm">
               <FolderTree className="w-3.5 h-3.5 text-purple-400" />

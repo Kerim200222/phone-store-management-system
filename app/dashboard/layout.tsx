@@ -55,6 +55,13 @@ const navItems: NavItemConfig[] = [
     allowedRoles: ["Admin", "Personel"],
   },
   {
+    title: "2. El Alım",
+    href: "/dashboard/purchases/new",
+    icon: Smartphone,
+    badge: "Alış",
+    allowedRoles: ["Admin", "Personel"],
+  },
+  {
     title: "Teknik Servis",
     href: "/dashboard/repairs",
     icon: Wrench,
