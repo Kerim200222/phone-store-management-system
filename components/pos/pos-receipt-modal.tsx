@@ -61,7 +61,7 @@ export function POSReceiptModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
       <div 
-        className="relative w-full max-w-md bg-white text-slate-900 rounded-2xl shadow-2xl overflow-hidden my-6 border border-slate-200 print:m-0 print:border-none print:shadow-none"
+        className="relative w-full max-w-md bg-white text-slate-900 rounded-2xl shadow-2xl overflow-hidden my-6 border border-slate-200 print:m-0 print:border-none print:shadow-none print:w-[80mm] print:max-w-[80mm] print:p-0"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Başarı Bildirim Şeridi */}
@@ -78,8 +78,8 @@ export function POSReceiptModal({
           </button>
         </div>
 
-        {/* Fiş İçeriği (Termal Fiş Simülasyonu) */}
-        <div className="p-6 space-y-4 font-mono text-xs">
+        {/* Fiş İçeriği (80mm Termal Fiş Formatı) */}
+        <div className="thermal-receipt-printable p-6 space-y-4 font-mono text-xs print:p-1 print:w-[76mm]">
           {/* Mağaza Başlığı */}
           <div className="text-center space-y-1 pb-3 border-b border-dashed border-slate-300">
             <div className="flex items-center justify-center gap-1.5 font-bold text-sm tracking-tight text-slate-950 font-sans">
