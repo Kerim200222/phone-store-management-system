@@ -651,5 +651,5 @@
 - **Teknik Kazanım & Karşılaşılan Durumlar:**
   - İkinci el telefon alım süreçlerinde yasal zorunluluk olan 15 haneli tekil IMEI takibi, T.C. Kimlik Numaralı satıcı sözleşmesi ve Gider Pusulası tanziminin yazılımsal iş akışı tasarlandı.
   - Alım anında çift yönlü muhasebe mantığı (envanter artışı + kasa nakit çıkışı) Supabase üzerinde ACID prensipleriyle başarıyla uygulandı.
-- **Referans:** `PR (feature/G19-secondhand-purchase-workflow)`
+- **Referans:** `PR #92 (feature/G19-secondhand-purchase-workflow)`
 
