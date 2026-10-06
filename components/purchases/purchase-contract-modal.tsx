@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { 
   X, 
@@ -14,10 +14,13 @@ import {
   ShieldCheck,
   Smartphone,
   FileText,
-  Boxes
+  Boxes,
+  Receipt
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PurchaseContractData } from "@/types/purchase"
+import { ThermalReceiptView } from "@/components/receipt/thermal-receipt-view"
+import { UniversalReceiptData } from "@/types/receipt"
 
 interface PurchaseContractModalProps {
   data: PurchaseContractData | null
@@ -33,6 +36,7 @@ export function PurchaseContractModal({
   onNewPurchase,
 }: PurchaseContractModalProps) {
   const router = useRouter()
+  const [viewMode, setViewMode] = useState<"contract" | "thermal">("contract")
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -43,6 +47,55 @@ export function PurchaseContractModal({
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [isOpen, onClose])
+
+  const thermalReceiptData: UniversalReceiptData | null = useMemo(() => {
+    if (!data) return null
+    return {
+      receiptNo: data.receiptNo,
+      type: "purchase",
+      date: data.date,
+      cashierName: "Yetkili Satış & Alım Sorumlusu",
+      store: {
+        name: data.storeName || "TELEFON MAĞAZASI A.Ş.",
+        branchName: "Kadıköy Merkez Şubesi",
+        address: data.storeAddress || "Bağdat Cad. No:42/A Kadıköy / İstanbul",
+        phone: data.storePhone || "(0216) 555 12 34",
+        taxOffice: "Kadıköy V.D.",
+        taxNumber: "1948201938",
+      },
+      customer: {
+        name: data.customerName,
+        phone: data.customerPhone,
+        tckn: data.customerTckn || undefined,
+        address: data.customerAddress || undefined,
+      },
+      items: [
+        {
+          id: data.productId,
+          name: `${data.brand} ${data.model} ${data.storage} (${data.color})`,
+          quantity: 1,
+          unitPrice: data.purchasePrice,
+          totalPrice: data.purchasePrice,
+          imei: data.imei,
+          taxRate: 0,
+          category: "İkinci El Telefon",
+          warrantyPeriod: "6 Ay Mağaza Donanım Garantisi",
+        },
+      ],
+      subtotal: data.purchasePrice,
+      discountTotal: 0,
+      taxTotal: 0,
+      grandTotal: data.purchasePrice,
+      taxes: [],
+      paymentMethod: data.paymentMethod,
+      legalText:
+        "Gider Pusulası Niteliğinde İkinci El Cihaz Alım Makbuzudur. 213 Sayılı V.U.K. Madde 234 uyarınca düzenlenmiştir.",
+      footerMessage:
+        "İkinci El Cihaz Alımı ve Kasa Çıkışı Başarıyla Gerçekleşti.\nCihaz mağaza envanterine 1 adet olarak kaydedilmiştir.",
+      barcode: data.receiptNo.replace(/[^A-Za-z0-9]/g, ""),
+      qrData: `https://telefonmagazasi.com/gider-pusulasi/${data.receiptNo}`,
+    }
+  }, [data])
 
   if (!isOpen || !data) return null
 
@@ -94,8 +147,46 @@ export function PurchaseContractModal({
           </button>
         </div>
 
-        {/* Sözleşme & Gider Pusulası İçeriği */}
-        <div className="p-6 sm:p-8 space-y-6 text-xs text-slate-800">
+        {/* Yazdırma Formatı Seçimi Toolbar'ı */}
+        <div className="bg-slate-100 px-6 py-2.5 border-b border-slate-200 flex items-center justify-between print:hidden">
+          <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+            <Receipt className="w-4 h-4 text-indigo-600" />
+            Yazdırma Biçimi:
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setViewMode("contract")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all border ${
+                viewMode === "contract"
+                  ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              📄 A4 Sözleşme & Gider Pusulası
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("thermal")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all border ${
+                viewMode === "thermal"
+                  ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              🧾 80mm Termal Alım Fişi
+            </button>
+          </div>
+        </div>
+
+        {/* İçerik: Termal Fiş Modu */}
+        {viewMode === "thermal" && thermalReceiptData ? (
+          <div className="p-6 flex justify-center bg-slate-50 overflow-y-auto max-h-[70vh] print:p-0 print:bg-transparent print:max-h-none">
+            <ThermalReceiptView data={thermalReceiptData} />
+          </div>
+        ) : (
+          /* Orijinal A4 Sözleşme İçeriği */
+          <div className="p-6 sm:p-8 space-y-6 text-xs text-slate-800">
           {/* Üst Başlık & Mağaza Bilgileri */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-4 border-b-2 border-slate-900 gap-4">
             <div className="space-y-1">
@@ -302,6 +393,7 @@ export function PurchaseContractModal({
             İşlem Kayıt Kodu: {data.productId} • Supabase Senkronize Edildi
           </div>
         </div>
+        )}
 
         {/* Modal Alt Butonları (Yazdırma esnasında gizlenir) */}
         <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 print:hidden">

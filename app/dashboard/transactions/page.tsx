@@ -4,22 +4,31 @@ import React, { useState } from "react"
 import { 
   Receipt, 
   Search, 
-  Plus, 
   ArrowUpRight, 
   ArrowDownLeft, 
   CreditCard, 
   Banknote, 
-  Download
+  Download,
+  Printer
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { UniversalReceiptModal } from "@/components/receipt/universal-receipt-modal"
+import { 
+  UniversalReceiptData, 
+  SAMPLE_SALE_RECEIPT, 
+  SAMPLE_PURCHASE_RECEIPT 
+} from "@/types/receipt"
+import { formatTransactionRowToReceipt } from "@/lib/receipt-formatter"
 
 export default function TransactionsDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
+  const [activeReceipt, setActiveReceipt] = useState<UniversalReceiptData | null>(null)
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false)
 
   const transactions = [
     {
@@ -92,14 +101,36 @@ export default function TransactionsDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              setActiveReceipt(SAMPLE_SALE_RECEIPT)
+              setIsReceiptModalOpen(true)
+            }}
+            className="border-cyan-800/60 bg-cyan-950/30 text-cyan-300 hover:bg-cyan-900/50 text-xs h-8 gap-1.5"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            80mm Satış Fişi Örneği
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              setActiveReceipt(SAMPLE_PURCHASE_RECEIPT)
+              setIsReceiptModalOpen(true)
+            }}
+            className="border-amber-800/60 bg-amber-950/30 text-amber-300 hover:bg-amber-900/50 text-xs h-8 gap-1.5"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            80mm 2. El Alım Fişi Örneği
+          </Button>
+
           <Button variant="outline" size="sm" className="border-slate-800 bg-slate-900 text-slate-300 text-xs h-8 gap-1.5">
             <Download className="w-3.5 h-3.5" />
             Gün Sonu Raporu
-          </Button>
-          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-500 text-white font-medium gap-1.5 shadow-md shadow-cyan-600/20 text-xs h-8">
-            <Plus className="w-4 h-4" />
-            Yeni Satış Fişi
           </Button>
         </div>
       </div>
@@ -205,6 +236,7 @@ export default function TransactionsDashboardPage() {
                 <TableHead className="text-xs text-slate-400 font-semibold">Ödeme Yöntemi</TableHead>
                 <TableHead className="text-xs text-slate-400 font-semibold">Açıklama / Kalem</TableHead>
                 <TableHead className="text-xs text-slate-400 font-semibold text-right">Net Tutar</TableHead>
+                <TableHead className="text-xs text-slate-400 font-semibold text-center w-28">Fiş / Yazdır</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -238,12 +270,34 @@ export default function TransactionsDashboardPage() {
                   <TableCell className="text-right font-mono text-xs font-bold text-slate-100">
                     ₺{t.net_amount.toLocaleString("tr-TR")},00
                   </TableCell>
+                  <TableCell className="text-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setActiveReceipt(formatTransactionRowToReceipt(t))
+                        setIsReceiptModalOpen(true)
+                      }}
+                      className="h-7 px-2.5 text-[11px] font-semibold border-cyan-800/60 bg-cyan-950/30 text-cyan-300 hover:bg-cyan-900/50 hover:text-white gap-1"
+                    >
+                      <Printer className="w-3 h-3" />
+                      Fiş Yazdır
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Universal 80mm Fiş & Makbuz Modalı */}
+      <UniversalReceiptModal
+        isOpen={isReceiptModalOpen}
+        data={activeReceipt}
+        onClose={() => setIsReceiptModalOpen(false)}
+        title={activeReceipt?.type === "purchase" ? "İkinci El Alım Gider Pusulası" : "Satış Bilgi Fişi"}
+      />
     </div>
   )
 }
