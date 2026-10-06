@@ -89,7 +89,10 @@ export function POSReceiptModal({
             <p className="text-[11px] text-slate-500">Kadıköy Şubesi • Bağdat Cad. No:42/A</p>
             <p className="text-[10px] text-slate-400">Tel: (0216) 555 12 34 • VKN: 1948201938</p>
             <div className="pt-1.5 flex items-center justify-center gap-2 text-[10px] text-slate-600">
-              <span className="font-bold">FİŞ NO: {receipt.receipt_no}</span>
+              <span className="font-bold">İŞLEM / FİŞ NO: {receipt.receipt_no}</span>
+              <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[9px] font-semibold">
+                ✓ Stok Senkronize Edildi
+              </span>
             </div>
           </div>
 
