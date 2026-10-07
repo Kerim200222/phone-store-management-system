@@ -12,7 +12,7 @@ export type CategoryName = 'Telefon' | 'Aksesuar' | 'Yedek Parça' | string
 export type TransactionType = 'sale' | 'purchase' | 'return' | 'repair_payment'
 export type PaymentMethod = 'cash' | 'credit_card' | 'bank_transfer' | 'on_account' | 'split'
 export type TransactionStatus = 'completed' | 'pending' | 'cancelled'
-export type RepairStatus = 'bekliyor' | 'islemde' | 'tamamlandi' | 'iade' | 'teslim_edildi' | 'iptal'
+export type RepairStatus = 'bekliyor' | 'islemde' | 'parca_bekliyor' | 'tamamlandi' | 'iade' | 'teslim_edildi' | 'iptal'
 
 export interface Database {
   public: {
