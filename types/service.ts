@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { POSCustomerSelect } from "@/types/pos"
+import { RepairPartItem } from "@/types/database"
 
 /**
  * Arıza Kategorileri
@@ -285,7 +286,10 @@ export interface ServiceTicketDisplay {
   status: KanbanColumnId | "iade" | "teslim_edildi" | "iptal"
   priority: ServicePriority
   estimated_cost: number
+  labor_cost?: number
+  parts_total_cost?: number
   actual_cost: number
+  parts_used?: RepairPartItem[]
   assigned_technician?: string | null
   created_at: string
   updated_at: string
@@ -297,4 +301,206 @@ export interface ServiceFilterOptions {
   brand: "all" | string
   viewMode: "kanban" | "list"
 }
+
+/**
+ * Gün 23: Yedek Parça ve İşçilik Ekleme Tipleri
+ */
+export interface LaborPreset {
+  id: string
+  title: string
+  amount: number
+  description: string
+  category: string
+}
+
+export const COMMON_LABOR_PRESETS: LaborPreset[] = [
+  {
+    id: "labor-screen",
+    title: "Ekran & Dokunmatik Montajı",
+    amount: 450,
+    description: "Ekran sökümü, TrueTone ve FaceID flex aktarımı, su geçirmezlik conta yenileme",
+    category: "Ekran",
+  },
+  {
+    id: "labor-battery",
+    title: "Batarya Değişimi & Kalibrasyon",
+    amount: 350,
+    description: "Eski pilin kimyasal sökümü, orijinal yapışkan bantlama ve şarj-deşarj kalibrasyonu",
+    category: "Batarya",
+  },
+  {
+    id: "labor-socket",
+    title: "Şarj Soketi / Alt Bord İşçiliği",
+    amount: 350,
+    description: "Alt bord flex montajı, mikrofon ve anten hatları temas kontrolü",
+    category: "Şarj / Bord",
+  },
+  {
+    id: "labor-micro-solder",
+    title: "Mikro Lehim & Entegre Onarımı (BGA)",
+    amount: 950,
+    description: "Mikroskop altında kısa devre tespiti, entegre kalıplama (reballing) ve lehimleme",
+    category: "Anakart",
+  },
+  {
+    id: "labor-liquid",
+    title: "Sıvı Teması Ultrasonik Banyo & Temizlik",
+    amount: 600,
+    description: "İzopropil alkol ile korozyon temizliği, kurutma ve empedans ölçümü",
+    category: "Sıvı Teması",
+  },
+  {
+    id: "labor-backglass",
+    title: "Lazerle Arka Cam Temizliği & Presleme",
+    amount: 550,
+    description: "Fiber lazerle cam boyası kazıma, cam kırıntı temizliği ve presli yapıştırma",
+    category: "Kasa / Cam",
+  },
+]
+
+export interface SparePartOption {
+  id: string
+  name: string
+  brand: string
+  compatibleModel: string
+  category: "Yedek Parça" | "Aksesuar"
+  sku: string
+  stock_quantity: number
+  sale_price: number
+  cost_price: number
+  shelf_location: string
+}
+
+export const INITIAL_SPARE_PARTS: SparePartOption[] = [
+  {
+    id: "part-1",
+    name: "GX iPhone 13 OLED Orijinal Kalite Ekran Paneli",
+    brand: "Apple",
+    compatibleModel: "iPhone 13 (A2633)",
+    category: "Yedek Parça",
+    sku: "PRT-IP13-OLED",
+    stock_quantity: 8,
+    sale_price: 2750,
+    cost_price: 2100,
+    shelf_location: "Raf A-1 (Ekranlar)",
+  },
+  {
+    id: "part-2",
+    name: "Deji iPhone 13 Mucize Batarya 3227mAh Yüksek Kapasite",
+    brand: "Apple",
+    compatibleModel: "iPhone 13 (A2633)",
+    category: "Yedek Parça",
+    sku: "PRT-IP13-BAT",
+    stock_quantity: 14,
+    sale_price: 950,
+    cost_price: 520,
+    shelf_location: "Çekmece B-2 (Piller)",
+  },
+  {
+    id: "part-3",
+    name: "Samsung Galaxy S21 5G Orijinal EB-BG991ABY Batarya (4000mAh)",
+    brand: "Samsung",
+    compatibleModel: "Galaxy S21 5G (SM-G991B)",
+    category: "Yedek Parça",
+    sku: "PRT-S21-BAT",
+    stock_quantity: 6,
+    sale_price: 1100,
+    cost_price: 650,
+    shelf_location: "Çekmece B-4",
+  },
+  {
+    id: "part-4",
+    name: "Samsung Galaxy S21 5G Dynamic AMOLED 2X Ekran Modülü",
+    brand: "Samsung",
+    compatibleModel: "Galaxy S21 5G (SM-G991B)",
+    category: "Yedek Parça",
+    sku: "PRT-S21-DISP",
+    stock_quantity: 4,
+    sale_price: 3900,
+    cost_price: 2950,
+    shelf_location: "Raf A-3",
+  },
+  {
+    id: "part-5",
+    name: "Xiaomi 12 Type-C Hızlı Şarj Soketi & Alt Bord Modülü",
+    brand: "Xiaomi",
+    compatibleModel: "Xiaomi 12 (2201123G)",
+    category: "Yedek Parça",
+    sku: "PRT-MI12-SUB",
+    stock_quantity: 12,
+    sale_price: 450,
+    cost_price: 210,
+    shelf_location: "Kutu C-1 (Bordlar)",
+  },
+  {
+    id: "part-6",
+    name: "iPhone 12 Pro Lazer Uyumlu Arka Cam Panel (Grafit)",
+    brand: "Apple",
+    compatibleModel: "iPhone 12 Pro (A2407)",
+    category: "Yedek Parça",
+    sku: "PRT-IP12P-BC",
+    stock_quantity: 9,
+    sale_price: 750,
+    cost_price: 380,
+    shelf_location: "Raf D-2",
+  },
+  {
+    id: "part-7",
+    name: "iPhone 12 Pro 12MP Geniş Açı Orijinal Kamera Lensi",
+    brand: "Apple",
+    compatibleModel: "iPhone 12 Pro (A2407)",
+    category: "Yedek Parça",
+    sku: "PRT-IP12P-CAM",
+    stock_quantity: 5,
+    sale_price: 1200,
+    cost_price: 700,
+    shelf_location: "Çekmece E-1",
+  },
+  {
+    id: "part-8",
+    name: "Galaxy Z Flip 4 Orijinal Katlanabilir AMOLED İç Ekran Modülü",
+    brand: "Samsung",
+    compatibleModel: "Galaxy Z Flip 4 (SM-F721B)",
+    category: "Yedek Parça",
+    sku: "PRT-ZF4-FOLD",
+    stock_quantity: 2,
+    sale_price: 4800,
+    cost_price: 3600,
+    shelf_location: "Kasa İçi Özel Raf",
+  },
+  {
+    id: "part-9",
+    name: "Huawei P30 Pro HiSilicon Şarj & PMIC Güç Entegresi",
+    brand: "Huawei",
+    compatibleModel: "Huawei P30 Pro (VOG-L29)",
+    category: "Yedek Parça",
+    sku: "PRT-P30P-PMIC",
+    stock_quantity: 7,
+    sale_price: 850,
+    cost_price: 420,
+    shelf_location: "Mikro Kutu 12",
+  },
+  {
+    id: "part-10",
+    name: "iPhone 11 Ahize & Yakınlık Sensörü Flex Kablosu",
+    brand: "Apple",
+    compatibleModel: "iPhone 11 (A2221)",
+    category: "Yedek Parça",
+    sku: "PRT-IP11-EAR",
+    stock_quantity: 11,
+    sale_price: 320,
+    cost_price: 140,
+    shelf_location: "Kutu C-4",
+  },
+]
+
+export interface UpdateTicketCostPayload {
+  parts_used: RepairPartItem[]
+  parts_total_cost: number
+  labor_cost: number
+  actual_cost: number
+  technician_notes?: string
+  status?: KanbanColumnId
+}
+
 
