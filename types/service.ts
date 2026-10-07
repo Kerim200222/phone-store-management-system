@@ -201,3 +201,100 @@ export const SERVICE_PRESETS: ServicePreset[] = [
     condLiquidDamage: true,
   },
 ]
+
+/**
+ * Teknik Servis Kanban Sütun Tanımları (Gün 22)
+ */
+export type KanbanColumnId = "bekliyor" | "islemde" | "parca_bekliyor" | "tamamlandi"
+
+export interface KanbanColumnConfig {
+  id: KanbanColumnId
+  title: string
+  subtitle: string
+  color: "amber" | "cyan" | "purple" | "emerald"
+  badgeClass: string
+  headerBg: string
+  columnBorder: string
+  accentColor: string
+}
+
+export const KANBAN_COLUMNS: KanbanColumnConfig[] = [
+  {
+    id: "bekliyor",
+    title: "Bekliyor",
+    subtitle: "Kabul Edildi / İnceleme Sırasında",
+    color: "amber",
+    badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+    headerBg: "bg-amber-950/30 border-amber-800/40",
+    columnBorder: "border-amber-500/20",
+    accentColor: "#f59e0b",
+  },
+  {
+    id: "islemde",
+    title: "İşlemde",
+    subtitle: "Masada / Tamir Ediliyor",
+    color: "cyan",
+    badgeClass: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
+    headerBg: "bg-cyan-950/30 border-cyan-800/40",
+    columnBorder: "border-cyan-500/20",
+    accentColor: "#06b6d4",
+  },
+  {
+    id: "parca_bekliyor",
+    title: "Parça Bekliyor",
+    subtitle: "Tedarikçi / Yedek Parça Siparişi",
+    color: "purple",
+    badgeClass: "bg-purple-500/15 text-purple-300 border-purple-500/30",
+    headerBg: "bg-purple-950/30 border-purple-800/40",
+    columnBorder: "border-purple-500/20",
+    accentColor: "#a855f7",
+  },
+  {
+    id: "tamamlandi",
+    title: "Tamamlandı",
+    subtitle: "Test Edildi / Teslime Hazır",
+    color: "emerald",
+    badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+    headerBg: "bg-emerald-950/30 border-emerald-800/40",
+    columnBorder: "border-emerald-500/20",
+    accentColor: "#10b981",
+  },
+]
+
+/**
+ * Kanban Panosu ve Liste Görünümünde Gösterilen Servis Bileti Modeli
+ */
+export interface ServiceTicketDisplay {
+  id: string
+  ticket_number: string
+  customer_id: string
+  customer_name: string
+  customer_phone: string
+  customer_email?: string | null
+  device_brand: string
+  device_model: string
+  imei: string | null
+  serial_number?: string | null
+  device_password: string | null
+  pattern_code: string | null
+  physical_condition: string | null
+  has_accessories: string | null
+  issue_description: string
+  issue_category?: string
+  technician_notes: string | null
+  status: KanbanColumnId | "iade" | "teslim_edildi" | "iptal"
+  priority: ServicePriority
+  estimated_cost: number
+  actual_cost: number
+  assigned_technician?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ServiceFilterOptions {
+  searchQuery: string
+  priority: "all" | ServicePriority
+  brand: "all" | string
+  viewMode: "kanban" | "list"
+}
+

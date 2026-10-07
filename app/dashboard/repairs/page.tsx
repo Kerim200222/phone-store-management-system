@@ -9,7 +9,8 @@ import {
   KeyRound, 
   Clock, 
   CheckCircle2, 
-  RotateCcw
+  RotateCcw,
+  LayoutGrid
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -106,12 +107,21 @@ export default function RepairsDashboardPage() {
           </p>
         </div>
 
-        <Link href="/dashboard/service/new">
-          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-500 text-white font-medium gap-1.5 shadow-md shadow-cyan-600/20 text-xs h-8">
-            <Plus className="w-4 h-4" />
-            Yeni Servis Fişi Aç
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/service">
+            <Button size="sm" variant="outline" className="border-cyan-800/80 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/60 font-medium gap-1.5 text-xs h-8">
+              <LayoutGrid className="w-3.5 h-3.5" />
+              Kanban Panosu
+            </Button>
+          </Link>
+
+          <Link href="/dashboard/service/new">
+            <Button size="sm" className="bg-cyan-600 hover:bg-cyan-500 text-white font-medium gap-1.5 shadow-md shadow-cyan-600/20 text-xs h-8">
+              <Plus className="w-4 h-4" />
+              Yeni Servis Fişi Aç
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Status Counters */}

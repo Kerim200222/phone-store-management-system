@@ -720,5 +720,50 @@
   - GSM teknik servis süreçlerinde müşteri cihazlarının kabul anındaki fiziksel durum tespiti (ekspertiz), cihaz şifresi güvenliği ve arıza şikayetinin yasal teslim fişine dönüştürülmesi iş akışı başarıyla kuruldu.
 - **Referans:** `PR #94 (feature/G21-service-ticket-creation)`
 
+---
+
+## 📅 Gün 22: Teknik Servis Yönetimi - Teknik Servis Kanban Panosu
+
+- **Tarih:** 16 Ekim 2026
+- **Konu:** Hafta 5: Teknik Servis Yönetimi kapsamında `/dashboard/service` sayfasında biletleri (tickets) durumlarına göre (*Bekliyor, İşlemde, Parça Bekliyor, Tamamlandı*) sütunlar halinde listeleyen, Supabase veritabanından veri çeken ve anlık durum güncelleyen interaktif bir **Kanban Board** mimarisinin tasarlanması ve geliştirilmesi.
+- **Yapılan Çalışmalar:**
+  1. **Tip Mimarisi & Veritabanı Durum Genişletmesi (`types/service.ts`, `types/database.ts`):**
+     - `RepairStatus` union tipine `'parca_bekliyor'` durumu dahil edildi.
+     - 4 temel Kanban sütunu (`bekliyor`, `islemde`, `parca_bekliyor`, `tamamlandi`) için renk kodları, ikonlar, sayaçlar ve arka plan temaları ile `KANBAN_COLUMNS` konfigürasyonu tanımlandı.
+     - Panoda ve listede cihaz, müşteri, şifre ve maliyet detaylarını tutan `ServiceTicketDisplay` tipi modellendi.
+  2. **Supabase Servis Katmanı & Veri Çekme (`lib/service-ticket-service.ts`):**
+     - `fetchServiceTickets()` fonksiyonu kodlandı; `repair_tickets` tablosundaki kayıtları müşteri ilişkisi (`customers` tablosu join'i) ile birlikte çekerek arayüz modeline dönüştürdü.
+     - Çevrimdışı veya boş veritabanı durumlarında UI'ın kesintisiz test edilebilmesi için tüm 4 sütunu kapsayan zengin simülasyon biletleri (`INITIAL_KANBAN_TICKETS`) tanımlandı.
+     - `updateServiceTicketStatus(ticketId, newStatus)` fonksiyonu ile panoda bir kartın durumu değiştirildiğinde Supabase'e asenkron UPDATE sorgusu atıldı.
+  3. **Kanban Bilet Kartı Bileşeni (`components/service/kanban/kanban-ticket-card.tsx`):**
+     - Takip kodu (`SRV-YYYYMMDD-XXXX`), öncelik rozeti (Acil, Yüksek, Normal) ve geçen süre ("45 dk önce").
+     - Cihaz markası, modeli ve 15 haneli IMEI gösterimi.
+     - Müşteri adı ve telefon numarası dökümü.
+     - Arıza ve şikayet özeti ile kategori etiketi.
+     - Cihaz ekran kilidi / şifresi için tek tıkla gizle/göster anahtarı.
+     - Tahmini onarım tutarı ve tek tıkla kabul tutanağı yazdırma butonu.
+     - Tek tıkla "İşleme Al", "Tamamla" veya "Geri Al" durum ilerletme butonları ve açılır eylem menüsü.
+  4. **Kanban Sütun Bileşeni (`components/service/kanban/kanban-column.tsx`):**
+     - Duruma özel başlık, ikon, bilet adedi rozeti ve sütundaki cihazların toplam parasal hacmi.
+     - 0 bilet olması durumunda bilgilendirici boş durum (empty state) tasarımı ve hızlı yeni bilet açma kısayolu.
+  5. **Bilet İnceleme & Müdahale Modalı (`components/service/service-detail-modal.tsx`):**
+     - Seçilen servis biletinin tüm ekspertiz, aksesuar, şikayet ve maliyet dökümünü içeren modal.
+     - Teknisyenin serbest inceleme ve işlem notu ekleyip kaydedebileceği interaktif alan.
+  6. **Teknik Servis Pano Sayfası (`app/dashboard/service/page.tsx`):**
+     - Üst alanda canlı durum sayaçları (*Bekliyor, İşlemde, Parça Bekliyor, Tamamlandı, Toplam Servis Hacmi ₺*).
+     - Fiş no, müşteri adı, IMEI, model veya arıza metninde anlık canlı arama.
+     - Öncelik ve marka bazlı filtreleme çubuğu.
+     - **Kanban Panosu (Grid)** ile **Tablo / Liste Görünümü** arasında tek tıkla geçiş desteği.
+     - Gün 21'de geliştirilen `ServiceTicketModal` ile anında A4 veya 80mm fiş yazdırma köprüsü.
+  7. **Navigasyon ve Rota Uyumluluğu:**
+     - `app/dashboard/layout.tsx` menüsünde "Teknik Servis" bağlantısı doğrudan `/dashboard/service` Kanban panosuna bağlandı.
+     - `app/dashboard/repairs/page.tsx` başlık alanına "Kanban Panosu" hızlı erişim butonu eklendi.
+  8. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm statik Next.js rotaları sıfır hata ve sıfır TypeScript/ESLint uyarısı ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - GSM teknik servis iş akışında cihazların kabulden teslime kadar olan yaşam döngüsünün sütunlu görsel Kanban metodolojisiyle yönetilmesi, anlık durum güncellemeleri ve servis ciro hacminin takibi sağlandı.
+- **Referans:** `PR #95 (feature/G22-service-kanban-board)`
+
+
 
 
