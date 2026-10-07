@@ -63,9 +63,9 @@ const navItems: NavItemConfig[] = [
   },
   {
     title: "Teknik Servis",
-    href: "/dashboard/repairs",
+    href: "/dashboard/service",
     icon: Wrench,
-    badge: "G5",
+    badge: "Kanban",
     allowedRoles: ["Admin", "Personel"],
   },
   {
