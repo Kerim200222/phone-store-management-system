@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import Link from "next/link"
 import { 
   Wrench, 
   Search, 
@@ -105,10 +106,12 @@ export default function RepairsDashboardPage() {
           </p>
         </div>
 
-        <Button size="sm" className="bg-cyan-600 hover:bg-cyan-500 text-white font-medium gap-1.5 shadow-md shadow-cyan-600/20 text-xs h-8">
-          <Plus className="w-4 h-4" />
-          Yeni Servis Fişi Aç
-        </Button>
+        <Link href="/dashboard/service/new">
+          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-500 text-white font-medium gap-1.5 shadow-md shadow-cyan-600/20 text-xs h-8">
+            <Plus className="w-4 h-4" />
+            Yeni Servis Fişi Aç
+          </Button>
+        </Link>
       </div>
 
       {/* Status Counters */}
