@@ -689,4 +689,36 @@
   - Perakende mağazacılık donanımlarında (Epson TM-T20, Bixolon, Sewoo vb. 80mm ESC/POS rulo yazıcılar) web standartları (`@media print`, `@page`) ile sürücüsüz, doğrudan tarayıcı üzerinden piksel hassasiyetinde termal fiş yazdırma mimarisi deneyimlendi.
 - **Referans:** `PR #93 (feature/G20-thermal-receipt-invoice-printing)`
 
+---
+
+## 📅 Gün 21: Teknik Servis Yönetimi - Yeni Servis Kaydı Açma
+
+- **Tarih:** 15 Ekim 2026
+- **Konu:** Hafta 5: Teknik Servis Yönetimi kapsamında `/dashboard/service/new` formunun tasarlanması; Müşteri seçimi, Cihaz Modeli, Cihaz Şifresi, Şikayet, Dış Görünüm Notları (Çizik, kırık vb.) alanlarını alarak `repair_tickets` tablosuna yeni bir kayıt açan mimarinin geliştirilmesi.
+- **Yapılan Çalışmalar:**
+  1. **Doğrulama Şeması ve Tip Mimarisi (`types/service.ts`):**
+     - Zod kütüphanesi kullanılarak `serviceTicketFormSchema` tanımlandı; Müşteri ID, Cihaz Markası, Modeli, Şikayet Açıklaması, Şifre Türü (PIN / Metin / Desen / Yok), 15 haneli Luhn algoritmalı IMEI, Tahmini Ücret, Öncelik ve Teslim Edilen Aksesuarlar zorunlu/isteğe bağlı kurallarla modellendi.
+     - `ISSUE_CATEGORIES`, `SERVICE_PRIORITIES` ve tek tıkla test sağlayan `SERVICE_PRESETS` sabitleri oluşturuldu.
+  2. **Supabase Servis Katmanı (`lib/service-ticket-service.ts`):**
+     - Otomatik sıralı `SRV-YYYYMMDD-XXXX` servis fiş numarası üreten algoritma yazıldı.
+     - Veritabanındaki `repair_tickets` tablosuna `ticket_number`, `customer_id`, `device_brand`, `device_model`, `imei`, `device_password`, `physical_condition`, `issue_description`, `has_accessories`, `status: 'bekliyor'`, `estimated_cost` alanlarıyla kayıt açan `createServiceTicket` fonksiyonu kodlandı.
+     - Supabase çevrimdışı fallback mantığı ile ağ veya kimlik doğrulama kesintilerinde UI kesintisi yaşanmadan işlem tamamlanması güvenceye alındı.
+  3. **Yazdırılabilir Cihaz Teslim/Kabul Fişi Modalı (`components/service/service-ticket-modal.tsx`):**
+     - Servis kaydı tamamlandığında otomatik veya manuel açılan interaktif kabul makbuzu geliştirildi.
+     - Hem standart A4 Servis Teslim Tutanağı hem de 80mm Termal ESC/POS fiş formatı desteklendi.
+     - Güvenlik gerekçesiyle cihaz şifresini gizleme/gösterme anahtarı, yasal 30 gün içinde teslim alınmayan cihazlar hakkındaki sorumluluk maddesi, müşteri ve servis yetkilisi ıslak imza alanları dahil edildi.
+  4. **Servis Kayıt Arayüzü (`app/dashboard/service/new/page.tsx`):**
+     - **2 Sütunlu Ergonomik Form Düzeni:**
+       - **Sol Sütun (Cihaz Kabul Adımları):** Müşteri Arama & Seçici (ve `CustomerModal` ile yerinde hızlı yeni müşteri açma butonu), Cihaz Marka/Model seçicisi, 15 haneli Luhn geçerli IMEI doğrulayıcı ve tek tıkla IMEI üretici, Cihaz Şifresi / Kilit Türü seçici (PIN kodu, parola, desen tarifi veya yok), Arıza & Şikayet kategorileri ve detaylı metin alanı, Dış görünüm ekspertiz onay kutuları (ekran kırık, arka cam çatlak, kasa ezik vb.) ile serbest metin notu, Teslim alınan aksesuarlar (SIM kart, kılıf, şarj aleti vb.), Tahmini onarım tutarı ve öncelik derecesi.
+       - **Sağ Sütun (Canlı Servis Kimlik Kartı & Hızlı Şablonlar):** Gerçek zamanlı arıza özeti, müşteri iletişim kartı, şifre güvenlik göstergesi, tahmini maliyet ve tek tıkla form doldurmayı sağlayan Hızlı Test Şablonları (Kırık Ekran, Sıvı Teması, Şişmiş Batarya, Şarj Soketi).
+  5. **Navigasyon ve Rota Entegrasyonları:**
+     - `app/dashboard/repairs/page.tsx` üzerindeki "Yeni Servis Fişi Aç" butonu `/dashboard/service/new` sayfasına bağlandı.
+     - `app/dashboard/repairs/new/page.tsx` takma adı (alias) oluşturularak hem servis hem repairs rotalarından tam erişim sağlandı.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm 18 statik Next.js rotası sıfır hata ve sıfır TypeScript/ESLint uyarısı ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - GSM teknik servis süreçlerinde müşteri cihazlarının kabul anındaki fiziksel durum tespiti (ekspertiz), cihaz şifresi güvenliği ve arıza şikayetinin yasal teslim fişine dönüştürülmesi iş akışı başarıyla kuruldu.
+- **Referans:** `PR #94 (feature/G21-service-ticket-creation)`
+
+
 
