@@ -473,12 +473,21 @@ export default function ServiceKanbanPage() {
                         {formatCurrency(ticket.estimated_cost)}
                       </td>
                       <td className="py-3.5 px-4 text-right space-x-1">
+                        <Link href={`/dashboard/service/${ticket.id}`} title="Parça & İşçilik Yönet">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-cyan-400 hover:text-cyan-300 hover:bg-slate-800"
+                          >
+                            <Wrench className="w-4 h-4" />
+                          </Button>
+                        </Link>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => handleViewDetails(ticket)}
                           className="h-8 px-2 text-slate-400 hover:text-white"
-                          title="Detay"
+                          title="Hızlı İnceleme"
                         >
                           <Info className="w-4 h-4" />
                         </Button>
