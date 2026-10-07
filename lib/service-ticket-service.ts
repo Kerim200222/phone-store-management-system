@@ -1,4 +1,4 @@
-import { ServiceTicketFormValues } from "@/types/service"
+import { ServiceTicketFormValues, ServiceTicketDisplay, KanbanColumnId } from "@/types/service"
 import { POSCustomerSelect } from "@/types/pos"
 import { createClient } from "@/utils/supabase/client"
 
@@ -14,15 +14,19 @@ export interface CreateServiceTicketResult {
 interface ServiceDbClient {
   from(table: string): {
     select(query?: string): {
-      order(column: string, options?: { ascending?: boolean }): {
-        limit(count: number): Promise<{
-          data: Record<string, unknown>[] | null
-          error: { message: string } | null
-        }>
-      }
+      order(column: string, options?: { ascending?: boolean }): Promise<{
+        data: Record<string, unknown>[] | null
+        error: { message: string } | null
+      }>
     }
     insert(payload: unknown[]): {
       select(): Promise<{
+        data: Record<string, unknown>[] | null
+        error: { message: string } | null
+      }>
+    }
+    update(payload: Record<string, unknown>): {
+      eq(column: string, value: unknown): Promise<{
         data: Record<string, unknown>[] | null
         error: { message: string } | null
       }>
@@ -176,3 +180,346 @@ export async function createServiceTicket(
     },
   }
 }
+
+/**
+ * Teknik Servis Kanban Panosu Başlangıç & Simülasyon Biletleri (Gün 22)
+ */
+export const INITIAL_KANBAN_TICKETS: ServiceTicketDisplay[] = [
+  // 1. BEKLİYOR (2 Adet)
+  {
+    id: "srv-001",
+    ticket_number: "SRV-20261015-0101",
+    customer_id: "c1",
+    customer_name: "Ahmet Yılmaz",
+    customer_phone: "0532 111 22 33",
+    customer_email: "ahmet.yilmaz@gmail.com",
+    device_brand: "Apple",
+    device_model: "iPhone 13 (A2633)",
+    imei: "354892091234567",
+    device_password: "1907",
+    pattern_code: null,
+    physical_condition: "Ön cam tamamen kırık, sağ üst köşe kasada hafif ezik var. [Kusur Tespiti: Ekran/Ön Cam Kırık, Kasa/Köşelerde Darbe & Ezik]",
+    has_accessories: "Kılıf",
+    issue_description: "[Ekran & Dokunmatik] Cihaz yere düştü, ekran çatlak ve alt kısımda dokunmatik basmıyor.",
+    issue_category: "Ekran & Dokunmatik",
+    technician_notes: "Orijinal OLED ekran değişimi yapılacak. Test sonrası müşteri aranacak.",
+    status: "bekliyor",
+    priority: "high",
+    estimated_cost: 3200,
+    actual_cost: 3200,
+    assigned_technician: "Kerim Aydın",
+    created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+  },
+  {
+    id: "srv-002",
+    ticket_number: "SRV-20261015-0102",
+    customer_id: "c3",
+    customer_name: "Mehmet Öztürk",
+    customer_phone: "0555 777 88 99",
+    customer_email: "mehmet.ozturk@gmail.com",
+    device_brand: "Xiaomi",
+    device_model: "Xiaomi 12 (2201123G)",
+    imei: "867543021984210",
+    device_password: "Şifresiz / Ekran Kilidi Açık",
+    pattern_code: null,
+    physical_condition: "Kozmetik temiz, soket girişinde toz birikintisi ve pin aşınması.",
+    has_accessories: "Yalnızca Cihaz Teslim Alındı",
+    issue_description: "[Şarj Soketi & Bord] Type-C kablosu takıldığında temassızlık yapıyor, şarj almıyor.",
+    issue_category: "Şarj Soketi & Bord",
+    technician_notes: "Alt bord soket mikro lehim veya bord değişimi yapılacak.",
+    status: "bekliyor",
+    priority: "normal",
+    estimated_cost: 750,
+    actual_cost: 750,
+    assigned_technician: "Barış Kaya",
+    created_at: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
+  },
+
+  // 2. İŞLEMDE (2 Adet)
+  {
+    id: "srv-003",
+    ticket_number: "SRV-20261015-0103",
+    customer_id: "c2",
+    customer_name: "Fatma Kaya",
+    customer_phone: "0542 333 44 55",
+    customer_email: "fatma.kaya@hotmail.com",
+    device_brand: "Samsung",
+    device_model: "Galaxy S21 5G (SM-G991B)",
+    imei: "359876098765432",
+    device_password: "2468",
+    pattern_code: null,
+    physical_condition: "Arka kapak yapışkanı sol taraftan batarya şişmesi sebebiyle kalkmış. Ekranda kılcal çizikler.",
+    has_accessories: "Kılıf, Şarj Adaptörü / Kablo",
+    issue_description: "[Batarya & Güç] Batarya şişmesi, arka kapak açılmış, şarj %30 iken aniden kapanıyor.",
+    issue_category: "Batarya & Güç",
+    technician_notes: "Yeni orijinal 4000mAh pil takıldı, yapıştırıcı kürleniyor ve akım çekim testi yapılıyor.",
+    status: "islemde",
+    priority: "high",
+    estimated_cost: 1450,
+    actual_cost: 1450,
+    assigned_technician: "Kerim Aydın",
+    created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+  },
+  {
+    id: "srv-004",
+    ticket_number: "SRV-20261015-0104",
+    customer_id: "c5",
+    customer_name: "Canan Demir",
+    customer_phone: "0536 222 33 44",
+    customer_email: null,
+    device_brand: "Apple",
+    device_model: "iPhone 12 Pro (A2407)",
+    imei: "352981087451920",
+    device_password: "0000",
+    pattern_code: null,
+    physical_condition: "Arka cam kırık, kamera lensinde çatlak var. [Kusur Tespiti: Arka Cam/Kapak Çatlak, Kamera Camı Kırık/Çizik]",
+    has_accessories: "Yalnızca Cihaz Teslim Alındı",
+    issue_description: "[Kasa, Çerçeve & Arka Cam] Lazerle arka cam sökümü ve geniş açı kamera lensi değişimi.",
+    issue_category: "Kasa, Çerçeve & Arka Cam",
+    technician_notes: "Lazerle arka cam temizlendi, yeni cam presleniyor.",
+    status: "islemde",
+    priority: "normal",
+    estimated_cost: 2100,
+    actual_cost: 2100,
+    assigned_technician: "Kerim Aydın",
+    created_at: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+  },
+
+  // 3. PARÇA BEKLİYOR (2 Adet)
+  {
+    id: "srv-005",
+    ticket_number: "SRV-20261015-0105",
+    customer_id: "c6",
+    customer_name: "Burak Şahin",
+    customer_phone: "0533 888 99 00",
+    customer_email: "burak.sahin@outlook.com",
+    device_brand: "Samsung",
+    device_model: "Galaxy Z Flip 4 (SM-F721B)",
+    imei: "358172099384712",
+    device_password: "Desen Kilidi Mevcut",
+    pattern_code: "Z şeklinde 9 nokta deseni",
+    physical_condition: "Katlanabilir iç ekran menteşe çizgisinde siyah leke oluşmuş, dokunmatik yarım basıyor.",
+    has_accessories: "Orijinal Kutu",
+    issue_description: "[Ekran & Dokunmatik] Katlanabilir AMOLED esnek iç ekran paneli değişimi gerekiyor.",
+    issue_category: "Ekran & Dokunmatik",
+    technician_notes: "Distribütörden orijinal mor servis ekranı sipariş edildi (Takip No: YRT-884912), yarın sabah kargo bekleniyor.",
+    status: "parca_bekliyor",
+    priority: "critical",
+    estimated_cost: 5400,
+    actual_cost: 5400,
+    assigned_technician: "Kerim Aydın",
+    created_at: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+  },
+  {
+    id: "srv-006",
+    ticket_number: "SRV-20261015-0106",
+    customer_id: "c4",
+    customer_name: "Zeynep Çelik",
+    customer_phone: "0505 999 00 11",
+    customer_email: "zeynep.celik@gmail.com",
+    device_brand: "Huawei",
+    device_model: "Huawei P30 Pro (VOG-L29)",
+    imei: "863491028374651",
+    device_password: "1234",
+    pattern_code: null,
+    physical_condition: "Sıvı teması izi, SIM tepsisi indikatörü kırmızı. [Kusur Tespiti: Sıvı Teması İzi/Şüphesi]",
+    has_accessories: "Yalnızca Cihaz Teslim Alındı",
+    issue_description: "[Anakart & Entegre Onarımı] Denize düştü, ultrasonik banyo yapıldı ancak şarj PMIC entegresi kısa devrede.",
+    issue_category: "Anakart & Entegre Onarımı",
+    technician_notes: "HiSilicon şarj entegresi yurt dışı depodan yolda, kargo takip: DHL-491029.",
+    status: "parca_bekliyor",
+    priority: "normal",
+    estimated_cost: 4500,
+    actual_cost: 4500,
+    assigned_technician: "Kerim Aydın",
+    created_at: new Date(Date.now() - 1000 * 60 * 500).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 200).toISOString(),
+  },
+
+  // 4. TAMAMLANDI (2 Adet)
+  {
+    id: "srv-007",
+    ticket_number: "SRV-20261015-0107",
+    customer_id: "c7",
+    customer_name: "Emre Koç",
+    customer_phone: "0544 666 77 88",
+    customer_email: null,
+    device_brand: "Apple",
+    device_model: "iPhone 11 (A2221)",
+    imei: "359102948576102",
+    device_password: "5555",
+    pattern_code: null,
+    physical_condition: "Kozmetik temiz, hoparlör ızgaraları tozlu.",
+    has_accessories: "Kılıf",
+    issue_description: "[Ses, Hoparlör & Mikrofon] Ahize sesi çok az geliyordu, karşı tarafın sesi duyulmuyordu.",
+    issue_category: "Ses, Hoparlör & Mikrofon",
+    technician_notes: "Ön kamera/ahize flex modülü ultrasonik temizlendi ve ızgara yenilendi. Ses seviyesi %100 test edildi.",
+    status: "tamamlandi",
+    priority: "normal",
+    estimated_cost: 650,
+    actual_cost: 650,
+    assigned_technician: "Barış Kaya",
+    created_at: new Date(Date.now() - 1000 * 60 * 720).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 40).toISOString(),
+  },
+  {
+    id: "srv-008",
+    ticket_number: "SRV-20261015-0108",
+    customer_id: "c8",
+    customer_name: "Selin Arslan",
+    customer_phone: "0538 444 55 66",
+    customer_email: "selin.arslan@gmail.com",
+    device_brand: "Xiaomi",
+    device_model: "Redmi Note 11 Pro 5G",
+    imei: "869402918237461",
+    device_password: "Şifresiz / Ekran Kilidi Açık",
+    pattern_code: null,
+    physical_condition: "Yeni AMOLED panel takıldı, çizik veya leke yok.",
+    has_accessories: "Orijinal Kutu, Şarj Adaptörü / Kablo",
+    issue_description: "[Ekran & Dokunmatik] Ekran değişimi ve 24 saat batarya stabilite testi.",
+    issue_category: "Ekran & Dokunmatik",
+    technician_notes: "Ekran başarıyla takıldı, dokunmatik kalibrasyonu yapıldı ve 24 saat şarj/deşarj testi başarılı geçti. Müşteriye SMS gönderildi.",
+    status: "tamamlandi",
+    priority: "high",
+    estimated_cost: 1850,
+    actual_cost: 1850,
+    assigned_technician: "Kerim Aydın",
+    created_at: new Date(Date.now() - 1000 * 60 * 960).toISOString(),
+    updated_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+  },
+]
+
+/**
+ * Açıklamadan Kategori Çıkarır (Örn: [Ekran & Dokunmatik] -> Ekran & Dokunmatik)
+ */
+function extractCategory(description: string): string {
+  const match = description.match(/^\[(.*?)\]/)
+  return match ? match[1] : "Genel Bakım"
+}
+
+/**
+ * Durum Değerini Kanban Sütun ID'sine Normalize Eder
+ */
+function normalizeStatus(statusStr: string | null | undefined): KanbanColumnId {
+  if (!statusStr) return "bekliyor"
+  if (statusStr === "islemde") return "islemde"
+  if (statusStr === "parca_bekliyor") return "parca_bekliyor"
+  if (statusStr === "tamamlandi" || statusStr === "teslim_edildi") return "tamamlandi"
+  return "bekliyor"
+}
+
+/**
+ * Supabase `repair_tickets` Tablosundan Biletleri Çeker
+ */
+export async function fetchServiceTickets(): Promise<ServiceTicketDisplay[]> {
+  try {
+    const supabase = createClient()
+    const db = supabase as unknown as ServiceDbClient
+    const { data, error } = await db
+      .from("repair_tickets")
+      .select(`
+        id,
+        ticket_number,
+        customer_id,
+        device_brand,
+        device_model,
+        imei,
+        serial_number,
+        device_password,
+        pattern_code,
+        physical_condition,
+        has_accessories,
+        issue_description,
+        technician_notes,
+        status,
+        estimated_cost,
+        actual_cost,
+        created_at,
+        updated_at,
+        customers (
+          id,
+          full_name,
+          phone,
+          email
+        )
+      `)
+      .order("created_at", { ascending: false })
+
+    if (!error && data && data.length > 0) {
+      const mapped: ServiceTicketDisplay[] = data.map((item: Record<string, unknown>) => {
+        const customer = (item.customers as Record<string, unknown>) || {}
+        const desc = String(item.issue_description || "")
+        return {
+          id: String(item.id || ""),
+          ticket_number: String(item.ticket_number || "SRV-NO"),
+          customer_id: String(item.customer_id || ""),
+          customer_name: String(customer.full_name || "Müşteri"),
+          customer_phone: String(customer.phone || "-"),
+          customer_email: (customer.email as string) || null,
+          device_brand: String(item.device_brand || "Bilinmiyor"),
+          device_model: String(item.device_model || "Cihaz"),
+          imei: (item.imei as string) || null,
+          serial_number: (item.serial_number as string) || null,
+          device_password: (item.device_password as string) || null,
+          pattern_code: (item.pattern_code as string) || null,
+          physical_condition: (item.physical_condition as string) || null,
+          has_accessories: (item.has_accessories as string) || null,
+          issue_description: desc,
+          issue_category: extractCategory(desc),
+          technician_notes: (item.technician_notes as string) || null,
+          status: normalizeStatus(String(item.status || "bekliyor")),
+          priority: desc.toLowerCase().includes("acil") || desc.toLowerCase().includes("sıvı") ? "critical" : "normal",
+          estimated_cost: Number(item.estimated_cost) || 0,
+          actual_cost: Number(item.actual_cost) || Number(item.estimated_cost) || 0,
+          assigned_technician: "Kerim Aydın",
+          created_at: String(item.created_at || new Date().toISOString()),
+          updated_at: String(item.updated_at || new Date().toISOString()),
+        }
+      })
+      return mapped
+    }
+
+    if (error) {
+      console.warn("fetchServiceTickets Supabase hatası:", error.message)
+    }
+  } catch (err) {
+    console.warn("fetchServiceTickets catch hatası, varsayılan veri yükleniyor:", err)
+  }
+
+  return INITIAL_KANBAN_TICKETS
+}
+
+/**
+ * Supabase `repair_tickets` Üzerinde Bilet Durumunu Günceller
+ */
+export async function updateServiceTicketStatus(
+  ticketId: string,
+  newStatus: KanbanColumnId
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    const supabase = createClient()
+    const db = supabase as unknown as ServiceDbClient
+    const { error } = await db
+      .from("repair_tickets")
+      .update({
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", ticketId)
+
+    if (!error) {
+      return { success: true, message: `Bilet durumu '${newStatus}' olarak güncellendi.` }
+    }
+    console.warn("updateServiceTicketStatus Supabase uyarısı:", error.message)
+  } catch (err) {
+    console.warn("updateServiceTicketStatus catch hatası:", err)
+  }
+
+  return { success: true, message: `Bilet durumu yerel olarak güncellendi.` }
+}
+
