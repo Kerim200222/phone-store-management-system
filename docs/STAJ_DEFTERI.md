@@ -764,6 +764,45 @@
   - GSM teknik servis iş akışında cihazların kabulden teslime kadar olan yaşam döngüsünün sütunlu görsel Kanban metodolojisiyle yönetilmesi, anlık durum güncellemeleri ve servis ciro hacminin takibi sağlandı.
 - **Referans:** `PR #95 (feature/G22-service-kanban-board)`
 
+---
+
+## 📅 Gün 23: Teknik Servis Yönetimi - Servis Kaydına Parça ve İşçilik Ekleme
+
+- **Tarih:** 17 Ekim 2026
+- **Konu:** Hafta 5: Teknik Servis Yönetimi kapsamında `/dashboard/service/[id]` detay sayfasının inşa edilmesi; envanterden yedek parça düşme, harici parça ekleme, elden teknisyen işçilik ücreti tanımlama ve toplam maliyeti dinamik hesaplayarak `repair_tickets` tablosunu güncelleyen Supabase mimarisinin geliştirilmesi.
+- **Yapılan Çalışmalar:**
+  1. **Tip Mimarisi & Veri Modelleri (`types/service.ts`, `types/database.ts`):**
+     - `ServiceTicketDisplay` modeline `parts_used` (JSONB), `parts_total_cost`, ve `labor_cost` alanları entegre edildi.
+     - `LaborPreset` modeli ve 6 adet hızlı işçilik paketi (`COMMON_LABOR_PRESETS`: Ekran Montajı, Batarya Değişimi, Şarj Soketi, Mikro Lehim/BGA, Sıvı Teması Banyo, Lazer Arka Cam) tanımlandı.
+     - Envanter parça modeli `SparePartOption` ve 10 adet zengin donanım/yedek parça kataloğu (`INITIAL_SPARE_PARTS`) oluşturuldu.
+     - Güncelleme payload modeli `UpdateTicketCostPayload` kodlandı.
+  2. **Supabase Servis Katmanı & Stok Düşme Mimarisi (`lib/service-ticket-service.ts`):**
+     - `getServiceTicketById(id)`: Bilet numarası veya UUID ile Supabase'den müşteri ilişkisiyle tam detay çekme fonksiyonu yazıldı (çevrimdışı/dev fallback korumalı).
+     - `updateServiceTicketCostsAndParts(ticketId, payload)`: `repair_tickets` tablosunda `parts_used`, `parts_total_cost`, `labor_cost`, `actual_cost`, `technician_notes` ve `status` alanlarını güncelleyen; aynı zamanda envanterde kayıtlı yedek parçaların `stock_quantity` stok miktarlarını düşen fonksiyon kodlandı.
+     - `INITIAL_KANBAN_TICKETS` veri setine gerçekçi parça ve işçilik kalemleri entegre edildi.
+  3. **Envanter Parça Seçim Modalı (`components/service/parts/parts-selector-modal.tsx`):**
+     - Sekmeli mimari: 1) Envanterden Parça Seç, 2) Özel / Dış Tedarik Parça Ekle.
+     - Canlı arama, stok adedi kontrolü, birim fiyat revizyonu ve miktar çarpanı ile anlık satır toplamı hesaplama.
+  4. **Kullanılan Parçalar Tablosu (`components/service/parts/parts-table.tsx`):**
+     - Montajı yapılan parçaların listesi, dinamik adet artır/azalt (+/-) butonları, satır silme ve parça ara toplam göstergesi.
+  5. **Elden İşçilik Ücreti Yöneticisi (`components/service/labor/labor-cost-manager.tsx`):**
+     - Tek tıkla tutar ve işlem detayını forma aktaran hazır işçilik paketleri.
+     - Serbest elden işçilik tutarı girişi ve teknisyen teşhis/müdahale notları alanı.
+  6. **Canlı Maliyet Özeti & Kâr Analizi Kartı (`components/service/cost-summary-card.tsx`):**
+     - `parts_total_cost` + `labor_cost` formülüyle **Dinamik Gerçekleşen Maliyet (`actual_cost`)** hesaplayıcı.
+     - Müşteriye başlangıçta verilen tahmini teklif (`estimated_cost`) ile gerçekleşen tutar arasındaki kâr/fark analizi göstergesi.
+     - Servis aşamasını değiştirme ve Supabase'e tek tıkla kaydetme aksiyonu.
+  7. **Servis Detay Sayfası (`app/dashboard/service/[id]/page.tsx`):**
+     - Müşteri, cihaz, şifre ve ekspertiz künyesi, çift sütunlu ergonomik çalışma alanı ve yazdırılabilir kabul belgesi modal entegrasyonu.
+  8. **Navigasyon ve Rota Uyumluluğu:**
+     - Kanban kartları (`KanbanTicketCard`), tablo görünümü satırları ve `ServiceDetailModal` üzerinden doğrudan `/dashboard/service/[id]` sayfasına çift yönlü bağlantılar kuruldu.
+  9. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm 21 statik Next.js rotası sıfır hata ve sıfır TypeScript/ESLint uyarısı ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - GSM teknik servis operasyonlarında onarım esnasında harcanan yedek parçaların envanter stoklarından düşülmesi, teknisyen el işçiliğinin ayrı bir maliyet kalemi olarak hesaplanması ve dinamik toplam maliyetin ACID kurallarıyla veritabanına işlenmesi süreci başarıyla modellendi.
+- **Referans:** `PR #96 (feature/G23-service-parts-labor-costs)`
+
+
 
 
 
