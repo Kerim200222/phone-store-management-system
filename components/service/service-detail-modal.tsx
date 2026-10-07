@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import Link from "next/link"
 import { 
   X, 
   Smartphone, 
@@ -250,12 +251,22 @@ export function ServiceDetailModal({
             Servis Kabul Fişi Yazdır
           </Button>
 
-          <Button
-            onClick={onClose}
-            className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold px-5"
-          >
-            Kapat
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link href={`/dashboard/service/${ticket.id}`}>
+              <Button className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold gap-1.5 shadow-sm">
+                <Wrench className="w-3.5 h-3.5" />
+                Parça & İşçilik Yönet
+              </Button>
+            </Link>
+
+            <Button
+              variant="ghost"
+              onClick={onClose}
+              className="text-slate-400 hover:text-white text-xs"
+            >
+              Kapat
+            </Button>
+          </div>
         </div>
       </div>
     </div>

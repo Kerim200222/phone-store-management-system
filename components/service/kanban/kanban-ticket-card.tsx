@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import Link from "next/link"
 import { 
   Smartphone, 
   User, 
@@ -106,9 +107,11 @@ export function KanbanTicketCard({
       {/* 1. Başlık: Takip Kodu, Öncelik & Menü */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="font-mono text-[11px] font-bold text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/50 truncate">
-            {ticket.ticket_number}
-          </span>
+          <Link href={`/dashboard/service/${ticket.id}`}>
+            <span className="font-mono text-[11px] font-bold text-cyan-400 hover:text-cyan-300 hover:underline bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/50 truncate block">
+              {ticket.ticket_number}
+            </span>
+          </Link>
           {getPriorityBadge(ticket.priority)}
           <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
             {getTimeAgo(ticket.created_at)}
@@ -129,6 +132,13 @@ export function KanbanTicketCard({
               className="absolute right-0 top-6 z-30 w-44 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl py-1 text-xs text-slate-200"
               onMouseLeave={() => setShowActionsMenu(false)}
             >
+              <Link
+                href={`/dashboard/service/${ticket.id}`}
+                className="w-full text-left px-3 py-1.5 hover:bg-slate-800 flex items-center gap-2 text-cyan-300 font-semibold"
+              >
+                <Wrench className="w-3.5 h-3.5 text-cyan-400" />
+                Parça & İşçilik Ekle
+              </Link>
               <button
                 onClick={() => {
                   setShowActionsMenu(false)
@@ -136,8 +146,8 @@ export function KanbanTicketCard({
                 }}
                 className="w-full text-left px-3 py-1.5 hover:bg-slate-800 flex items-center gap-2"
               >
-                <Info className="w-3.5 h-3.5 text-cyan-400" />
-                Detayları İncele
+                <Info className="w-3.5 h-3.5 text-slate-400" />
+                Hızlı İnceleme
               </button>
               <button
                 onClick={() => {
