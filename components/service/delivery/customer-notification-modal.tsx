@@ -11,8 +11,7 @@ import {
   ArrowRight, 
   Smartphone, 
   DollarSign, 
-  ExternalLink,
-  ShieldAlert
+  ExternalLink
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ServiceTicketDisplay, generateCompletionNotificationText } from "@/types/service"

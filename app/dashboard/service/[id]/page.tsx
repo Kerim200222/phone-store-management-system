@@ -18,8 +18,7 @@ import {
   RefreshCw,
   Printer,
   DollarSign,
-  MessageSquare,
-  ShieldCheck
+  MessageSquare
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
