@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { POSCustomerSelect } from "@/types/pos"
-import { RepairPartItem } from "@/types/database"
+import { RepairPartItem, PaymentMethod } from "@/types/database"
 
 /**
  * Arıza Kategorileri
@@ -291,6 +291,9 @@ export interface ServiceTicketDisplay {
   actual_cost: number
   parts_used?: RepairPartItem[]
   assigned_technician?: string | null
+  completed_at?: string | null
+  delivered_at?: string | null
+  transaction_number?: string | null
   created_at: string
   updated_at: string
 }
@@ -502,5 +505,101 @@ export interface UpdateTicketCostPayload {
   technician_notes?: string
   status?: KanbanColumnId
 }
+
+/**
+ * ==============================================================================
+ * GÜN 24: SERVİS TAMAMLAMA, MÜŞTERİ BİLDİRİMİ VE KASA TAHSİLATI MODELLERİ
+ * ==============================================================================
+ */
+
+export interface ServiceDeliveryCheckoutPayload {
+  ticketId: string
+  ticketNumber: string
+  customerId?: string | null
+  customerName: string
+  customerPhone: string
+  deviceBrand: string
+  deviceModel: string
+  imei?: string | null
+  paymentMethod: PaymentMethod // 'cash' | 'credit_card' | 'bank_transfer' | 'on_account' | 'split'
+  totalAmount: number // Actual cost (parts + labor)
+  discountAmount: number
+  netAmount: number
+  paidAmount: number
+  warrantyPeriodMonths: number // 0, 1, 3, 6, 12
+  warrantyNotes?: string
+  deliveredTo: string // Cihazı teslim alan kişi
+  technicianNotes?: string
+  internalNotes?: string
+  sendNotification?: boolean
+  notificationChannel?: "whatsapp" | "sms" | "none"
+}
+
+export interface ServiceDeliveryResult {
+  success: boolean
+  transactionId?: string
+  transactionNumber?: string
+  ticketNumber?: string
+  deliveredAt?: string
+  message?: string
+  error?: string
+}
+
+export interface CustomerNotificationTemplate {
+  customerName: string
+  customerPhone: string
+  ticketNumber: string
+  deviceBrand: string
+  deviceModel: string
+  totalAmount: number
+  warrantyPeriod?: string
+  storeName?: string
+  storePhone?: string
+  storeAddress?: string
+}
+
+/**
+ * Onarım Tamamlandığında Müşteriye Gönderilecek Hazır Bildirim Metni (WhatsApp / SMS)
+ */
+export function generateCompletionNotificationText(data: CustomerNotificationTemplate): string {
+  const store = data.storeName || "Phone Store Teknik Servis"
+  const phone = data.storePhone || "0212 555 00 24"
+  const formattedAmount = new Intl.NumberFormat("tr-TR", {
+    style: "currency",
+    currency: "TRY",
+    maximumFractionDigits: 0,
+  }).format(data.totalAmount)
+
+  return `Sayın ${data.customerName}, ${data.deviceBrand} ${data.deviceModel} cihazınızın teknik servis bakım ve onarımı başarıyla tamamlanmıştır.
+
+Toplam Tutar: ${formattedAmount}
+Servis Takip No: ${data.ticketNumber}
+
+Cihazınızı mağazamızdan teslim alabilirsiniz. Bizi tercih ettiğiniz için teşekkür ederiz.
+${store} - Tel: ${phone}`
+}
+
+/**
+ * Cihaz Teslim Edildiğinde ve Tahsilat Alındığında Bilgilendirme Metni
+ */
+export function generateDeliveryNotificationText(data: CustomerNotificationTemplate): string {
+  const store = data.storeName || "Phone Store Teknik Servis"
+  const formattedAmount = new Intl.NumberFormat("tr-TR", {
+    style: "currency",
+    currency: "TRY",
+    maximumFractionDigits: 0,
+  }).format(data.totalAmount)
+
+  const warrantyText = data.warrantyPeriod && data.warrantyPeriod !== "Garantisiz"
+    ? `\nCihazınız ${data.warrantyPeriod} boyunca servis garantimiz altındadır.`
+    : ""
+
+  return `Sayın ${data.customerName}, ${data.deviceBrand} ${data.deviceModel} cihazınız tarafınıza teslim edilmiş ve ${formattedAmount} tutarındaki servis ödemesi tahsil edilmiştir.${warrantyText}
+
+Servis Fişi / Kasa No: ${data.ticketNumber}
+Hayırlı günlerde kullanmanızı dileriz.
+${store}`
+}
+
 
 
