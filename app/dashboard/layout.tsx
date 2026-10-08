@@ -18,7 +18,8 @@ import {
   Store, 
   ChevronRight,
   Shield,
-  ShieldAlert
+  ShieldAlert,
+  History
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -66,6 +67,13 @@ const navItems: NavItemConfig[] = [
     href: "/dashboard/service",
     icon: Wrench,
     badge: "Kanban",
+    allowedRoles: ["Admin", "Personel"],
+  },
+  {
+    title: "Cihaz Geçmişi",
+    href: "/dashboard/service/history",
+    icon: History,
+    badge: "IMEI",
     allowedRoles: ["Admin", "Personel"],
   },
   {

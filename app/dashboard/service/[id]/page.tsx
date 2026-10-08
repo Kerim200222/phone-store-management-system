@@ -18,7 +18,8 @@ import {
   RefreshCw,
   Printer,
   DollarSign,
-  MessageSquare
+  MessageSquare,
+  History
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -393,6 +394,19 @@ export default function ServiceTicketDetailPage() {
             </Button>
           )}
 
+          {ticket.imei && (
+            <Link href={`/dashboard/service/history?imei=${ticket.imei}`}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-indigo-700/60 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 text-xs gap-1.5 font-medium"
+              >
+                <History className="w-3.5 h-3.5 text-indigo-400" />
+                Cihaz Geçmişi
+              </Button>
+            </Link>
+          )}
+
           <Button
             size="sm"
             variant="outline"
@@ -440,10 +454,22 @@ export default function ServiceTicketDetailPage() {
 
         {/* Cihaz Bilgisi */}
         <div className="p-3.5 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
-            Cihaz & Model
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
+              Cihaz & Model
+            </span>
+            {ticket.imei && (
+              <Link
+                href={`/dashboard/service/history?imei=${ticket.imei}`}
+                className="text-[10px] font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 hover:underline transition-colors"
+                title="Cihazın tüm servis ve alım-satım geçmişini zaman çizelgesinde gör"
+              >
+                <History className="w-3 h-3" />
+                Geçmiş
+              </Link>
+            )}
+          </div>
           <p className="font-bold text-white text-sm">{ticket.device_brand} {ticket.device_model}</p>
           <p className="text-[11px] font-mono text-cyan-400 truncate">
             {ticket.imei ? `IMEI: ${ticket.imei}` : "IMEI Belirtilmedi"}

@@ -14,7 +14,8 @@ import {
   CheckCircle2, 
   DollarSign, 
   Printer, 
-  Info
+  Info,
+  History
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -296,6 +297,18 @@ export default function ServiceKanbanPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-cyan-400" : ""}`} />
             <span className="hidden sm:inline">Yenile</span>
           </Button>
+
+          {/* Cihaz Geçmişi & IMEI Sorgulama Butonu */}
+          <Link href="/dashboard/service/history">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 border-slate-800 bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-white font-semibold gap-1.5 text-xs px-3"
+            >
+              <History className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Cihaz / IMEI Geçmişi</span>
+            </Button>
+          </Link>
 
           {/* Yeni Servis Kaydı Aç Butonu */}
           <Link href="/dashboard/service/new">
