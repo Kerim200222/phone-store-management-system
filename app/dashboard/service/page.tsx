@@ -22,16 +22,23 @@ import {
   ServiceTicketDisplay, 
   KanbanColumnId, 
   KANBAN_COLUMNS, 
-  ServiceTicketReceiptData 
+  ServiceTicketReceiptData,
+  ServiceDeliveryCheckoutPayload,
+  ServiceDeliveryResult
 } from "@/types/service"
+import { UniversalReceiptData } from "@/types/receipt"
 import { 
   fetchServiceTickets, 
   updateServiceTicketStatus,
   INITIAL_KANBAN_TICKETS
 } from "@/lib/service-ticket-service"
+import { formatServiceDeliveryToReceipt } from "@/lib/receipt-formatter"
 import { KanbanColumn } from "@/components/service/kanban/kanban-column"
 import { ServiceDetailModal } from "@/components/service/service-detail-modal"
 import { ServiceTicketModal } from "@/components/service/service-ticket-modal"
+import { CustomerNotificationModal } from "@/components/service/delivery/customer-notification-modal"
+import { ServiceDeliveryModal } from "@/components/service/delivery/service-delivery-modal"
+import { UniversalReceiptModal } from "@/components/receipt/universal-receipt-modal"
 
 export default function ServiceKanbanPage() {
   const [tickets, setTickets] = useState<ServiceTicketDisplay[]>(INITIAL_KANBAN_TICKETS)
@@ -47,6 +54,13 @@ export default function ServiceKanbanPage() {
   
   const [receiptData, setReceiptData] = useState<ServiceTicketReceiptData | null>(null)
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false)
+
+  // Gün 24: Teslimat ve Müşteri Bildirimi Modalları
+  const [selectedTicketForAction, setSelectedTicketForAction] = useState<ServiceTicketDisplay | null>(null)
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false)
+  const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false)
+  const [isUniversalReceiptOpen, setIsUniversalReceiptOpen] = useState(false)
+  const [universalReceiptData, setUniversalReceiptData] = useState<UniversalReceiptData | null>(null)
 
   // Biletleri Çekme Fonksiyonu
   const loadTickets = useCallback(async () => {
@@ -132,6 +146,39 @@ export default function ServiceKanbanPage() {
   const handleViewDetails = (ticket: ServiceTicketDisplay) => {
     setSelectedTicketForDetail(ticket)
     setIsDetailModalOpen(true)
+  }
+
+  // Gün 24: Teslimat Modalı Açma
+  const handleOpenDeliverModal = (ticket: ServiceTicketDisplay) => {
+    setSelectedTicketForAction(ticket)
+    setIsDeliveryModalOpen(true)
+  }
+
+  // Gün 24: Müşteri Bildirimi Modalı Açma
+  const handleOpenNotifyModal = (ticket: ServiceTicketDisplay) => {
+    setSelectedTicketForAction(ticket)
+    setIsNotifyModalOpen(true)
+  }
+
+  // Gün 24: Teslimat ve Kasa Tahsilatı Başarılı
+  const handleDeliverySuccess = (result: ServiceDeliveryResult, updatedTicket: ServiceTicketDisplay) => {
+    setTickets((prev) =>
+      prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t))
+    )
+    if (selectedTicketForDetail && selectedTicketForDetail.id === updatedTicket.id) {
+      setSelectedTicketForDetail(updatedTicket)
+    }
+  }
+
+  // Gün 24: Teslim Fişi / Makbuzunu Yazdır
+  const handlePrintDeliveryReceipt = (
+    result: ServiceDeliveryResult,
+    payload: ServiceDeliveryCheckoutPayload
+  ) => {
+    if (!selectedTicketForAction) return
+    const receipt = formatServiceDeliveryToReceipt(selectedTicketForAction, payload)
+    setUniversalReceiptData(receipt)
+    setIsUniversalReceiptOpen(true)
   }
 
   // Filtreleme Mantığı
@@ -399,6 +446,8 @@ export default function ServiceKanbanPage() {
                 onStatusChange={handleStatusChange}
                 onPrintTicket={handlePrintTicket}
                 onViewDetails={handleViewDetails}
+                onDeliverTicket={handleOpenDeliverModal}
+                onNotifyCustomer={handleOpenNotifyModal}
               />
             )
           })}
@@ -528,6 +577,35 @@ export default function ServiceKanbanPage() {
         onNewTicket={() => {
           setIsReceiptModalOpen(false)
         }}
+      />
+
+      {/* Gün 24: Müşteri Onarım Bildirimi Modalı (WhatsApp / SMS) */}
+      <CustomerNotificationModal
+        isOpen={isNotifyModalOpen}
+        onClose={() => setIsNotifyModalOpen(false)}
+        ticket={selectedTicketForAction}
+        actualCost={selectedTicketForAction?.actual_cost || selectedTicketForAction?.estimated_cost || 0}
+        onProceedToDelivery={() => {
+          setIsNotifyModalOpen(false)
+          setIsDeliveryModalOpen(true)
+        }}
+      />
+
+      {/* Gün 24: Cihaz Teslimi ve Kasa Tahsilat Modalı (Checkout) */}
+      <ServiceDeliveryModal
+        isOpen={isDeliveryModalOpen}
+        onClose={() => setIsDeliveryModalOpen(false)}
+        ticket={selectedTicketForAction}
+        actualCost={selectedTicketForAction?.actual_cost || selectedTicketForAction?.estimated_cost || 0}
+        onSuccess={handleDeliverySuccess}
+        onPrintReceipt={handlePrintDeliveryReceipt}
+      />
+
+      {/* Gün 20 & 24: 80mm Termal Makbuz Çıktı Modalı */}
+      <UniversalReceiptModal
+        isOpen={isUniversalReceiptOpen}
+        onClose={() => setIsUniversalReceiptOpen(false)}
+        data={universalReceiptData}
       />
     </div>
   )
