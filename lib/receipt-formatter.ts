@@ -6,6 +6,7 @@ import {
 } from "@/types/receipt"
 import { CartItem, CartSummary, POSCustomerSelect, POSPaymentMethod } from "@/types/pos"
 import { PurchaseFormValues } from "@/types/purchase"
+import { ServiceTicketDisplay, ServiceDeliveryCheckoutPayload } from "@/types/service"
 
 /**
  * POS Satış Sepetini 80mm Universal Fiş Modeline Dönüştürür
@@ -210,3 +211,89 @@ export function formatTransactionRowToReceipt(row: {
     qrData: `https://telefonmagazasi.com/belge/${row.trx_number}`,
   }
 }
+
+/**
+ * Teknik Servis Teslim ve Kasa Tahsilatını 80mm Universal Fiş Modeline Dönüştürür (Gün 24)
+ */
+export function formatServiceDeliveryToReceipt(
+  ticket: ServiceTicketDisplay,
+  checkoutPayload: ServiceDeliveryCheckoutPayload,
+  cashierName: string = "Kerim Aydın (Teknik Servis)"
+): UniversalReceiptData {
+  const items: ReceiptItem[] = []
+
+  // 1. Eklenen yedek parçalar
+  if (ticket.parts_used && ticket.parts_used.length > 0) {
+    ticket.parts_used.forEach((part, index) => {
+      items.push({
+        id: `part-${index}`,
+        name: `[Parça] ${part.part_name}`,
+        quantity: part.quantity,
+        unitPrice: part.unit_price,
+        totalPrice: part.total_price,
+        category: "Yedek Parça",
+        warrantyPeriod: checkoutPayload.warrantyPeriodMonths > 0
+          ? `${checkoutPayload.warrantyPeriodMonths} Ay Servis Garantisi`
+          : undefined,
+      })
+    })
+  }
+
+  // 2. Elden işçilik / onarım ücreti
+  const labor = Number(ticket.labor_cost) || 0
+  if (labor > 0 || items.length === 0) {
+    items.push({
+      id: "srv-labor",
+      name: `[İşçilik] ${ticket.issue_category || "Cihaz Onarım & Montaj Hizmeti"}`,
+      quantity: 1,
+      unitPrice: labor > 0 ? labor : checkoutPayload.totalAmount,
+      totalPrice: labor > 0 ? labor : checkoutPayload.totalAmount,
+      category: "İşçilik",
+      warrantyPeriod: checkoutPayload.warrantyPeriodMonths > 0
+        ? `${checkoutPayload.warrantyPeriodMonths} Ay Onarım Garantisi`
+        : undefined,
+    })
+  }
+
+  const subtotal = Math.round((checkoutPayload.netAmount / 1.2) * 100) / 100
+  const taxAmount = Math.round((checkoutPayload.netAmount - subtotal) * 100) / 100
+
+  const warrantyStr = checkoutPayload.warrantyPeriodMonths > 0
+    ? `${checkoutPayload.warrantyPeriodMonths} Ay Yedek Parça & Onarım Garantisi`
+    : "Garantisiz Teslimat"
+
+  return {
+    receiptNo: checkoutPayload.ticketNumber,
+    type: "repair",
+    date: new Date().toISOString(),
+    cashierName,
+    store: DEFAULT_STORE_INFO,
+    customer: {
+      name: checkoutPayload.customerName,
+      phone: checkoutPayload.customerPhone,
+    },
+    items,
+    subtotal,
+    discountTotal: checkoutPayload.discountAmount,
+    taxTotal: taxAmount,
+    grandTotal: checkoutPayload.netAmount,
+    taxes: [
+      {
+        taxRate: 20,
+        taxableAmount: subtotal,
+        taxAmount: taxAmount,
+      },
+    ],
+    paymentMethod: checkoutPayload.paymentMethod,
+    paymentDetails: {
+      cashAmount: checkoutPayload.paymentMethod === "cash" ? checkoutPayload.paidAmount : undefined,
+      cardAmount: checkoutPayload.paymentMethod === "credit_card" ? checkoutPayload.paidAmount : undefined,
+    },
+    notes: `Cihaz: ${ticket.device_brand} ${ticket.device_model}${ticket.imei ? ` • IMEI: ${ticket.imei}` : ""}\nTeslim Alan: ${checkoutPayload.deliveredTo || checkoutPayload.customerName}\nGaranti Durumu: ${warrantyStr}`,
+    legalText: "213 Sayılı V.U.K. uyarınca düzenlenmiş TEKNİK SERVİS TESLİM VE TAHSİLAT MAKBUZUDUR. Servis garantisi sıvı teması ve kullanıcı kaynaklı darbe/kırılmaları kapsamaz.",
+    footerMessage: `Cihazınız başarıyla teslim edilmiş ve ödemesi tahsil edilmiştir.\nGaranti Süresi: ${warrantyStr}\nBizi tercih ettiğiniz için teşekkür ederiz.`,
+    barcode: checkoutPayload.ticketNumber.replace(/[^A-Za-z0-9]/g, ""),
+    qrData: `https://telefonmagazasi.com/servis-makbuzu/${checkoutPayload.ticketNumber}`,
+  }
+}
+

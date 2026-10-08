@@ -17,7 +17,10 @@ import {
   CheckCircle2,
   Wrench,
   Boxes,
-  Info
+  Info,
+  DollarSign,
+  MessageSquare,
+  ShieldCheck
 } from "lucide-react"
 import { ServiceTicketDisplay, KanbanColumnId } from "@/types/service"
 import { Button } from "@/components/ui/button"
@@ -27,6 +30,8 @@ interface KanbanTicketCardProps {
   onStatusChange: (ticketId: string, newStatus: KanbanColumnId) => void
   onPrintTicket: (ticket: ServiceTicketDisplay) => void
   onViewDetails: (ticket: ServiceTicketDisplay) => void
+  onDeliverTicket?: (ticket: ServiceTicketDisplay) => void
+  onNotifyCustomer?: (ticket: ServiceTicketDisplay) => void
 }
 
 export function KanbanTicketCard({
@@ -34,6 +39,8 @@ export function KanbanTicketCard({
   onStatusChange,
   onPrintTicket,
   onViewDetails,
+  onDeliverTicket,
+  onNotifyCustomer,
 }: KanbanTicketCardProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showActionsMenu, setShowActionsMenu] = useState(false)
@@ -304,7 +311,7 @@ export function KanbanTicketCard({
           )}
 
           {/* İleri Taşı Butonu */}
-          {nextStatus && (
+          {nextStatus ? (
             <Button
               size="sm"
               onClick={() => onStatusChange(ticket.id, nextStatus)}
@@ -314,7 +321,38 @@ export function KanbanTicketCard({
               <span>{nextStatus === "islemde" ? "İşleme Al" : nextStatus === "tamamlandi" ? "Tamamla" : "İlerlet"}</span>
               <ArrowRight className="w-3 h-3" />
             </Button>
-          )}
+          ) : ticket.status === "teslim_edildi" ? (
+            <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/50">
+              <ShieldCheck className="w-3 h-3" />
+              Teslim Edildi
+            </span>
+          ) : ticket.status === "tamamlandi" ? (
+            <div className="flex items-center gap-1">
+              {onNotifyCustomer && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onNotifyCustomer(ticket)}
+                  className="h-7 px-1.5 text-[10px] border-emerald-800 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 gap-1 font-bold"
+                  title="Müşteriye Bildir (WhatsApp/SMS)"
+                >
+                  <MessageSquare className="w-3 h-3 text-emerald-400" />
+                  <span className="hidden sm:inline">Bildir</span>
+                </Button>
+              )}
+              {onDeliverTicket && (
+                <Button
+                  size="sm"
+                  onClick={() => onDeliverTicket(ticket)}
+                  className="h-7 px-2 text-[11px] font-bold bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white gap-1 shadow-sm"
+                  title="Cihazı Teslim Et ve Tahsilat Yap"
+                >
+                  <DollarSign className="w-3 h-3" />
+                  <span>Teslim Et</span>
+                </Button>
+              )}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

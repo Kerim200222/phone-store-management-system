@@ -16,7 +16,9 @@ import {
   FileText,
   Tag,
   RefreshCw,
-  Printer
+  Printer,
+  DollarSign,
+  MessageSquare
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -24,18 +26,26 @@ import {
   ServiceTicketDisplay, 
   KanbanColumnId, 
   UpdateTicketCostPayload, 
-  ServiceTicketReceiptData 
+  ServiceTicketReceiptData,
+  ServiceDeliveryCheckoutPayload,
+  ServiceDeliveryResult
 } from "@/types/service"
 import { RepairPartItem } from "@/types/database"
+import { UniversalReceiptData } from "@/types/receipt"
 import { 
   getServiceTicketById, 
-  updateServiceTicketCostsAndParts 
+  updateServiceTicketCostsAndParts,
+  markServiceTicketAsCompleted
 } from "@/lib/service-ticket-service"
+import { formatServiceDeliveryToReceipt } from "@/lib/receipt-formatter"
 import { PartsTable } from "@/components/service/parts/parts-table"
 import { PartsSelectorModal } from "@/components/service/parts/parts-selector-modal"
 import { LaborCostManager } from "@/components/service/labor/labor-cost-manager"
 import { CostSummaryCard } from "@/components/service/cost-summary-card"
 import { ServiceTicketModal } from "@/components/service/service-ticket-modal"
+import { CustomerNotificationModal } from "@/components/service/delivery/customer-notification-modal"
+import { ServiceDeliveryModal } from "@/components/service/delivery/service-delivery-modal"
+import { UniversalReceiptModal } from "@/components/receipt/universal-receipt-modal"
 
 export default function ServiceTicketDetailPage() {
   const params = useParams()
@@ -56,6 +66,12 @@ export default function ServiceTicketDetailPage() {
   const [isPartsModalOpen, setIsPartsModalOpen] = useState(false)
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false)
   const [receiptData, setReceiptData] = useState<ServiceTicketReceiptData | null>(null)
+
+  // Gün 24: Teslimat ve Müşteri Bildirim Modalları
+  const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false)
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false)
+  const [isUniversalReceiptOpen, setIsUniversalReceiptOpen] = useState(false)
+  const [universalReceiptData, setUniversalReceiptData] = useState<UniversalReceiptData | null>(null)
 
   // Kaydetme Durumu
   const [isSaving, setIsSaving] = useState(false)
@@ -212,6 +228,78 @@ export default function ServiceTicketDetailPage() {
     setIsReceiptModalOpen(true)
   }
 
+  // Gün 24: Onarımı Tamamla (Durumu Tamamlandı Yap ve Bildirim Modalını Aç)
+  const handleCompleteTicket = async () => {
+    if (!ticket) return
+    try {
+      const res = await markServiceTicketAsCompleted(ticket.id, technicianNotes)
+      if (res.success) {
+        setStatus("tamamlandi")
+        setTicket((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: "tamamlandi",
+                completed_at: new Date().toISOString(),
+                technician_notes: technicianNotes,
+              }
+            : null
+        )
+        setIsSavedSuccess(true)
+        setSaveMessage(res.message || "Cihaz onarımı tamamlandı olarak kaydedildi.")
+        setTimeout(() => setIsSavedSuccess(false), 3000)
+        setIsNotifyModalOpen(true)
+      }
+    } catch (err) {
+      console.warn("Onarım tamamlama hatası:", err)
+    }
+  }
+
+  // Gün 24: Teslimat Başarılı Olduğunda
+  const handleDeliverySuccess = (result: ServiceDeliveryResult, updatedTicket: ServiceTicketDisplay) => {
+    setTicket(updatedTicket)
+    setStatus("tamamlandi")
+    setIsSavedSuccess(true)
+    setSaveMessage(result.message || "Cihaz teslim edildi ve teknik servis geliri kasaya kaydedildi.")
+    setTimeout(() => setIsSavedSuccess(false), 4000)
+  }
+
+  // Gün 24: Teslimat Fişi / Makbuzunu Yazdır
+  const handlePrintDeliveryReceipt = (
+    result: ServiceDeliveryResult,
+    payload: ServiceDeliveryCheckoutPayload
+  ) => {
+    if (!ticket) return
+    const receipt = formatServiceDeliveryToReceipt(ticket, payload)
+    setUniversalReceiptData(receipt)
+    setIsUniversalReceiptOpen(true)
+  }
+
+  // Zaten teslim edilmiş cihaz için makbuz aç
+  const handlePrintExistingDeliveryReceipt = () => {
+    if (!ticket) return
+    const payload: ServiceDeliveryCheckoutPayload = {
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticket_number,
+      customerId: ticket.customer_id,
+      customerName: ticket.customer_name,
+      customerPhone: ticket.customer_phone,
+      deviceBrand: ticket.device_brand,
+      deviceModel: ticket.device_model,
+      imei: ticket.imei,
+      paymentMethod: "cash",
+      totalAmount: actualCost,
+      discountAmount: 0,
+      netAmount: actualCost,
+      paidAmount: actualCost,
+      warrantyPeriodMonths: 6,
+      deliveredTo: ticket.customer_name,
+    }
+    const receipt = formatServiceDeliveryToReceipt(ticket, payload)
+    setUniversalReceiptData(receipt)
+    setIsUniversalReceiptOpen(true)
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-[500px] flex flex-col items-center justify-center space-y-3">
@@ -264,7 +352,47 @@ export default function ServiceTicketDetailPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {ticket.status === "teslim_edildi" ? (
+            <Button
+              size="sm"
+              onClick={handlePrintExistingDeliveryReceipt}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-1.5 shadow-md shadow-emerald-600/20"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Teslimat Makbuzu Yazdır
+            </Button>
+          ) : ticket.status === "tamamlandi" ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsNotifyModalOpen(true)}
+                className="border-emerald-700 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 text-xs gap-1.5 font-bold"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                Müşteriye Bildir
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setIsDeliveryModalOpen(true)}
+                className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs gap-1.5 shadow-md shadow-emerald-600/25"
+              >
+                <DollarSign className="w-3.5 h-3.5" />
+                Teslim Et & Tahsilat
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              onClick={handleCompleteTicket}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-1.5 shadow-md shadow-emerald-600/20"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Onarımı Tamamla
+            </Button>
+          )}
+
           <Button
             size="sm"
             variant="outline"
@@ -272,7 +400,7 @@ export default function ServiceTicketDetailPage() {
             className="border-slate-700 bg-slate-900 text-slate-200 hover:text-white text-xs gap-1.5"
           >
             <Printer className="w-3.5 h-3.5 text-cyan-400" />
-            Fiş / Makbuz Yazdır
+            Kabul Fişi
           </Button>
 
           <Button
@@ -412,12 +540,16 @@ export default function ServiceTicketDetailPage() {
             laborCost={laborCost}
             actualCost={actualCost}
             estimatedCost={ticket.estimated_cost}
-            status={status}
+            status={ticket.status === "teslim_edildi" ? "teslim_edildi" : status}
             onChangeStatus={setStatus}
             onSave={handleSaveCosts}
             onPrint={handleOpenReceiptModal}
             isSaving={isSaving}
             isSavedSuccess={isSavedSuccess}
+            onCompleteTicket={handleCompleteTicket}
+            onNotifyCustomer={() => setIsNotifyModalOpen(true)}
+            onDeliverCheckout={() => setIsDeliveryModalOpen(true)}
+            isDelivered={ticket.status === "teslim_edildi"}
           />
         </div>
       </div>
@@ -441,6 +573,32 @@ export default function ServiceTicketDetailPage() {
           setIsReceiptModalOpen(false)
           router.push("/dashboard/service/new")
         }}
+      />
+
+      {/* Gün 24: Müşteri Onarım Bildirimi Modalı (WhatsApp / SMS) */}
+      <CustomerNotificationModal
+        isOpen={isNotifyModalOpen}
+        onClose={() => setIsNotifyModalOpen(false)}
+        ticket={ticket}
+        actualCost={actualCost}
+        onProceedToDelivery={() => setIsDeliveryModalOpen(true)}
+      />
+
+      {/* Gün 24: Cihaz Teslimi ve Kasa Tahsilat Modalı (Checkout) */}
+      <ServiceDeliveryModal
+        isOpen={isDeliveryModalOpen}
+        onClose={() => setIsDeliveryModalOpen(false)}
+        ticket={ticket}
+        actualCost={actualCost}
+        onSuccess={handleDeliverySuccess}
+        onPrintReceipt={handlePrintDeliveryReceipt}
+      />
+
+      {/* Gün 20 & 24: 80mm Termal Makbuz Çıktı Modalı */}
+      <UniversalReceiptModal
+        isOpen={isUniversalReceiptOpen}
+        onClose={() => setIsUniversalReceiptOpen(false)}
+        data={universalReceiptData}
       />
     </div>
   )

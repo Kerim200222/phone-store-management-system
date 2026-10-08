@@ -19,6 +19,8 @@ interface KanbanColumnProps {
   onStatusChange: (ticketId: string, newStatus: KanbanColumnId) => void
   onPrintTicket: (ticket: ServiceTicketDisplay) => void
   onViewDetails: (ticket: ServiceTicketDisplay) => void
+  onDeliverTicket?: (ticket: ServiceTicketDisplay) => void
+  onNotifyCustomer?: (ticket: ServiceTicketDisplay) => void
 }
 
 export function KanbanColumn({
@@ -27,6 +29,8 @@ export function KanbanColumn({
   onStatusChange,
   onPrintTicket,
   onViewDetails,
+  onDeliverTicket,
+  onNotifyCustomer,
 }: KanbanColumnProps) {
   // Kolon ikonunu seç
   const getColumnIcon = () => {
@@ -113,6 +117,8 @@ export function KanbanColumn({
               onStatusChange={onStatusChange}
               onPrintTicket={onPrintTicket}
               onViewDetails={onViewDetails}
+              onDeliverTicket={onDeliverTicket}
+              onNotifyCustomer={onNotifyCustomer}
             />
           ))
         )}

@@ -9,7 +9,10 @@ import {
   Printer, 
   TrendingDown, 
   TrendingUp, 
-  Minus
+  Minus,
+  CheckCircle2,
+  MessageSquare,
+  ShieldCheck
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { KanbanColumnId } from "@/types/service"
@@ -19,12 +22,16 @@ interface CostSummaryCardProps {
   laborCost: number
   actualCost: number
   estimatedCost: number
-  status: KanbanColumnId
+  status: KanbanColumnId | "teslim_edildi" | "iade" | "iptal"
   onChangeStatus: (status: KanbanColumnId) => void
   onSave: () => void
   onPrint: () => void
   isSaving: boolean
   isSavedSuccess: boolean
+  onCompleteTicket?: () => void
+  onNotifyCustomer?: () => void
+  onDeliverCheckout?: () => void
+  isDelivered?: boolean
 }
 
 export function CostSummaryCard({
@@ -38,6 +45,10 @@ export function CostSummaryCard({
   onPrint,
   isSaving,
   isSavedSuccess,
+  onCompleteTicket,
+  onNotifyCustomer,
+  onDeliverCheckout,
+  isDelivered = false,
 }: CostSummaryCardProps) {
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat("tr-TR", {
@@ -137,7 +148,7 @@ export function CostSummaryCard({
             Servis Aşaması:
           </label>
           <select
-            value={status}
+            value={status === "teslim_edildi" ? "tamamlandi" : status}
             onChange={(e) => onChangeStatus(e.target.value as KanbanColumnId)}
             className="w-full h-10 px-3 rounded-xl border border-slate-700 bg-slate-950 text-slate-100 text-xs font-bold focus:ring-2 focus:ring-cyan-500"
           >
@@ -150,17 +161,63 @@ export function CostSummaryCard({
 
         {/* Aksiyon Butonları */}
         <div className="pt-2 space-y-2">
+          {/* Cihaz Zaten Teslim Edildiyse */}
+          {(isDelivered || status === "teslim_edildi") ? (
+            <div className="p-3 rounded-xl bg-emerald-950/50 border border-emerald-500/50 text-emerald-300 text-xs flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+              <div>
+                <span className="font-bold block text-white">Cihaz Teslim Edildi</span>
+                <span className="text-[11px] text-emerald-400">Teknik servis geliri kasaya kaydedildi.</span>
+              </div>
+            </div>
+          ) : status === "tamamlandi" ? (
+            /* Durum Tamamlandı İse: Teslim Et & Müşteriye Bildir Butonları */
+            <>
+              {onDeliverCheckout && (
+                <Button
+                  onClick={onDeliverCheckout}
+                  className="w-full h-12 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold text-xs gap-2 shadow-xl shadow-emerald-600/30 ring-1 ring-emerald-400/40 animate-pulse hover:animate-none"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  <span>Teslim Et & Tahsilat Yap ({formatCurrency(actualCost)})</span>
+                </Button>
+              )}
+
+              {onNotifyCustomer && (
+                <Button
+                  variant="outline"
+                  onClick={onNotifyCustomer}
+                  className="w-full h-10 border-emerald-700/80 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-200 text-xs font-bold gap-2"
+                >
+                  <MessageSquare className="w-4 h-4 text-emerald-400" />
+                  <span>Müşteriye Bildir (WhatsApp / SMS)</span>
+                </Button>
+              )}
+            </>
+          ) : (
+            /* Durum İşlemde / Bekliyor İse: Onarımı Tamamla Butonu */
+            onCompleteTicket && (
+              <Button
+                onClick={onCompleteTicket}
+                className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-2 shadow-lg shadow-emerald-600/25"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Onarımı Tamamla (Tamamlandı Yap)</span>
+              </Button>
+            )
+          )}
+
           {/* Kaydet Butonu */}
           <Button
             onClick={onSave}
             disabled={isSaving}
-            className="w-full h-11 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs gap-2 shadow-lg shadow-cyan-600/20"
+            className="w-full h-10 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs gap-2 shadow-lg shadow-cyan-600/20"
           >
             <Save className={`w-4 h-4 ${isSaving ? "animate-spin" : ""}`} />
             <span>{isSaving ? "Supabase'e Kaydediliyor..." : isSavedSuccess ? "Başarıyla Kaydedildi!" : "Maliyetleri Supabase'e Kaydet"}</span>
           </Button>
 
-          {/* Servis Fişi Yazdır */}
+          {/* Servis Fişi / Kabul Belgesi Yazdır */}
           <Button
             variant="outline"
             onClick={onPrint}
