@@ -6,20 +6,14 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { 
   ArrowLeft, 
   Smartphone, 
-  Wrench, 
   Plus, 
   Layers, 
   RefreshCw, 
-  History, 
-  ShieldCheck,
-  Search,
-  Sparkles,
-  HelpCircle,
-  Clock
+  History
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DeviceHistoryQueryResult } from "@/types/device-history"
-import { getDeviceHistoryByIMEI, DEVICE_HISTORY_PRESETS } from "@/lib/device-history-service"
+import { getDeviceHistoryByIMEI } from "@/lib/device-history-service"
 import { DeviceHistorySearch } from "@/components/devices/device-history-search"
 import { DeviceHistoryHeader } from "@/components/devices/device-history-header"
 import { DeviceHistoryTimeline } from "@/components/devices/device-history-timeline"

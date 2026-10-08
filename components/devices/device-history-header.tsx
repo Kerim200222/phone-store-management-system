@@ -6,16 +6,11 @@ import {
   Copy, 
   Check, 
   ShieldCheck, 
-  Clock, 
   Wrench, 
-  DollarSign, 
   User, 
   Printer, 
-  Tag,
   CheckCircle2,
-  Calendar,
-  Layers,
-  Battery
+  Calendar
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DeviceSummary, DeviceCurrentStatus } from "@/types/device-history"

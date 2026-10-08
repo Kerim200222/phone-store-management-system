@@ -4,13 +4,9 @@ import React, { useRef } from "react"
 import { 
   X, 
   Printer, 
-  Download, 
   Smartphone, 
-  Barcode, 
-  ShieldCheck, 
   FileText,
-  Calendar,
-  CheckCircle2
+  Calendar
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DeviceSummary, DeviceTimelineEvent } from "@/types/device-history"

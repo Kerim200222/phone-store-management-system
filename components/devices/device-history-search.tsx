@@ -8,7 +8,6 @@ import {
   X, 
   Sparkles, 
   AlertCircle,
-  CheckCircle2,
   ScanLine
 } from "lucide-react"
 import { Button } from "@/components/ui/button"

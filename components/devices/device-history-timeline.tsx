@@ -14,17 +14,11 @@ import {
   ChevronDown, 
   ChevronUp, 
   Calendar, 
-  User, 
-  FileText, 
-  DollarSign, 
   Clock, 
-  ArrowRight,
   ExternalLink,
-  SlidersHorizontal,
   ArrowUpDown
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { DeviceTimelineEvent, DeviceHistoryEventType } from "@/types/device-history"
+import { DeviceTimelineEvent } from "@/types/device-history"
 
 interface DeviceHistoryTimelineProps {
   events: DeviceTimelineEvent[]

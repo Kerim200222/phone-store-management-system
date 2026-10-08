@@ -1,7 +1,6 @@
 import { 
   DeviceHistoryQueryResult, 
   DeviceTimelineEvent, 
-  DeviceSummary, 
   DeviceHistoryPreset 
 } from "@/types/device-history"
 import { createClient } from "@/utils/supabase/client"
@@ -37,7 +36,11 @@ export function validateIMEI(imei: string): { isValid: boolean; message?: string
   const checkDigit = (10 - (sum % 10)) % 10
   const expectedCheckDigit = parseInt(clean[14], 10)
 
-  // Luhn tam eşleşmese bile Türkiye operatör formatında 15 haneli rakam kabul edilir
+  // Luhn tam eşleşmese bile Türkiye standartlarında 15 haneli rakam kabul edilir
+  if (checkDigit !== expectedCheckDigit) {
+    return { isValid: true, message: "Luhn kontrol uyarısı (15 hane geçerli)" }
+  }
+
   return { isValid: true }
 }
 
@@ -523,7 +526,7 @@ export async function getDeviceHistoryByIMEI(imei: string): Promise<DeviceHistor
     const supabase = createClient()
 
     // 2a. repair_tickets tablosundan çek
-    const { data: ticketsData, error: ticketError } = await supabase
+    const { data: ticketsData } = await supabase
       .from("repair_tickets")
       .select(`
         id,
@@ -590,10 +593,11 @@ export async function getDeviceHistoryByIMEI(imei: string): Promise<DeviceHistor
     let currentOwner: { name: string; phone: string } | null = null
 
     // İşlem kalemlerinden alım/satım olayları üret
-    if (trxItemsData && trxItemsData.length > 0) {
-      for (const item of trxItemsData) {
-        const trx = (item.transactions as unknown as Record<string, unknown>) || {}
-        const cust = (trx.customers as unknown as Record<string, unknown>) || {}
+    const rawItems = (trxItemsData || []) as Array<Record<string, unknown>>
+    if (rawItems.length > 0) {
+      for (const item of rawItems) {
+        const trx = (item.transactions as Record<string, unknown>) || {}
+        const cust = (trx.customers as Record<string, unknown>) || {}
         const isPurchase = trx.type === "purchase"
         const isSale = trx.type === "sale"
 
@@ -624,11 +628,12 @@ export async function getDeviceHistoryByIMEI(imei: string): Promise<DeviceHistor
     }
 
     // Servis biletlerinden tamir olayları üret
-    if (ticketsData && ticketsData.length > 0) {
-      for (const ticket of ticketsData) {
-        brand = ticket.device_brand || brand
-        model = ticket.device_model || model
-        const cust = (ticket.customers as unknown as Record<string, unknown>) || {}
+    const rawTickets = (ticketsData || []) as Array<Record<string, unknown>>
+    if (rawTickets.length > 0) {
+      for (const ticket of rawTickets) {
+        brand = (ticket.device_brand as string) || brand
+        model = (ticket.device_model as string) || model
+        const cust = (ticket.customers as Record<string, unknown>) || {}
 
         if (cust.full_name) {
           currentOwner = {
@@ -641,17 +646,17 @@ export async function getDeviceHistoryByIMEI(imei: string): Promise<DeviceHistor
         events.push({
           id: `srv-in-${ticket.id}`,
           type: "repair_intake",
-          date: ticket.created_at,
-          title: `Teknik Servis Kabulü (${ticket.ticket_number})`,
-          description: `Şikayet: ${ticket.issue_description}`,
+          date: String(ticket.created_at || new Date().toISOString()),
+          title: `Teknik Servis Kabulü (${String(ticket.ticket_number || "")})`,
+          description: `Şikayet: ${String(ticket.issue_description || "")}`,
           badgeText: "Servis Girişi",
           badgeColor: "amber",
           iconName: "wrench",
           amount: Number(ticket.estimated_cost) || 0,
-          customer: cust.full_name ? { name: String(cust.full_name), phone: String(cust.phone) } : null,
+          customer: cust.full_name ? { name: String(cust.full_name), phone: String(cust.phone || "") } : null,
           metadata: {
-            ticketNumber: ticket.ticket_number,
-            physicalCondition: ticket.physical_condition || undefined,
+            ticketNumber: String(ticket.ticket_number || ""),
+            physicalCondition: ticket.physical_condition ? String(ticket.physical_condition) : undefined,
           },
         })
 
@@ -660,19 +665,26 @@ export async function getDeviceHistoryByIMEI(imei: string): Promise<DeviceHistor
           events.push({
             id: `srv-out-${ticket.id}`,
             type: "repair_delivered",
-            date: ticket.delivered_at || ticket.completed_at || ticket.created_at,
-            title: `Onarım Tamamlandı & Teslimat (${ticket.ticket_number})`,
-            description: ticket.technician_notes || "Onarım tamamlandı, cihaz müşteriye teslim edildi.",
+            date: String(ticket.delivered_at || ticket.completed_at || ticket.created_at || new Date().toISOString()),
+            title: `Onarım Tamamlandı & Teslimat (${String(ticket.ticket_number || "")})`,
+            description: String(ticket.technician_notes || "Onarım tamamlandı, cihaz müşteriye teslim edildi."),
             badgeText: "Teslim Edildi",
             badgeColor: "emerald",
             iconName: "check-circle",
             amount: Number(ticket.actual_cost) || Number(ticket.estimated_cost) || 0,
-            customer: cust.full_name ? { name: String(cust.full_name), phone: String(cust.phone) } : null,
+            customer: cust.full_name ? { name: String(cust.full_name), phone: String(cust.phone || "") } : null,
             metadata: {
-              ticketNumber: ticket.ticket_number,
+              ticketNumber: String(ticket.ticket_number || ""),
               warrantyMonths: 6,
               laborCost: Number(ticket.labor_cost) || 0,
-              partsUsed: Array.isArray(ticket.parts_used) ? ticket.parts_used : [],
+              partsUsed: Array.isArray(ticket.parts_used)
+                ? (ticket.parts_used as Array<Record<string, unknown>>).map((p) => ({
+                    partName: String(p.partName || p.part_name || p.name || "Yedek Parça"),
+                    quantity: Number(p.quantity || 1),
+                    unitPrice: Number(p.unitPrice || p.unit_price || 0),
+                    totalPrice: Number(p.totalPrice || p.total_price || 0),
+                  }))
+                : [],
             },
           })
         }
