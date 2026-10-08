@@ -847,6 +847,47 @@
   - GSM teknik servis onarım sürecinin nihai kapanış adımı olan müşteri bilgilendirmesi, cihaz teslimatı ve kasa tahsilatı döngüsü tamamlandı; POS ve Kasa (`transactions`) modülleri ile Teknik Servis (`repair_tickets`) modülü arasında çift taraflı ilişkisel ve finansal entegrasyon sağlandı.
 - **Referans:** `PR #97 (feature/G24-service-completion-checkout)`
 
+---
+
+## 📅 Gün 25: Teknik Servis Yönetimi - Servis Geçmişi ve Cihaz Takibi (IMEI Lifecycle Timeline)
+
+- **Tarih:** 19 Ekim 2026
+- **Konu:** Hafta 5: Teknik Servis Yönetimi kapsamında; bir cihazın 15 haneli IMEI numarası ile aratıldığında daha önce dükkanda hangi işlemleri (2. el alım, sıfır satış, servis kabulü, parça montajı, onarım tamamlama, teslimat ve garanti süreci) gördüğünü listeleyen interaktif bir "Cihaz Geçmişi" (Device History) zaman çizelgesi (Timeline) bileşeni ve ekspertiz takip sayfasının inşa edilmesi.
+- **Yapılan Çalışmalar:**
+  1. **Tip Mimarisi & Şema Doğrulama (`types/device-history.ts`):**
+     - Olay türleri union'ı: `DeviceHistoryEventType` (`purchase`, `sale`, `repair_intake`, `repair_in_progress`, `repair_parts_labor`, `repair_completed`, `repair_delivered`, `warranty_claim`, `inspection`).
+     - `DeviceTimelineEvent` arayüzü: Benzersiz ID, tarih/saat, olay tipi, başlık, açıklama, maliyet/fiyat, aktör/personel, müşteri bilgisi, kullanılan parçalar listesi, işçilik tutarı ve meta veriler.
+     - `DeviceSummary` arayüzü: IMEI, marka, model, renk, hafıza kapasitesi, fiziksel durum, güncel sahiplik, ilk dükkan giriş tarihi, toplam servis sayısı, toplam mağaza harcaması ve aktif garanti durumu.
+     - Zod tabanlı 15 haneli Luhn geçerli `imeiQuerySchema` ve `DeviceHistoryPreset` veri modelleri tanımlandı.
+  2. **Supabase Servis Katmanı & IMEI Yaşam Döngüsü Toplayıcısı (`lib/device-history-service.ts`):**
+     - `validateIMEI(imei)`: 15 hanelik kontrol ve Luhn algoritması doğrulayıcısı kodlandı.
+     - `getDeviceHistoryByIMEI(imei)`: Supabase `repair_tickets`, `transaction_items`, `transactions` ve `products` tablolarını ilişkisel olarak sorgulayıp birleştiren (aggregation); dükkanda gerçekleşmiş alış, satış ve tüm servis müdahalelerini kronolojik bir zaman çizelgesine dönüştüren servis fonksiyonu yazıldı.
+     - Geliştirme ve test süreçleri için 5 farklı zengin telefon yaşam döngüsü senaryosu (`SEED_DEVICE_HISTORIES` & `DEVICE_HISTORY_PRESETS`: iPhone 11 Pro, Xiaomi Redmi Note 11 Pro, Samsung Galaxy S21, Huawei P30 Pro, iPhone 13) hazırlandı.
+  3. **İnteraktif Arama & Preset Çubuğu (`components/devices/device-history-search.tsx`):**
+     - 15 haneli Luhn kontrollü IMEI arama çubuğu, anlık karakter sayacı, temizleme butonu ve tek tıkla test sağlayan hızlı cihaz çipleri (presets).
+  4. **Cihaz Künyesi ve Canlı Metrik Kartları (`components/devices/device-history-header.tsx`):**
+     - Cihaz marka, model, renk, hafıza kapasitesi ve canlı durum rozeti.
+     - 4 kritik KPI kartı: Toplam Servis Müdahalesi, Kalan Garanti Süresi, Kayıtlı Son Müşteri ve Dükkana İlk Giriş Tarihi.
+     - Hızlı A4 Yazdırma / Ekspertiz Raporu butonu.
+  5. **Dikey Zaman Çizelgesi Bileşeni (`components/devices/device-history-timeline.tsx`):**
+     - Tarihe göre azalan/artan sıralama ve kategori bazlı olay filtreleri (Tümü, 🛒 Alım / Satım, 🔧 Servis & Onarım, 🛡️ Garanti).
+     - Renk kodlu ve parlayan zaman çizelgesi düğümleri (nodes) ve dikey kılavuz çizgisi.
+     - Açılır/kapanır akordeon detaylar: Kullanılan yedek parçalar tablosu, işçilik ücreti, müşteri iletişim bilgisi ve işlem tutarı rozeti.
+  6. **Resmi A4 Cihaz Ekspertiz ve Servis Geçmiş Raporu Modalı (`components/devices/device-history-report-modal.tsx`):**
+     - Tarayıcının yazdırma (`window.print()`) özelliğine tam uyumlu, kurumsal mağaza anteti, barkod, cihaz künyesi, kronolojik işlem dökümü ve kaşe/imza alanı içeren resmi rapor penceresi.
+  7. **Cihaz Geçmişi Sayfası (`app/dashboard/service/history/page.tsx`):**
+     - URL query parametresi (`?imei=...`) ile doğrudan sorgulama desteği, React Suspense sarmalı ile sıfır SSR hidrasyon hatası, boş ve sonuçsuz durumlar için bilgilendirici yönlendirmeler.
+  8. **Navigasyon ve Bütünleşik Sistem Entegrasyonu:**
+     - Dashboard sol menüsüne (Sidebar) "Cihaz Geçmişi" rotası eklendi (`icon: History`, badge: "IMEI").
+     - Servis Kanban panosu (`/dashboard/service`) üst başlığına "Cihaz / IMEI Geçmişi" arama butonu entegre edildi.
+     - Servis bilet detay sayfasında (`/dashboard/service/[id]`) hem eylem çubuğuna hem de IMEI alanına doğrudan zaman çizelgesine bağlanan hızlı geçiş butonları eklendi.
+  9. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm Next.js rotaları sıfır hata ve sıfır TypeScript/ESLint uyarısı ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - İkinci el telefon alım-satımı ve teknik servis operasyonu yapan işletmelerde aynı cihazın aylar veya yıllar boyunca birden fazla kez dükkana girip çıkabildiği; IMEI kimliği üzerinden alım, satış, parça değişimi ve garanti kayıtlarının tek bir zaman çizelgesinde toplanmasının ekspertiz ve sahtecilik önleme açısından hayati öneme sahip olduğu deneyimlendi.
+- **Referans:** `PR #98 (feature/G25-device-history-timeline)`
+
+
 
 
 
