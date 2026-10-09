@@ -8,7 +8,6 @@ import {
   AlertTriangle, 
   Banknote, 
   Plus, 
-  Search, 
   ArrowRight, 
   Settings, 
   Layers, 
@@ -17,7 +16,6 @@ import {
   TrendingUp,
   RefreshCw,
   Database,
-  Sparkles,
   History
 } from "lucide-react"
 import { useRoleAccess } from "@/hooks/use-role-access"

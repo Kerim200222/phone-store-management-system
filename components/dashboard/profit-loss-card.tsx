@@ -4,11 +4,8 @@ import React from "react"
 import { 
   TrendingUp, 
   TrendingDown, 
-  PieChart, 
   CreditCard, 
   Banknote, 
-  ArrowUpRight, 
-  Percent, 
   Scale
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"

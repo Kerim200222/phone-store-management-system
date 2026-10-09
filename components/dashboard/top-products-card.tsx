@@ -2,7 +2,7 @@
 
 import React from "react"
 import Link from "next/link"
-import { Trophy, TrendingUp, Package, ArrowRight, Layers } from "lucide-react"
+import { Trophy, TrendingUp, Package, ArrowRight } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"

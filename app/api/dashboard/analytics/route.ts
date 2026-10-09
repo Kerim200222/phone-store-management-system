@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { DateFilterType } from "@/lib/date-filters"
 import { getDashboardAnalytics } from "@/lib/dashboard-analytics-service"
 
+export const dynamic = "force-dynamic"
+
 /**
  * ==============================================================================
  * GÜN 26: DASHBOARD ANALYTICS API ROUTE

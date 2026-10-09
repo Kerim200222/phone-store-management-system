@@ -555,15 +555,16 @@ async function aggregateFromSupabaseDirect(
     .select("id, name, brand, stock_quantity, min_stock_level, sale_price")
     .eq("is_active", true)
 
-  const criticalProducts = (products || [])
-    .filter((p) => Number(p.stock_quantity) <= Number(p.min_stock_level))
+  const rawProducts = (products || []) as Array<Record<string, unknown>>
+  const criticalProducts = rawProducts
+    .filter((p) => Number(p.stock_quantity || 0) <= Number(p.min_stock_level || 1))
     .map((p) => ({
-      id: String(p.id),
-      name: String(p.name),
-      brand: String(p.brand),
-      stockQuantity: Number(p.stock_quantity),
-      minStockLevel: Number(p.min_stock_level),
-      salePrice: Number(p.sale_price),
+      id: String(p.id || ""),
+      name: String(p.name || ""),
+      brand: String(p.brand || ""),
+      stockQuantity: Number(p.stock_quantity || 0),
+      minStockLevel: Number(p.min_stock_level || 1),
+      salePrice: Number(p.sale_price || 0),
     }))
 
   // Ciro ve Gelir Dağılımını Hesapla
@@ -577,9 +578,10 @@ async function aggregateFromSupabaseDirect(
 
   const recentTrxList: RecentTransactionItem[] = []
 
-  for (const trx of transactions || []) {
+  const rawTransactions = (transactions || []) as Array<Record<string, unknown>>
+  for (const trx of rawTransactions) {
     const amount = Number(trx.net_amount) || 0
-    const cust = (trx.customers as unknown as Record<string, unknown>) || {}
+    const cust = (trx.customers as Record<string, unknown>) || {}
     const custName = cust.full_name ? String(cust.full_name) : null
 
     if (trx.type === "sale") {
@@ -634,20 +636,21 @@ async function aggregateFromSupabaseDirect(
     }
   > = {}
 
-  for (const item of trxItems || []) {
-    const parentTrx = (item.transactions as unknown as Record<string, unknown>) || {}
+  const rawTrxItems = (trxItems || []) as Array<Record<string, unknown>>
+  for (const item of rawTrxItems) {
+    const parentTrx = (item.transactions as Record<string, unknown>) || {}
     if (parentTrx.type !== "sale") continue
 
     const qty = Number(item.quantity) || 1
     const totPrice = Number(item.total_price) || 0
-    const prod = (item.products as unknown as Record<string, unknown>) || {}
+    const prod = (item.products as Record<string, unknown>) || {}
     const pCost = Number(prod.purchase_price) || 0
     const itemCost = qty * pCost
     totalCogs += itemCost
 
     const pId = String(item.product_id)
     if (!productAgg[pId]) {
-      const cat = (prod.categories as unknown as Record<string, unknown>) || {}
+      const cat = (prod.categories as Record<string, unknown>) || {}
       productAgg[pId] = {
         productId: pId,
         name: String(prod.name || "Ürün"),
@@ -688,14 +691,15 @@ async function aggregateFromSupabaseDirect(
   let inProgressCount = 0
   let completedCount = 0
 
-  for (const ticket of tickets || []) {
+  const rawTickets = (tickets || []) as Array<Record<string, unknown>>
+  for (const ticket of rawTickets) {
     const st = String(ticket.status)
     if (st === "bekliyor") pendingCount++
     else if (st === "islemde" || st === "parca_bekliyor") inProgressCount++
     else if (st === "tamamlandi") completedCount++
 
     if ((st === "bekliyor" || st === "islemde") && activeTicketsList.length < 5) {
-      const cust = (ticket.customers as unknown as Record<string, unknown>) || {}
+      const cust = (ticket.customers as Record<string, unknown>) || {}
       activeTicketsList.push({
         id: String(ticket.id),
         ticketNumber: String(ticket.ticket_number),
@@ -766,13 +770,12 @@ export async function getDashboardAnalytics(
 
   // 1. Supabase RPC Çağrısı
   try {
-    const { data: rpcData, error: rpcError } = await supabase.rpc(
-      "get_dashboard_analytics",
-      {
-        p_start_date: range.startDate,
-        p_end_date: range.endDate,
-      }
-    )
+    const { data: rpcData, error: rpcError } = await (supabase as unknown as {
+      rpc: (fn: string, params?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>
+    }).rpc("get_dashboard_analytics", {
+      p_start_date: range.startDate,
+      p_end_date: range.endDate,
+    })
 
     if (!rpcError && rpcData && typeof rpcData === "object") {
       const parsedData = rpcData as unknown as DashboardAnalyticsData
