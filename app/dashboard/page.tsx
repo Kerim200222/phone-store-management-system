@@ -27,6 +27,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SummaryCard } from "@/components/dashboard/summary-card"
 import { TopProductsCard } from "@/components/dashboard/top-products-card"
 import { ProfitLossCard } from "@/components/dashboard/profit-loss-card"
+import { SalesTrendLineChart } from "@/components/dashboard/charts/sales-trend-line-chart"
+import { RevenuePieChart } from "@/components/dashboard/charts/revenue-pie-chart"
 import { 
   getDashboardAnalytics, 
   formatCurrency 
@@ -94,6 +96,8 @@ export default function DashboardPage() {
   const payMethods = analyticsData?.paymentMethods || []
   const recentTrx = analyticsData?.recentTransactions || []
   const activeSrv = analyticsData?.activeTickets || []
+  const salesTrendData = analyticsData?.salesTrend || []
+  const revenueDistributionData = analyticsData?.revenueDistribution || []
 
   return (
     <div className="space-y-6 pb-12">
@@ -286,7 +290,27 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 4. GÜN 26 ANALİTİK ÇİFT PANEL: EN ÇOK SATILAN ÜRÜNLER & KÂR-ZARAR DAĞILIMI */}
+      {/* 4. GÜN 27: RECHARTS İLE VERİ GÖRSELLEŞTİRME (ÇİZGİ VE PASTA GRAFİKLERİ) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Çizgi Grafik: Son 7 Günlük Satış & Servis Trendi (2 Sütun) */}
+        <div className="lg:col-span-2">
+          <SalesTrendLineChart
+            data={salesTrendData}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Pasta Grafik: Satış vs Servis Gelir Dağılımı (1 Sütun) */}
+        <div className="lg:col-span-1">
+          <RevenuePieChart
+            data={revenueDistributionData}
+            totalRevenue={rev.total}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+
+      {/* 5. GÜN 26 ANALİTİK ÇİFT PANEL: EN ÇOK SATILAN ÜRÜNLER & KÂR-ZARAR DAĞILIMI */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Panel 1: Kâr-Zarar & Gelir Dağılımı */}
         <ProfitLossCard
