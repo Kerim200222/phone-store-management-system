@@ -8,7 +8,7 @@ import {
   Cell,
   Tooltip,
 } from "recharts"
-import { PieChart as PieIcon, Layers, ShieldCheck } from "lucide-react"
+import { PieChart as PieIcon } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RevenueDistributionSlice } from "@/types/dashboard-analytics"
 import { formatCurrency } from "@/lib/dashboard-analytics-service"
