@@ -102,6 +102,33 @@ export interface DashboardAnalyticsData {
   criticalStock: CriticalStockSummary
   recentTransactions: RecentTransactionItem[]
   activeTickets: ActiveTicketItem[]
+  // GÜN 27: Recharts Grafik Veri Modelleri
+  salesTrend?: DailySalesTrendPoint[]
+  revenueDistribution?: RevenueDistributionSlice[]
+}
+
+/**
+ * Gün 27: Son 7 Günlük Satış Trend Çizgi Grafiği Veri Noktası
+ */
+export interface DailySalesTrendPoint {
+  date: string             // "03 Eki", "04 Eki" vb.
+  fullDate: string         // "3 Ekim 2026"
+  dayName: string          // "Pzt", "Sal", "Çar", vb.
+  salesRevenue: number     // Ürün Satış Cirosu (TL)
+  repairRevenue: number    // Teknik Servis Geliri (TL)
+  totalRevenue: number     // Toplam Günlük Ciro (TL)
+  transactionCount: number // O günkü işlem adedi
+}
+
+/**
+ * Gün 27: Teknik Servis & Satış Gelir Dağılımı Pasta Grafiği Dilimi
+ */
+export interface RevenueDistributionSlice {
+  name: string             // "Ürün Satışı", "Teknik Servis", "İkinci El Alım"
+  value: number            // Tutar (TL)
+  percentage: number       // Yüzde (%)
+  color: string            // HEX Renk Kodu (#06b6d4, #6366f1 vb.)
+  count: number            // İşlem adedi
 }
 
 export interface DashboardAnalyticsResponse {
