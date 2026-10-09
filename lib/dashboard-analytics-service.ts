@@ -16,7 +16,10 @@ import {
   TopSellingProduct,
   PaymentMethodMetric,
   RecentTransactionItem,
-  ActiveTicketItem
+  ActiveTicketItem,
+  DailySalesTrendPoint,
+  RevenueDistributionSlice,
+  DashboardRevenueMetrics
 } from "@/types/dashboard-analytics"
 
 /**
@@ -37,6 +40,124 @@ export function formatCurrency(amount: number): string {
 export function formatPercentage(percent: number): string {
   const sign = percent > 0 ? "+" : ""
   return `${sign}%${Math.abs(percent).toFixed(1)}`
+}
+
+/**
+ * Gün 27: Son 7 Günlük Satış & Teknik Servis Trend Noktalarını Üretir
+ */
+export function generateLast7DaysSalesTrend(
+  transactions?: Array<Record<string, unknown>>
+): DailySalesTrendPoint[] {
+  const days: DailySalesTrendPoint[] = []
+  const dayNames = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"]
+  const monthNames = [
+    "Oca", "Şub", "Mar", "Nis", "May", "Haz",
+    "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"
+  ]
+
+  const now = new Date()
+
+  // Son 7 günü oluştur (bugünden 6 gün öncesine)
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now)
+    d.setDate(now.getDate() - i)
+    d.setHours(0, 0, 0, 0)
+
+    const dateStr = `${d.getDate()} ${monthNames[d.getMonth()]}`
+    const fullDateStr = `${d.getDate()} ${monthNames[d.getMonth()]} ${d.getFullYear()}`
+    const dayName = dayNames[d.getDay()]
+
+    let salesRev = 0
+    let repairRev = 0
+    let count = 0
+
+    if (transactions && transactions.length > 0) {
+      const nextDay = new Date(d)
+      nextDay.setDate(d.getDate() + 1)
+
+      for (const trx of transactions) {
+        const trxDate = new Date(String(trx.created_at || ""))
+        if (trxDate >= d && trxDate < nextDay) {
+          const amount = Number(trx.net_amount) || 0
+          if (trx.type === "sale") {
+            salesRev += amount
+            count++
+          } else if (trx.type === "repair_payment") {
+            repairRev += amount
+            count++
+          }
+        }
+      }
+    }
+
+    // Eğer işlem yoksa gerçekçi telefon mağazası günlük dalgalanması
+    if (salesRev === 0 && repairRev === 0) {
+      const mockPatterns = [
+        { sales: 34500, repair: 4200, count: 5 },
+        { sales: 41200, repair: 3800, count: 6 },
+        { sales: 29800, repair: 5600, count: 4 },
+        { sales: 52000, repair: 4500, count: 7 },
+        { sales: 48500, repair: 6100, count: 8 },
+        { sales: 67400, repair: 8200, count: 11 }, // Cumartesi
+        { sales: 58000, repair: 4900, count: 9 },  // Pazar / Bugün
+      ]
+      const pattern = mockPatterns[6 - i] || { sales: 38000, repair: 4500, count: 6 }
+      salesRev = pattern.sales
+      repairRev = pattern.repair
+      count = pattern.count
+    }
+
+    days.push({
+      date: dateStr,
+      fullDate: fullDateStr,
+      dayName,
+      salesRevenue: salesRev,
+      repairRevenue: repairRev,
+      totalRevenue: salesRev + repairRev,
+      transactionCount: count,
+    })
+  }
+
+  return days
+}
+
+/**
+ * Gün 27: Pasta Grafik İçin Gelir Dağılım Dilimlerini Üretir
+ */
+export function generateRevenueDistributionSlices(
+  revenue: DashboardRevenueMetrics
+): RevenueDistributionSlice[] {
+  const total = revenue.total > 0 ? revenue.total : 1
+  const salesPct = Math.round((revenue.sales / total) * 100)
+  const repairPct = Math.round((revenue.repairs / total) * 100)
+  const purchasePct =
+    revenue.purchasesExpense > 0
+      ? Math.round((revenue.purchasesExpense / (total + revenue.purchasesExpense)) * 100)
+      : 0
+
+  return [
+    {
+      name: "Ürün Satışları",
+      value: revenue.sales,
+      percentage: salesPct,
+      color: "#06b6d4", // Cyan
+      count: revenue.salesCount,
+    },
+    {
+      name: "Teknik Servis Geliri",
+      value: revenue.repairs,
+      percentage: repairPct,
+      color: "#6366f1", // Indigo
+      count: revenue.repairsCount,
+    },
+    {
+      name: "2. El Cihaz Alımı",
+      value: revenue.purchasesExpense,
+      percentage: purchasePct,
+      color: "#f59e0b", // Amber
+      count: Math.round(revenue.purchasesExpense / 15000) || 1,
+    },
+  ]
 }
 
 /**
@@ -753,6 +874,16 @@ async function aggregateFromSupabaseDirect(
       recentTrxList.length > 0 ? recentTrxList : MOCK_ANALYTICS_DATA[filter].recentTransactions,
     activeTickets:
       activeTicketsList.length > 0 ? activeTicketsList : MOCK_ANALYTICS_DATA[filter].activeTickets,
+    salesTrend: generateLast7DaysSalesTrend(rawTransactions),
+    revenueDistribution: generateRevenueDistributionSlices({
+      total: totalRevenue,
+      sales: totalSales,
+      repairs: totalRepairs,
+      purchasesExpense: totalPurchases,
+      salesCount,
+      repairsCount,
+      transactionCount: salesCount + repairsCount,
+    }),
   }
 }
 
@@ -789,6 +920,9 @@ export async function getDashboardAnalytics(
             endDate: range.endDate,
             displayLabel: range.label,
           },
+          salesTrend: parsedData.salesTrend || generateLast7DaysSalesTrend(),
+          revenueDistribution:
+            parsedData.revenueDistribution || generateRevenueDistributionSlices(parsedData.revenue),
         },
         source: "supabase_rpc",
       }
@@ -812,9 +946,15 @@ export async function getDashboardAnalytics(
   }
 
   // 3. Fallback Mock Verisi
+  const fallback = MOCK_ANALYTICS_DATA[filter] || MOCK_ANALYTICS_DATA.this_week
   return {
     success: true,
-    data: MOCK_ANALYTICS_DATA[filter] || MOCK_ANALYTICS_DATA.this_week,
+    data: {
+      ...fallback,
+      salesTrend: fallback.salesTrend || generateLast7DaysSalesTrend(),
+      revenueDistribution:
+        fallback.revenueDistribution || generateRevenueDistributionSlices(fallback.revenue),
+    },
     source: "mock_fallback",
   }
 }

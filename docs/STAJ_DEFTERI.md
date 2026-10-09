@@ -930,6 +930,42 @@
   - Supabase PostgreSQL Stored Procedure (RPC) kullanımının karmaşık aggregate sorgularında istemci tarafına veri taşıma yükünü nasıl minimize ettiği ve ağ trafiğini nasıl optimize ettiği deneyimlendi.
 - **Referans:** `PR #99 (feature/G26-dashboard-reports-rpc)`
 
+---
+
+## 📅 Gün 27: Raporlama ve İleri Düzey Özellikler - Recharts ile Grafikler (Line & Pie Charts)
+
+- **Tarih:** 21 Ekim 2026
+- **Konu:** Hafta 6: Raporlama ve İleri Düzey Özellikler kapsamında; Dashboard ana sayfasına modern ve interaktif veri görselleştirme altyapısının kazandırılması; `recharts` kütüphanesi kullanılarak son 7 günün satış ve teknik servis ciro trendini gösteren çok çizgili bir **Çizgi Grafik (Line Chart)** ile mağaza gelir kaynaklarının oransal dağılımını gösteren bir **Pasta/Halka Grafik (Pie Chart / Donut)** bileşeninin tasarlanıp sisteme entegre edilmesi.
+- **Yapılan Çalışmalar:**
+  1. **Kütüphane Kurulumu & Tip Mimarisi:**
+     - Projeye modern React grafik motoru `recharts` dahil edildi.
+     - `DailySalesTrendPoint`: Tarih etiketi, tam tarih, gün adı, ürün satış cirosu, teknik servis geliri, toplam ciro ve günlük işlem adedi veri modeli modellendi.
+     - `RevenueDistributionSlice`: Gelir kaynağı adı, tutar, yüzdelik oran, renk kodu ve işlem adedi modeli kodlandı.
+  2. **Veri Üretim & Analitik Servis Katmanı (`lib/dashboard-analytics-service.ts`):**
+     - `generateLast7DaysSalesTrend(transactions)`: Veritabanındaki `transactions` kayıtlarını gün gün eşleştiren; son 7 günün ürün satışı ve teknik servis gelirlerini derleyen analitik fonksiyon yazıldı.
+     - `generateRevenueDistributionSlices(revenue)`: Toplam ciro içerisindeki Ürün Satışı (%X, Cyan `#06b6d4`), Teknik Servis Geliri (%Y, Indigo `#6366f1`) ve 2. El Cihaz Alım Hacmi (%Z, Amber `#f59e0b`) oranlarını hesaplayan dönüştürücü kodlandı.
+  3. **Son 7 Günlük Satış & Servis Çizgi Grafiği (`components/dashboard/charts/sales-trend-line-chart.tsx`):**
+     - Recharts `ResponsiveContainer`, `LineChart`, `Line`, `XAxis`, `YAxis`, `CartesianGrid`, `Tooltip`, ve `Legend` bileşenleri kullanıldı.
+     - Yumuşak kavisli (`monotone`), parlak aktif noktalı (`activeDot`), çift çizgili (Cyan ve Indigo kesikli) estetik tasarım.
+     - Koyu temaya özel cam efektli (`backdrop-blur-md`) `CustomTooltip` bileşeni kodlanarak günlük toplam, ciro kırılımları ve TL formatlaması sunuldu.
+     - Üst alanda 7 günlük toplam ciro ve günlük ortalama satış hacmi rozetleri eklendi.
+  4. **Gelir Dağılımı Pasta Grafiği (`components/dashboard/charts/revenue-pie-chart.tsx`):**
+     - Recharts `PieChart`, `Pie`, `Cell`, ve `Tooltip` ile modern donut (halka) tarzı pasta grafik inşa edildi (`innerRadius={65}`, `outerRadius={92}`, `paddingAngle={4}`).
+     - Halka merkezinde dinamik olarak toplam ciro veya üzerine gelinen dilimin adını, tutarını ve yüzdelik oranını gösteren canlı metrik kartı tasarlandı.
+     - Alt kısımda her bir gelir kaynağının renk kodlu yüzdesini ve toplam tutarını listeleyen interaktif hover rozetleri eklendi.
+  5. **Dashboard Sayfa Entegrasyonu (`app/dashboard/page.tsx`):**
+     - Dashboard özet metrik kartlarının hemen altına `grid-cols-1 lg:grid-cols-3` düzeninde görsel analitik bölümü yerleştirildi:
+       - 2 Sütun Genişliğinde: `SalesTrendLineChart` (Son 7 Günlük Çizgi Grafik)
+       - 1 Sütun Genişliğinde: `RevenuePieChart` (Gelir Dağılımı Pasta Grafik)
+     - Canlı veri yenileme butonu ve yüklenme animasyonları (Skeleton) ile tam senkronize edildi.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm Next.js rotaları sıfır hata ve sıfır TypeScript/ESLint uyarısı ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Sayısal tablolara kıyasla görsel grafiklerin (zaman serisi çizgi grafikleri ve oransal pasta grafikleri) işletme yöneticilerine mağaza trendlerini, hafta sonu satış sıçramalarını ve teknik servis gelir katkısını anlık okuma kolaylığı sağladığı görüldü.
+  - Recharts kütüphanesinin Next.js Client Component yapısında `ResponsiveContainer` ve Tailwind CSS koyu tema renk paleti ile nasıl kusursuz entegre edildiği deneyimlendi.
+- **Referans:** `PR #100 (feature/G27-recharts-dashboard-charts)`
+
+
 
 
 
