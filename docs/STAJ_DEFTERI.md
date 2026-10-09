@@ -887,6 +887,50 @@
   - İkinci el telefon alım-satımı ve teknik servis operasyonu yapan işletmelerde aynı cihazın aylar veya yıllar boyunca birden fazla kez dükkana girip çıkabildiği; IMEI kimliği üzerinden alım, satış, parça değişimi ve garanti kayıtlarının tek bir zaman çizelgesinde toplanmasının ekspertiz ve sahtecilik önleme açısından hayati öneme sahip olduğu deneyimlendi.
 - **Referans:** `PR #98 (feature/G25-device-history-timeline)`
 
+---
+
+## 📅 Gün 26: Raporlama ve İleri Düzey Özellikler - Günlük ve Haftalık Raporlar (Supabase RPC & Analytics)
+
+- **Tarih:** 20 Ekim 2026
+- **Konu:** Hafta 6: Raporlama ve İleri Düzey Özellikler kapsamında; Gün 9'da tasarlanan Dashboard Ana Sayfasının gerçek veritabanı verilerine bağlanması; Supabase Stored Procedure (RPC) ve Next.js API Route üzerinden seçilen dönemin (Bugün, Bu Hafta, Bu Ay) toplam cirosunu, satılan malların maliyetini (COGS), brüt kâr-zarar durumunu ve en çok satılan ürünlerini getiren analitik altyapının inşa edilmesi.
+- **Yapılan Çalışmalar:**
+  1. **Supabase PostgreSQL Stored Procedure (`supabase/08_dashboard_analytics_rpc.sql`):**
+     - `public.get_dashboard_analytics(p_start_date, p_end_date)` RPC fonksiyonu yazıldı.
+     - Fonksiyon tek bir atomik sorguda:
+       - Satış (`sale`) ve Teknik Servis (`repair_payment`) tahsilatlarını toplayarak **Toplam Ciro**yu,
+       - Satılan ürünlerin alış maliyetlerini (`transaction_items.quantity * products.purchase_price`) toplayarak **COGS (Satılan Malların Maliyeti)** tutarını,
+       - Ciro - COGS formülüyle **Brüt Kâr** ve **Kâr Marjı %** oranını,
+       - Seçilen dönemde en çok satan ilk 5 ürünü (adet, ciro, kâr ve güncel stok bilgisiyle),
+       - Kasa ödeme yöntemleri dağılımını (Kredi Kartı, Nakit, Havale),
+       - Kritik stok altındaki ürünleri ve aktif servis kuyruğunu tek bir JSONB nesnesi olarak hesaplayıp döner.
+  2. **Tip Mimarisi (`types/dashboard-analytics.ts`):**
+     - `TopSellingProduct`, `PaymentMethodMetric`, `DashboardRevenueMetrics`, `DashboardProfitMetrics`, `ServiceQueueSummary`, `CriticalStockSummary`, `RecentTransactionItem`, `ActiveTicketItem`, ve `DashboardAnalyticsData` TypeScript modelleri tasarlandı.
+  3. **Dashboard Analitik Servis Katmanı (`lib/dashboard-analytics-service.ts`):**
+     - Üç kademeli hibrit mimari:
+       1. Öncelikli olarak `supabase.rpc('get_dashboard_analytics')` çağrısı,
+       2. RPC yoksa veya ağ hatasında `transactions`, `transaction_items`, `products`, `repair_tickets` tablolarından dinamik istemci taraflı aggregation,
+       3. Çevrimdışı/dev ortamı için tutarlı ve zengin mock fallback veri seti (`MOCK_ANALYTICS_DATA`).
+     - Para birimi (`formatCurrency`) ve yüzde (`formatPercentage`) formatlayıcıları kodlandı.
+  4. **Next.js Server API Route (`app/api/dashboard/analytics/route.ts`):**
+     - `GET /api/dashboard/analytics?period=today|this_week|this_month` uç noktası (`force-dynamic`) oluşturuldu; REST mimarisiyle dış entegrasyonlara ve sunucu taraflı raporlamalara hazır hale getirildi.
+  5. **En Çok Satılan Ürünler Paneli (`components/dashboard/top-products-card.tsx`):**
+     - Sıralama rozetleri (1. altın, 2. gümüş, 3. bronz), ürün adı, kategori etiketi, satılan adet sayısı, toplam ciro, net kâr katkısı ve anlık depo stok adedini görselleştiren özel bileşen.
+  6. **Kâr-Zarar ve Gelir Dağılım Kartı (`components/dashboard/profit-loss-card.tsx`):**
+     - Toplam Ciro, Maliyet (COGS), Brüt Kâr ve Kâr Marjı % göstergesi.
+     - Satış Cirosu vs Teknik Servis Geliri oranını gösteren çift renkli dağılım çubuğu.
+     - Nakit, Kredi Kartı ve Havale işlem hacimleri matrisi.
+  7. **Dashboard Ana Sayfasının Gerçek Verilere Bağlanması (`app/dashboard/page.tsx`):**
+     - Canlı veri çekme (`useEffect`), yüklenme durumları (Skeleton / Spinner) ve tek tıkla canlı veri yenileme butonu (`RefreshCw`).
+     - 4 Özet Kartı gerçek verilere bağlandı: 1) Dönemsel Toplam Ciro, 2) Brüt Kâr Durumu (Kârda / Zararda rozeti), 3) Aktif Servis Kuyruğu, 4) Kritik Stok Uyarısı.
+     - Gerçek son kasa hareketleri ve aktif servis kuyruğu tabloları entegre edildi.
+  8. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm 22 Next.js rotası sıfır hata ve sıfır TypeScript/ESLint uyarısı ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Perakende telefon mağazacılığında sadece ciro takibinin yeterli olmadığı; ürün alım maliyetleri (COGS) ve servis işçilik kârı ayrıştırılarak brüt kârlılık oranının hesaplanmasının işletme sağlığı için hayati olduğu kavrandı.
+  - Supabase PostgreSQL Stored Procedure (RPC) kullanımının karmaşık aggregate sorgularında istemci tarafına veri taşıma yükünü nasıl minimize ettiği ve ağ trafiğini nasıl optimize ettiği deneyimlendi.
+- **Referans:** `PR #99 (feature/G26-dashboard-reports-rpc)`
+
+
 
 
 

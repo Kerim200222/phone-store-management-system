@@ -83,7 +83,44 @@ export interface Database {
       }
     }
     Functions: {
-      [_ in never]: never
+      get_dashboard_analytics: {
+        Args: {
+          p_start_date?: string
+          p_end_date?: string
+        }
+        Returns: Json
+      }
+      process_pos_checkout: {
+        Args: {
+          p_customer_id?: string | null
+          p_payment_method: string
+          p_total_amount: number
+          p_discount_amount: number
+          p_net_amount: number
+          p_notes?: string | null
+          p_created_by?: string | null
+          p_items: Json
+        }
+        Returns: Json
+      }
+      process_secondhand_purchase: {
+        Args: {
+          p_customer_id: string
+          p_payment_method: string
+          p_purchase_price: number
+          p_model: string
+          p_imei: string
+          p_battery_health?: number | null
+          p_cosmetic_condition?: string | null
+          p_storage?: string | null
+          p_color?: string | null
+          p_category_id: string
+          p_estimated_sale_price?: number
+          p_notes?: string | null
+          p_created_by?: string | null
+        }
+        Returns: Json
+      }
     }
     Enums: {
       user_role: UserRole
