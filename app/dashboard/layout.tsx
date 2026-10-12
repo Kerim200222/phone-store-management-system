@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge"
 import { useRoleAccess } from "@/hooks/use-role-access"
 import { NavItemConfig } from "@/types/auth"
 import { CustomAvatar } from "@/components/ui/custom-avatar"
+import { StockAlertBell } from "@/components/notifications/stock-alert-bell"
 
 const navItems: NavItemConfig[] = [
   {
@@ -363,10 +364,13 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          {/* Sağ Kısım: Kullanıcı Profili + Rol Rozeti + Çıkış Yap Butonu */}
+          {/* Sağ Kısım: Düşük Stok Bildirim Çanı + Kullanıcı Profili + Rol Rozeti + Çıkış Yap Butonu */}
           <div className="flex items-center gap-3">
+            {/* Gün 28: Düşük Stok Uyarı Sistemi (Notification Bell) */}
+            <StockAlertBell threshold={5} />
+
             {/* Kullanıcı Profil Bilgisi */}
-            <div className="flex items-center gap-2.5 pl-2">
+            <div className="flex items-center gap-2.5 pl-1 sm:pl-2">
               <CustomAvatar 
                 name={userEmail || userRole} 
                 size={32} 

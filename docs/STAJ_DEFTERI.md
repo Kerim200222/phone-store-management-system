@@ -965,6 +965,47 @@
   - Recharts kütüphanesinin Next.js Client Component yapısında `ResponsiveContainer` ve Tailwind CSS koyu tema renk paleti ile nasıl kusursuz entegre edildiği deneyimlendi.
 - **Referans:** `PR #100 (feature/G27-recharts-dashboard-charts)`
 
+---
+
+## 📅 Gün 28: Raporlama ve İleri Düzey Özellikler - Düşük Stok Uyarı Sistemi (Supabase RPC & Notification Bell)
+
+- **Tarih:** 22 Ekim 2026
+- **Konu:** Hafta 6: Raporlama ve İleri Düzey Özellikler kapsamında; telefon mağazasında stok miktarı 5'in altına düşen (kritik ve tükenen) ürünlerin tespiti için Supabase SQL sorgusu/RPC fonksiyonu geliştirilmesi; bu verilerin tüm sayfalarda erişilebilir şekilde Dashboard Header çubuğuna entegre edilen modern bir "Bildirim Çanı" (Notification Bell) ve zengin Dropdown bileşeni içerisinde listelenmesi.
+- **Yapılan Çalışmalar:**
+  1. **Supabase SQL Fonksiyonu & Veritabanı Mimarisi (`supabase/09_low_stock_notification_rpc.sql`):**
+     - `public.get_low_stock_products(p_threshold INTEGER DEFAULT 5)` Stored Procedure (RPC) fonksiyonu yazıldı.
+     - `products` tablosu üzerinde `stock_quantity < p_threshold` ve `is_active = true` filtrelemesi uygulandı.
+     - `categories` tablosu ile `LEFT JOIN` kurularak kategori adının doğrudan tek sorguda getirilmesi sağlandı.
+     - Tükenen ürünlerin en üstte yer alması amacıyla `stock_quantity ASC, name ASC` sıralaması tanımlandı.
+     - SQL seviyesinde `SECURITY DEFINER` ve `EXECUTE` izinleri yetkilendirildi.
+  2. **TypeScript Tip Tanımları (`types/stock-alert.ts` & `types/database.ts`):**
+     - Ciddiyet seviyeleri için `StockSeverity = "out_of_stock" | "critical" | "warning"` birliği tanımlandı.
+     - `LowStockProduct`, `StockAlertSummary`, `StockAlertFilter` ve `StockAlertResponse` arayüzleri modellendi.
+     - `types/database.ts` içerisindeki `Database.public.Functions` altına `get_low_stock_products` fonksiyon parametre ve dönüş tipleri eklendi.
+  3. **Servis Katmanı (`lib/stock-alert-service.ts`):**
+     - `determineSeverity`: Adet 0 ve altı ise "out_of_stock", 1-2 ise "critical", 3-4 ise "warning" dinamik ciddiyet belirleyicisi kodlandı.
+     - `fetchLowStockProducts`: 3 aşamalı dayanıklı veri çekme mekanizması kuruldu:
+       1. Supabase RPC `get_low_stock_products` çağrısı,
+       2. Hata durumunda doğrudan Supabase `products.lt('stock_quantity', threshold)` sorgusu,
+       3. Çevrimdışı/dev ortamında batarya, ekran paneli, şarj adaptörü gibi gerçekçi telefon mağazası `MOCK_LOW_STOCK_PRODUCTS` veri seti.
+  4. **Bildirim Çanı & Dropdown Bileşeni (`components/notifications/stock-alert-bell.tsx`):**
+     - Header barı için `Bell` ikonlu, kritik ürün olduğunda animasyonlu titreşim (`animate-pulse` / `animate-ping`) ve kırmızı/turuncu rozet (`Badge`) gösteren buton oluşturuldu.
+     - Dropdown tıklandığında açılan şık cam efektli (`backdrop-blur-xl`) panel tasarlandı:
+       - Üst başlıkta "Stok < 5" kritik eşik etiketi ve canlı "Yenile" butonu.
+       - Filtre sekmeleri: "Tümü (x)", "Tükendi (x)", "Kritik (x)", "Azalan (x)".
+       - Liste kartlarında ürün adı, markası, kategorisi, barkodu/IMEI'si, satış fiyatı ve durum rozeti (0 Adet Tükendi, 1 Adet Kritik vb.).
+       - Boş durum ekranı ("Tüm stoklar güvenli seviyede").
+       - Alt barda "Envantere Git (`/dashboard/inventory`)" hızlı yönlendirme butonu.
+       - Dışarı tıklama ve ESC tuşu ile otomatik kapanma davranışı.
+  5. **Dashboard Header Entegrasyonu (`app/dashboard/layout.tsx`):**
+     - Kullanıcı profil avatarının soluna `<StockAlertBell threshold={5} />` yerleştirilerek tüm alt sayfalarda (Envanter, POS, Teknik Servis, Raporlar) anlık stok uyarısının görünür olması sağlandı.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` ile tüm sayfalar ve bileşenler sıfır hata ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Mağazada en çok satılan veya teknik serviste kullanılan parçaların (batarya, ekran koruyucu, adaptör vb.) aniden tükenmesinin önüne geçmek için header bildirim çanının mağaza personeli ve yöneticisi açısından operasyonel kurtarıcı olduğu görüldü.
+  - SQL tarafında RPC fonksiyonu yazarak istemci tarafındaki gereksiz veri transferinin engellenmesi ve performans optimizasyonu pekiştirildi.
+- **Referans:** `PR #101 (feature/G28-low-stock-alert-notification)`
+
 
 
 
