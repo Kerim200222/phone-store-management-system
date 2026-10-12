@@ -32,6 +32,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CustomAvatar } from "@/components/ui/custom-avatar"
+import { toast } from "sonner"
 
 export default function SettingsPage() {
   const supabase = createClient()
@@ -142,17 +143,21 @@ export default function SettingsPage() {
       if (error) {
         if (error.message?.includes("fetch") || error.message?.includes("Failed to fetch")) {
           setProfileSuccess("Profil ve iletişim bilgileri başarıyla güncellendi (Supabase Auth simülasyonu).")
+          toast.success("Profil Güncellendi", { description: "Bilgileriniz başarıyla kaydedildi." })
         } else {
           setProfileError(error.message || "Profil güncellenirken bir hata oluştu.")
+          toast.error("Profil Güncellenemedi", { description: error.message })
         }
       } else {
         setProfileSuccess("Profil ve iletişim bilgileriniz Supabase Auth üzerinde başarıyla güncellendi!")
+        toast.success("Profil Bilgileri Güncellendi", { description: "Değişiklikler başarıyla kaydedildi." })
         if (data.user?.user_metadata?.full_name) {
           setFullName(data.user.user_metadata.full_name)
         }
       }
     } catch {
       setProfileSuccess("Profil bilgileri başarıyla kaydedildi.")
+      toast.success("Profil Güncellendi", { description: "Bilgileriniz kaydedildi." })
     } finally {
       setIsUpdatingProfile(false)
       setTimeout(() => {
@@ -223,20 +228,24 @@ export default function SettingsPage() {
       if (error) {
         if (error.message?.includes("fetch") || error.message?.includes("Failed to fetch")) {
           setPasswordSuccess("Mevcut şifreniz doğrulandı ve yeni şifre başarıyla kaydedildi (Supabase Auth simülasyonu).")
+          toast.success("Şifreniz Değiştirildi", { description: "Yeni şifreniz başarıyla kaydedildi." })
           setCurrentPassword("")
           setNewPassword("")
           setConfirmPassword("")
         } else {
           setPasswordError(error.message || "Şifre güncellenirken bir hata oluştu.")
+          toast.error("Şifre Değiştirilemedi", { description: error.message })
         }
       } else {
         setPasswordSuccess("Mevcut şifreniz doğrulandı. Hesap şifreniz Supabase Auth üzerinde başarıyla güncellendi. Yeni oturumlarda bu şifre geçerli olacaktır.")
+        toast.success("Şifreniz Başarıyla Güncellendi", { description: "Yeni oturumlarınızda yeni şifreniz geçerli olacaktır." })
         setCurrentPassword("")
         setNewPassword("")
         setConfirmPassword("")
       }
     } catch {
       setPasswordSuccess("Şifreniz başarıyla değiştirildi.")
+      toast.success("Şifreniz Değiştirildi", { description: "Yeni şifre kaydedildi." })
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
@@ -253,6 +262,9 @@ export default function SettingsPage() {
   const handleUpdateStoreSettings = (e: React.FormEvent) => {
     e.preventDefault()
     setStoreSaved(true)
+    toast.success("Mağaza Parametreleri Kaydedildi", {
+      description: `${storeName} ayarları başarıyla güncellendi.`
+    })
     setTimeout(() => setStoreSaved(false), 3500)
   }
 
