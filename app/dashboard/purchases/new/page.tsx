@@ -41,6 +41,7 @@ import { createClient } from "@/utils/supabase/client"
 import { processSecondhandDevicePurchase } from "@/lib/purchase-service"
 import { PurchaseContractModal } from "@/components/purchases/purchase-contract-modal"
 import { CustomerModal } from "@/components/customers/customer-modal"
+import { toast } from "sonner"
 
 interface CustomerDbClient {
   from(table: string): {
@@ -220,8 +221,14 @@ export default function NewPurchasePage() {
       setCustomers((prev) => [newCust, ...prev])
       setValue("customerId", newCust.id, { shouldValidate: true })
       setIsCustomerModalOpen(false)
+      toast.success("Müşteri Başarıyla Eklendi", {
+        description: `${newCust.full_name} müşteri listesine kaydedildi.`
+      })
       return true
     } catch {
+      toast.error("Müşteri Eklenemedi", {
+        description: "Lütfen müşteri bilgilerini kontrol ediniz."
+      })
       return false
     }
   }
@@ -230,6 +237,9 @@ export default function NewPurchasePage() {
   const onSubmit = async (values: PurchaseFormValues) => {
     if (!selectedCustomer) {
       setSubmitError("Lütfen cihazı satın alacağınız müşteriyi seçiniz.")
+      toast.error("Müşteri Seçilmedi", {
+        description: "Lütfen cihazı satın alacağınız müşteriyi seçiniz."
+      })
       return
     }
 
@@ -240,6 +250,9 @@ export default function NewPurchasePage() {
       const result = await processSecondhandDevicePurchase(values, selectedCustomer)
 
       if (result.success) {
+        toast.success("2. El Cihaz Alımı Tamamlandı", {
+          description: `${values.brand} ${values.model} envantere kaydedildi. Sözleşme No: ${result.transactionNumber}`
+        })
         // Sözleşme Modalı Verisini Hazırla
         const contract: PurchaseContractData = {
           contractNumber: result.transactionNumber,
@@ -275,12 +288,15 @@ export default function NewPurchasePage() {
         setContractData(contract)
         setIsContractModalOpen(true)
       } else {
-        setSubmitError(result.error || "İşlem kaydedilirken bir hata oluştu.")
+        const errorMsg = result.error || "İşlem kaydedilirken bir hata oluştu."
+        setSubmitError(errorMsg)
+        toast.error("Satın Alma Başarısız", { description: errorMsg })
       }
     } catch (err: unknown) {
       console.error("Purchase error:", err)
       const errorMsg = err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu."
       setSubmitError(errorMsg)
+      toast.error("Alım İşlemi Hatası", { description: errorMsg })
     } finally {
       setIsSubmitting(false)
     }
