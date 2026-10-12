@@ -31,6 +31,7 @@ import {
 import { INITIAL_CUSTOMERS } from "@/types/customer"
 import { createClient } from "@/utils/supabase/client"
 import { processPOSTransaction } from "@/lib/pos-checkout"
+import { toast } from "sonner"
 
 type CategoryFilter = "all" | "Telefon" | "Aksesuar" | "Yedek Parça"
 
@@ -142,7 +143,10 @@ export default function POSPage() {
 
   // Sepete Ürün Ekleme Mantığı
   const handleAddToCart = useCallback((product: POSProduct) => {
-    if (product.stock_quantity <= 0) return
+    if (product.stock_quantity <= 0) {
+      toast.error("Stok Yetersiz", { description: `${product.name} stokta kalmamış.` })
+      return
+    }
 
     setCart((prevCart) => {
       const existingIndex = prevCart.findIndex((item) => item.product.id === product.id)
@@ -150,7 +154,7 @@ export default function POSPage() {
       if (existingIndex > -1) {
         const currentItem = prevCart[existingIndex]
         if (currentItem.quantity >= product.stock_quantity) {
-          // Stok limitine ulaşıldı
+          toast.warning("Maksimum Stok", { description: `Bu üründen daha fazla eklenemez (Mevcut: ${product.stock_quantity}).` })
           return prevCart
         }
         const updated = [...prevCart]
@@ -160,6 +164,7 @@ export default function POSPage() {
           quantity: newQty,
           total_price: (currentItem.unit_price * newQty) - currentItem.discount,
         }
+        toast.success("Miktar Artırıldı", { description: `${product.name} (${newQty} Adet)` })
         return updated
       } else {
         const newItem: CartItem = {
@@ -171,6 +176,7 @@ export default function POSPage() {
           total_price: product.sale_price,
           selected_imei: product.imei,
         }
+        toast.success("Sepete Eklendi", { description: `${product.name} (₺${product.sale_price.toLocaleString("tr-TR")})` })
         return [newItem, ...prevCart]
       }
     })
@@ -246,9 +252,11 @@ export default function POSPage() {
         setScanNotification(`✅ "${matchedProduct.name}" sepete eklendi!`)
       } else {
         setScanNotification(`⚠️ "${matchedProduct.name}" stokta kalmamış!`)
+        toast.error("Stok Yetersiz", { description: `"${matchedProduct.name}" stokta kalmamış!` })
       }
     } else {
       setScanNotification(`❌ "${query}" barkod veya IMEI ile eşleşen ürün bulunamadı.`)
+      toast.error("Ürün Bulunamadı", { description: `"${query}" barkod veya IMEI ile eşleşen ürün bulunamadı.` })
     }
 
     setBarcodeInput("")
@@ -329,12 +337,18 @@ export default function POSPage() {
         setScanNotification(
           `✅ Satış Tamamlandı! ${result.transactionNumber} veritabanına kaydedildi ve ${result.itemsCount} ürünün stoğu düşürüldü.`
         )
+        toast.success("Satış Başarıyla Tamamlandı", {
+          description: `Fiş No: ${result.transactionNumber} • Tutar: ₺${cartSummary.finalTotal.toLocaleString("tr-TR")}`
+        })
       } else {
-        setScanNotification(`❌ Satış işlemi başarısız: ${result.error || "Bilinmeyen hata"}`)
+        const errText = result.error || "Bilinmeyen hata"
+        setScanNotification(`❌ Satış işlemi başarısız: ${errText}`)
+        toast.error("Satış Tamamlanamadı", { description: errText })
       }
     } catch (err) {
       console.error("Satış işlemi sırasında beklenmeyen hata:", err)
       setScanNotification("❌ Satış işlemi tamamlanırken bir hata oluştu.")
+      toast.error("Satış Hatası", { description: "İşlem sırasında beklenmeyen bir hata oluştu." })
     } finally {
       setIsCheckingOut(false)
     }
