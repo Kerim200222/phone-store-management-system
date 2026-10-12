@@ -42,6 +42,7 @@ import { createClient } from "@/utils/supabase/client"
 import { createServiceTicket } from "@/lib/service-ticket-service"
 import { ServiceTicketModal } from "@/components/service/service-ticket-modal"
 import { CustomerModal } from "@/components/customers/customer-modal"
+import { toast } from "sonner"
 
 interface CustomerDbClient {
   from(table: string): {
@@ -212,8 +213,14 @@ export default function NewServiceTicketPage() {
       setCustomers((prev) => [newCust, ...prev])
       setValue("customerId", newCust.id, { shouldValidate: true })
       setIsCustomerModalOpen(false)
+      toast.success("Müşteri Başarıyla Eklendi", {
+        description: `${newCust.full_name} müşteri listesine kaydedildi.`
+      })
       return true
     } catch {
+      toast.error("Müşteri Eklenemedi", {
+        description: "Lütfen müşteri bilgilerini kontrol ediniz."
+      })
       return false
     }
   }
@@ -222,6 +229,9 @@ export default function NewServiceTicketPage() {
   const onSubmit = async (values: ServiceTicketFormValues) => {
     if (!selectedCustomer) {
       setSubmitError("Lütfen cihazı teslim eden müşteriyi seçiniz.")
+      toast.error("Müşteri Seçilmedi", {
+        description: "Lütfen cihazı teslim eden müşteriyi seçiniz."
+      })
       return
     }
 
@@ -232,6 +242,9 @@ export default function NewServiceTicketPage() {
       const result = await createServiceTicket(values, selectedCustomer)
 
       if (result.success) {
+        toast.success("Teknik Servis Kaydı Açıldı", {
+          description: `Bilet No: ${result.ticketNumber} • Cihaz: ${values.deviceBrand} ${values.deviceModel}`
+        })
         // Teslim Alınan Aksesuar Listesi
         const accessories: string[] = []
         if (values.accProtectiveCase) accessories.push("Kılıf")
@@ -287,11 +300,14 @@ export default function NewServiceTicketPage() {
         setReceiptData(receipt)
         setIsReceiptModalOpen(true)
       } else {
-        setSubmitError(result.error || "Kayıt açılırken bir hata meydana geldi.")
+        const errorMsg = result.error || "Kayıt açılırken bir hata meydana geldi."
+        setSubmitError(errorMsg)
+        toast.error("Servis Kaydı Oluşturulamadı", { description: errorMsg })
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu."
       setSubmitError(msg)
+      toast.error("Servis Kaydı Hatası", { description: msg })
     } finally {
       setIsSubmitting(false)
     }
