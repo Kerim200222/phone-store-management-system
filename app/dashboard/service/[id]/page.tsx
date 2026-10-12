@@ -15,7 +15,6 @@ import {
   AlertTriangle, 
   FileText,
   Tag,
-  RefreshCw,
   Printer,
   DollarSign,
   MessageSquare,
