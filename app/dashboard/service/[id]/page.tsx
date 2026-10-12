@@ -47,6 +47,8 @@ import { ServiceTicketModal } from "@/components/service/service-ticket-modal"
 import { CustomerNotificationModal } from "@/components/service/delivery/customer-notification-modal"
 import { ServiceDeliveryModal } from "@/components/service/delivery/service-delivery-modal"
 import { UniversalReceiptModal } from "@/components/receipt/universal-receipt-modal"
+import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 
 export default function ServiceTicketDetailPage() {
   const params = useParams()
@@ -159,6 +161,9 @@ export default function ServiceTicketDetailPage() {
       if (result.success) {
         setIsSavedSuccess(true)
         setSaveMessage(result.message || "Başarıyla kaydedildi.")
+        toast.success("Maliyet ve Parçalar Kaydedildi", {
+          description: `Güncel Tutar: ₺${actualCost.toLocaleString("tr-TR")} • Durum: ${status}`
+        })
         setTicket((prev) =>
           prev
             ? {
@@ -173,10 +178,13 @@ export default function ServiceTicketDetailPage() {
             : null
         )
         setTimeout(() => setIsSavedSuccess(false), 3000)
+      } else {
+        toast.error("Kaydetme Başarısız", { description: result.message || "Bir hata oluştu." })
       }
     } catch (err) {
       console.warn("Kaydetme hatası:", err)
       setSaveMessage("Kayıt sırasında bir hata oluştu.")
+      toast.error("Kayıt Hatası", { description: "Veritabanı güncellenirken hata oluştu." })
     } finally {
       setIsSaving(false)
     }
@@ -248,11 +256,17 @@ export default function ServiceTicketDetailPage() {
         )
         setIsSavedSuccess(true)
         setSaveMessage(res.message || "Cihaz onarımı tamamlandı olarak kaydedildi.")
+        toast.success("Onarım Tamamlandı", {
+          description: `${ticket.device_brand} ${ticket.device_model} onarımı tamamlandı olarak işaretlendi.`
+        })
         setTimeout(() => setIsSavedSuccess(false), 3000)
         setIsNotifyModalOpen(true)
+      } else {
+        toast.error("İşlem Başarısız", { description: res.message || "Durum güncellenemedi." })
       }
     } catch (err) {
       console.warn("Onarım tamamlama hatası:", err)
+      toast.error("Hata", { description: "Onarım durumu güncellenirken hata oluştu." })
     }
   }
 
@@ -262,6 +276,9 @@ export default function ServiceTicketDetailPage() {
     setStatus("tamamlandi")
     setIsSavedSuccess(true)
     setSaveMessage(result.message || "Cihaz teslim edildi ve teknik servis geliri kasaya kaydedildi.")
+    toast.success("Cihaz Teslim Edildi", {
+      description: `Tahsilat yapıldı ve teknik servis geliri kasaya kaydedildi. (İşlem No: ${result.transactionNumber})`
+    })
     setTimeout(() => setIsSavedSuccess(false), 4000)
   }
 
