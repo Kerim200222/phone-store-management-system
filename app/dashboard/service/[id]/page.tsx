@@ -320,9 +320,36 @@ export default function ServiceTicketDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[500px] flex flex-col items-center justify-center space-y-3">
-        <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin" />
-        <p className="text-sm text-slate-400">Servis bilet detayları yükleniyor...</p>
+      <div className="space-y-6 pb-12">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48 bg-slate-800" />
+            <Skeleton className="h-4 w-32 bg-slate-800/60" />
+          </div>
+          <Skeleton className="h-9 w-32 rounded-lg bg-slate-800" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+              <Skeleton className="h-6 w-52 bg-slate-800" />
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-16 rounded-xl bg-slate-800/60" />
+                <Skeleton className="h-16 rounded-xl bg-slate-800/60" />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+              <Skeleton className="h-5 w-40 bg-slate-800" />
+              <Skeleton className="h-32 w-full rounded-xl bg-slate-800/40" />
+            </div>
+          </div>
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+              <Skeleton className="h-6 w-36 bg-slate-800" />
+              <Skeleton className="h-28 w-full rounded-xl bg-slate-800/60" />
+              <Skeleton className="h-10 w-full rounded-lg bg-slate-800" />
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
