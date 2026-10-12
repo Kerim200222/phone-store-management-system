@@ -338,7 +338,7 @@ export default function POSPage() {
           `✅ Satış Tamamlandı! ${result.transactionNumber} veritabanına kaydedildi ve ${result.itemsCount} ürünün stoğu düşürüldü.`
         )
         toast.success("Satış Başarıyla Tamamlandı", {
-          description: `Fiş No: ${result.transactionNumber} • Tutar: ₺${cartSummary.finalTotal.toLocaleString("tr-TR")}`
+          description: `Fiş No: ${result.transactionNumber} • Tutar: ₺${cartSummary.grand_total.toLocaleString("tr-TR")}`
         })
       } else {
         const errText = result.error || "Bilinmeyen hata"
