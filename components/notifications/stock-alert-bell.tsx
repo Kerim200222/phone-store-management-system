@@ -8,7 +8,6 @@ import {
   AlertOctagon,
   Package,
   RefreshCw,
-  ExternalLink,
   ShieldAlert,
   ArrowRight,
   TrendingDown,
