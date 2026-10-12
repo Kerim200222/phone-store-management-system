@@ -10,12 +10,7 @@ import {
   Compass,
   ArrowRight,
   Loader2,
-  Package,
-  Receipt,
-  Settings,
   Sparkles,
-  QrCode,
-  ShieldCheck,
 } from "lucide-react"
 
 import {
@@ -26,17 +21,10 @@ import {
   CommandGroup,
   CommandItem,
   CommandSeparator,
-  CommandShortcut,
 } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import {
-  GlobalSearchResponse,
-  ServiceTicketSearchResult,
-  ProductSearchResult,
-  CustomerSearchResult,
-  NavigationSearchResult,
-} from "@/types/global-search"
+import { GlobalSearchResponse } from "@/types/global-search"
 
 interface GlobalCommandPaletteProps {
   /** Harici tetikleme için isteğe bağlı buton sınıfı */

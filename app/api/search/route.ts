@@ -316,9 +316,40 @@ export async function GET(request: NextRequest) {
         .limit(6),
     ])
 
+interface DbTicketRow {
+  id: string
+  ticket_number?: string | null
+  customer_name?: string | null
+  device_model?: string | null
+  imei?: string | null
+  status?: string | null
+  fault_description?: string | null
+}
+
+interface DbProductRow {
+  id: string
+  name: string
+  barcode?: string | null
+  imei?: string | null
+  brand?: string | null
+  model?: string | null
+  stock_quantity?: number | null
+  sale_price?: number | null
+  category_id?: string | null
+  categories?: { name?: string | null } | null
+}
+
+interface DbCustomerRow {
+  id: string
+  name?: string | null
+  phone?: string | null
+  email?: string | null
+}
+
     // Sonuçları Ayrıştırma - Biletler
     if (ticketsRes.status === "fulfilled" && !ticketsRes.value.error && ticketsRes.value.data) {
-      tickets = ticketsRes.value.data.map((t: any) => {
+      const rows = ticketsRes.value.data as unknown as DbTicketRow[]
+      tickets = rows.map((t) => {
         const ticketNum = t.ticket_number || `Bilet #${t.id.slice(0, 8)}`
         return {
           id: String(t.id),
@@ -341,7 +372,8 @@ export async function GET(request: NextRequest) {
 
     // Sonuçları Ayrıştırma - Ürünler
     if (productsRes.status === "fulfilled" && !productsRes.value.error && productsRes.value.data) {
-      products = productsRes.value.data.map((p: any) => {
+      const rows = productsRes.value.data as unknown as DbProductRow[]
+      products = rows.map((p) => {
         const qty = Number(p.stock_quantity ?? 0)
         const categoryName = p.categories?.name || "Ürün"
         const isOutOfStock = qty <= 0
@@ -372,7 +404,8 @@ export async function GET(request: NextRequest) {
 
     // Sonuçları Ayrıştırma - Müşteriler
     if (customersRes.status === "fulfilled" && !customersRes.value.error && customersRes.value.data) {
-      customers = customersRes.value.data.map((c: any) => ({
+      const rows = customersRes.value.data as unknown as DbCustomerRow[]
+      customers = rows.map((c) => ({
         id: String(c.id),
         title: c.name || "İsimsiz Müşteri",
         subtitle: `Tel: ${c.phone || "—"}${c.email ? ` • ${c.email}` : ""}`,
