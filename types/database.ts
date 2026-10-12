@@ -121,6 +121,27 @@ export interface Database {
         }
         Returns: Json
       }
+      get_low_stock_products: {
+        Args: {
+          p_threshold?: number
+        }
+        Returns: {
+          id: string
+          name: string
+          brand: string
+          model: string | null
+          barcode: string | null
+          imei: string | null
+          stock_quantity: number
+          min_stock_level: number
+          purchase_price: number
+          sale_price: number
+          image_url: string | null
+          category_id: string | null
+          category_name: string
+          severity: string
+        }[]
+      }
     }
     Enums: {
       user_role: UserRole
