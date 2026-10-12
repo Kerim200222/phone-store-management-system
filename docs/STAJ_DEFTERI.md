@@ -965,6 +965,41 @@
   - Recharts kütüphanesinin Next.js Client Component yapısında `ResponsiveContainer` ve Tailwind CSS koyu tema renk paleti ile nasıl kusursuz entegre edildiği deneyimlendi.
 - **Referans:** `PR #100 (feature/G27-recharts-dashboard-charts)`
 
+---
+
+## 📅 Gün 30: UI/UX Cilasının Atılması - Sonner Toast Bildirimleri, Skeleton Loading & Tipografi İyileştirmeleri
+
+- **Tarih:** 24 Ekim 2026
+- **Konu:** Hafta 6: Raporlama ve İleri Düzey Özellikler ve Proje Final Cilası kapsamında; uygulamanın tüm kritik form ve veri işlem akışlarına kullanıcı deneyimini zirveye taşıyan zengin **Toast Bildirimleri (Sonner)** entegrasyonu; veri yüklenirken sayfa sıçramalarını (CLS) önleyen ve modern bir bekleme hissi sağlayan **Skeleton Loading (İskelet Yükleme)** bileşenlerinin kazandırılması; koyu tema, tipografi, seçim (selection) ve kaydırma çubuğu (scrollbar) tutarsızlıklarının giderilerek profesyonel bir kurumsal kimliğe kavuşturulması.
+- **Yapılan Çalışmalar:**
+  1. **Sonner Toast Bildirim Altyapısı (`components/ui/sonner.tsx` & `app/layout.tsx`):**
+     - Projeye modern React bildirim motoru `sonner` dahil edildi.
+     - Koyu temaya ve Tailwind sınıflarına tam uyumlu, cam efektli (`backdrop-blur-md`), renk kodlu (Yeşil: Başarı, Kırmızı: Hata, Sarı: Uyarı, Mavi: Bilgi) ve kapatma butonlu `Toaster` bileşeni inşa edildi.
+     - `app/layout.tsx` kök layout seviyesinde `Toaster` monte edilerek tüm sayfalarda kesintisiz bildirim akışı sağlandı.
+  2. **Tüm Form ve Operasyonel Akışlara Toast Bildirimlerinin Bağlanması:**
+     - **Yeni Ürün Ekleme (`/dashboard/inventory/new`):** Başarılı ürün kaydı, geçersiz görsel formatı ve dosya boyutu aşımlarında zengin bildirimler (`toast.success`, `toast.error`).
+     - **Teknik Servis Bilet Kaydı (`/dashboard/service/new`):** Müşteri seçimi eksikliği, yeni müşteri kaydı ve bilet açılışında anlık bildirimler.
+     - **Teknik Servis Süreç Yönetimi (`/dashboard/service/[id]`):** Parça maliyetlerinin kaydedilmesi, "Onarımı Tamamla" buton aksiyonu ve "Teslim Et / Tahsilat Yap" adımlarında tutar ve işlem numarası içeren bildirimler.
+     - **2. El Cihaz Alım Formu (`/dashboard/purchases/new`):** Müşteri kabulü, sözleşme oluşturulması ve envanter kaydında toast geri bildirimleri.
+     - **POS Hızlı Satış (`/dashboard/pos`):** Sepete ürün ekleme/miktar artırma, maksimum stok uyarısı (`toast.warning`), barkod okuyucu eşleşmeleri ve satış tamamlama/tahsilat fişi kesiminde detaylı bildirimler.
+     - **Kullanıcı Girişi (`/login`):** Başarılı oturum açma, demo modu ve hatalı şifre uyarıları.
+     - **Sistem Ayarları (`/dashboard/settings`):** Profil güncelleme, şifre değiştirme ve mağaza parametrelerinin kaydedilmesi.
+     - **Envanter Panosu (`/dashboard/inventory`):** Barkod ve IMEI panoya kopyalandığında kullanıcıya kopyalama onayı.
+  3. **Skeleton Loading (İskelet Yükleme) Bileşenleri (`components/ui/skeleton.tsx`):**
+     - Shadcn UI standartlarında `Skeleton`, `TableSkeleton` ve `CardSkeleton` bileşenleri kodlandı.
+     - **Envanter Tablosu (`/dashboard/inventory`):** Supabase'den ürünler yüklenirken ham boşluk veya spinner yerine ürün görseli, adı, kategorisi, fiyatı ve stok rozetini simüle eden tam 7 sütunlu animasyonlu iskelet satırları gösterildi.
+     - **Cihaz Geçmişi & IMEI Sorgulama (`/dashboard/service/history`):** Cihaz künye kartı, istatistik kutuları ve dikey zaman çizelgesi için katmanlı Skeleton blokları geliştirildi.
+  4. **Tipografi, Renk ve Scrollbar Tutarsızlıklarının Giderilmesi:**
+     - `app/layout.tsx` içerisinde `html` etiketine `className="dark"` ve `lang="tr"` sabitlendi; Geist font ailesi `font-sans` ve `bg-slate-950 text-slate-100` zeminine bağlandı.
+     - `app/globals.css` içerisine modern koyu tema kaydırma çubuğu (`::-webkit-scrollbar`), yarı saydam parça rayları ve hover geçişleri eklendi.
+     - Metin seçimi için neon cyan parlama stili (`selection:bg-cyan-500/30 selection:text-cyan-200`) tanımlandı.
+  5. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm Next.js rotaları sıfır hata ve sıfır TypeScript/ESLint uyarısı ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Modern web uygulamalarında `alert()` veya statik metinler yerine `toast` bildirimleri kullanmanın kullanıcı güvenini ve arayüz akıcılığını ne derece yükselttiği deneyimlendi.
+  - Veri yüklenirken Skeleton animasyonlarının sayfa yerleşim kaymalarını (Cumulative Layout Shift - CLS) sıfırlayarak kullanıcıya anlık görsel geri bildirim sağladığı kavrandı.
+- **Referans:** `PR #103 (feature/G30-ui-ux-polish-sonner-skeleton-typography)`
+
 
 
 
