@@ -48,6 +48,7 @@ import {
 } from "@/types/inventory"
 import { createClient } from "@/utils/supabase/client"
 import { CustomImage } from "@/components/ui/custom-image"
+import { toast } from "sonner"
 
 interface CategoryOption {
   id: string
@@ -246,12 +247,16 @@ export default function NewProductPage() {
       "image/gif"
     ]
     if (!allowedTypes.includes(file.type)) {
-      alert("Lütfen yalnızca PNG, JPG, WEBP veya GIF formatında bir görsel seçin.")
+      toast.error("Geçersiz Görsel Formatı", {
+        description: "Lütfen yalnızca PNG, JPG, WEBP veya GIF formatında bir görsel seçin."
+      })
       return
     }
 
     if (file.size > IMAGE_UPLOAD_RULES.MAX_FILE_SIZE_BYTES) {
-      alert("Görsel dosya boyutu 5 MB'dan küçük olmalıdır.")
+      toast.error("Dosya Boyutu Çok Büyük", {
+        description: "Görsel dosya boyutu 5 MB'dan küçük olmalıdır."
+      })
       return
     }
 
@@ -503,6 +508,10 @@ export default function NewProductPage() {
         message: `"${data.name}" ürünü ve Supabase Storage görseli başarıyla sisteme kaydedildi!`
       })
 
+      toast.success("Ürün Başarıyla Eklendi", {
+        description: `"${data.name}" envantere kaydedildi. Stok: ${data.stockQuantity} Adet.`
+      })
+
       // Formu sıfırla
       handleRemoveImage()
       reset({
@@ -533,6 +542,9 @@ export default function NewProductPage() {
       setFeedback({
         type: "success",
         message: `"${data.name}" yerel önbelleğe ve simülasyona başarıyla eklendi.`
+      })
+      toast.success("Ürün Kaydedildi", {
+        description: `"${data.name}" simülasyon modunda envantere eklendi.`
       })
     } finally {
       setIsSubmitting(false)

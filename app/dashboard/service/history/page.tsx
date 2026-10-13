@@ -18,6 +18,8 @@ import { DeviceHistorySearch } from "@/components/devices/device-history-search"
 import { DeviceHistoryHeader } from "@/components/devices/device-history-header"
 import { DeviceHistoryTimeline } from "@/components/devices/device-history-timeline"
 import { DeviceHistoryReportModal } from "@/components/devices/device-history-report-modal"
+import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 
 function DeviceHistoryContent() {
   const searchParams = useSearchParams()
@@ -36,8 +38,16 @@ function DeviceHistoryContent() {
       const data = await getDeviceHistoryByIMEI(imeiToQuery)
       setHistoryResult(data)
       setCurrentImei(imeiToQuery)
+      if (data && data.device) {
+        toast.success("Cihaz Geçmişi Yüklendi", {
+          description: `${data.device.brand} ${data.device.model} • ${data.events.length} işlem kaydı bulundu.`
+        })
+      }
     } catch (err) {
       console.warn("IMEI sorgulama hatası:", err)
+      toast.error("Geçmiş Sorgulanamadı", {
+        description: `${imeiToQuery} için veri çekilirken hata oluştu.`
+      })
     } finally {
       setIsLoading(false)
     }
@@ -111,16 +121,39 @@ function DeviceHistoryContent() {
         isLoading={isLoading}
       />
 
-      {/* 3. YÜKLENİYOR VEYA SONUÇ GÖRÜNÜMÜ */}
+      {/* 3. YÜKLENİYOR SKELETON VEYA SONUÇ GÖRÜNÜMÜ */}
       {isLoading ? (
-        <div className="min-h-[400px] flex flex-col items-center justify-center space-y-3 bg-slate-900/60 rounded-2xl border border-slate-800 p-8">
-          <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin" />
-          <p className="text-sm font-semibold text-slate-200">
-            IMEI ({currentImei}) veritabanında taranıyor...
-          </p>
-          <p className="text-xs text-slate-500">
-            Alış faturaları, satış fişleri ve servis biletleri taranıyor.
-          </p>
+        <div className="space-y-6">
+          {/* Cihaz Künye Skeleton */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-7 w-64 bg-slate-800" />
+                <Skeleton className="h-4 w-44 bg-slate-800/60" />
+              </div>
+              <Skeleton className="h-9 w-36 rounded-lg bg-slate-800" />
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <Skeleton className="h-16 rounded-xl bg-slate-800/60" />
+              <Skeleton className="h-16 rounded-xl bg-slate-800/60" />
+              <Skeleton className="h-16 rounded-xl bg-slate-800/60" />
+              <Skeleton className="h-16 rounded-xl bg-slate-800/60" />
+            </div>
+          </div>
+
+          {/* Zaman Çizelgesi Skeleton */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5 rounded-full bg-slate-800" />
+              <Skeleton className="h-5 w-48 bg-slate-800" />
+            </div>
+            <div className="space-y-3 pt-3">
+              <Skeleton className="h-24 w-full rounded-xl bg-slate-800/40" />
+              <Skeleton className="h-24 w-full rounded-xl bg-slate-800/40" />
+              <Skeleton className="h-24 w-full rounded-xl bg-slate-800/40" />
+            </div>
+          </div>
         </div>
       ) : historyResult ? (
         <div className="space-y-6">

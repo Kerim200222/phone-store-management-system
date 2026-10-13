@@ -15,7 +15,6 @@ import {
   AlertTriangle, 
   FileText,
   Tag,
-  RefreshCw,
   Printer,
   DollarSign,
   MessageSquare,
@@ -47,6 +46,8 @@ import { ServiceTicketModal } from "@/components/service/service-ticket-modal"
 import { CustomerNotificationModal } from "@/components/service/delivery/customer-notification-modal"
 import { ServiceDeliveryModal } from "@/components/service/delivery/service-delivery-modal"
 import { UniversalReceiptModal } from "@/components/receipt/universal-receipt-modal"
+import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 
 export default function ServiceTicketDetailPage() {
   const params = useParams()
@@ -159,6 +160,9 @@ export default function ServiceTicketDetailPage() {
       if (result.success) {
         setIsSavedSuccess(true)
         setSaveMessage(result.message || "Başarıyla kaydedildi.")
+        toast.success("Maliyet ve Parçalar Kaydedildi", {
+          description: `Güncel Tutar: ₺${actualCost.toLocaleString("tr-TR")} • Durum: ${status}`
+        })
         setTicket((prev) =>
           prev
             ? {
@@ -173,10 +177,13 @@ export default function ServiceTicketDetailPage() {
             : null
         )
         setTimeout(() => setIsSavedSuccess(false), 3000)
+      } else {
+        toast.error("Kaydetme Başarısız", { description: result.message || "Bir hata oluştu." })
       }
     } catch (err) {
       console.warn("Kaydetme hatası:", err)
       setSaveMessage("Kayıt sırasında bir hata oluştu.")
+      toast.error("Kayıt Hatası", { description: "Veritabanı güncellenirken hata oluştu." })
     } finally {
       setIsSaving(false)
     }
@@ -248,11 +255,17 @@ export default function ServiceTicketDetailPage() {
         )
         setIsSavedSuccess(true)
         setSaveMessage(res.message || "Cihaz onarımı tamamlandı olarak kaydedildi.")
+        toast.success("Onarım Tamamlandı", {
+          description: `${ticket.device_brand} ${ticket.device_model} onarımı tamamlandı olarak işaretlendi.`
+        })
         setTimeout(() => setIsSavedSuccess(false), 3000)
         setIsNotifyModalOpen(true)
+      } else {
+        toast.error("İşlem Başarısız", { description: res.message || "Durum güncellenemedi." })
       }
     } catch (err) {
       console.warn("Onarım tamamlama hatası:", err)
+      toast.error("Hata", { description: "Onarım durumu güncellenirken hata oluştu." })
     }
   }
 
@@ -262,6 +275,9 @@ export default function ServiceTicketDetailPage() {
     setStatus("tamamlandi")
     setIsSavedSuccess(true)
     setSaveMessage(result.message || "Cihaz teslim edildi ve teknik servis geliri kasaya kaydedildi.")
+    toast.success("Cihaz Teslim Edildi", {
+      description: `Tahsilat yapıldı ve teknik servis geliri kasaya kaydedildi. (İşlem No: ${result.transactionNumber})`
+    })
     setTimeout(() => setIsSavedSuccess(false), 4000)
   }
 
@@ -303,9 +319,36 @@ export default function ServiceTicketDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[500px] flex flex-col items-center justify-center space-y-3">
-        <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin" />
-        <p className="text-sm text-slate-400">Servis bilet detayları yükleniyor...</p>
+      <div className="space-y-6 pb-12">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48 bg-slate-800" />
+            <Skeleton className="h-4 w-32 bg-slate-800/60" />
+          </div>
+          <Skeleton className="h-9 w-32 rounded-lg bg-slate-800" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+              <Skeleton className="h-6 w-52 bg-slate-800" />
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-16 rounded-xl bg-slate-800/60" />
+                <Skeleton className="h-16 rounded-xl bg-slate-800/60" />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+              <Skeleton className="h-5 w-40 bg-slate-800" />
+              <Skeleton className="h-32 w-full rounded-xl bg-slate-800/40" />
+            </div>
+          </div>
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
+              <Skeleton className="h-6 w-36 bg-slate-800" />
+              <Skeleton className="h-28 w-full rounded-xl bg-slate-800/60" />
+              <Skeleton className="h-10 w-full rounded-lg bg-slate-800" />
+            </div>
+          </div>
+        </div>
       </div>
     )
   }

@@ -30,6 +30,7 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card"
+import { toast } from "sonner"
 
 function LoginFormContent() {
   const router = useRouter()
@@ -74,6 +75,9 @@ function LoginFormContent() {
           document.cookie = `phonestore_session=${encodeURIComponent(JSON.stringify({ email: email.trim(), role }))}; path=/; max-age=86400; SameSite=Lax`
 
           setSuccessMessage("Giriş başarılı! Yönetim paneline aktarılıyorsunuz...")
+          toast.success("Giriş Başarılı", {
+            description: `${role} yetkisiyle yönetim paneline yönlendiriliyorsunuz...`
+          })
           setTimeout(() => {
             router.push(destination)
           }, 600)
@@ -81,13 +85,18 @@ function LoginFormContent() {
         }
 
         // Kullanıcı dostu Türkçe hata mesajları
+        let errDesc = error.message
         if (error.message.includes("Invalid login credentials")) {
-          setErrorMessage("E-posta adresi veya şifre hatalı. Lütfen kontrol ediniz.")
+          errDesc = "E-posta adresi veya şifre hatalı. Lütfen kontrol ediniz."
+          setErrorMessage(errDesc)
         } else if (error.message.includes("Email not confirmed")) {
-          setErrorMessage("E-posta adresiniz henüz onaylanmamış.")
+          errDesc = "E-posta adresiniz henüz onaylanmamış."
+          setErrorMessage(errDesc)
         } else {
-          setErrorMessage(`Giriş başarısız: ${error.message}`)
+          errDesc = `Giriş başarısız: ${error.message}`
+          setErrorMessage(errDesc)
         }
+        toast.error("Giriş Yapılamadı", { description: errDesc })
         setLoading(false)
         return
       }
@@ -97,6 +106,9 @@ function LoginFormContent() {
         document.cookie = `phonestore_session=${encodeURIComponent(JSON.stringify({ email: email.trim(), role }))}; path=/; max-age=86400; SameSite=Lax`
 
         setSuccessMessage("Giriş başarılı! Yönlendiriliyorsunuz...")
+        toast.success("Hoş Geldiniz", {
+          description: "Oturum başarıyla açıldı. Yönlendiriliyorsunuz..."
+        })
         setTimeout(() => {
           router.push(destination)
         }, 600)
@@ -108,6 +120,9 @@ function LoginFormContent() {
         document.cookie = `phonestore_session=${encodeURIComponent(JSON.stringify({ email: email.trim(), role }))}; path=/; max-age=86400; SameSite=Lax`
 
         setSuccessMessage("Demo oturumu açıldı! Yönlendiriliyorsunuz...")
+        toast.success("Demo Girişi Başarılı", {
+          description: `${role} olarak sisteme giriş yapıldı.`
+        })
         setTimeout(() => {
           router.push(destination)
         }, 600)

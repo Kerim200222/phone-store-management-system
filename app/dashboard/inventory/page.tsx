@@ -39,6 +39,8 @@ import {
 } from "@/types/inventory"
 import { createClient } from "@/utils/supabase/client"
 import { CustomImage } from "@/components/ui/custom-image"
+import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 
 interface InventoryDbClient {
   from(table: string): {
@@ -332,6 +334,7 @@ export default function InventoryDashboardPage() {
   // Sayfalama (Pagination) Durumları
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
+  const [isLoading, setIsLoading] = useState(true)
 
   // Seçili Ürün Detay Modalı (Modal/Drawer state)
   const [selectedProductForDetail, setSelectedProductForDetail] = useState<InventoryItem | null>(null)
@@ -390,6 +393,8 @@ export default function InventoryDashboardPage() {
         }
       } catch {
         // Fallback initial list
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -432,6 +437,9 @@ export default function InventoryDashboardPage() {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(text)
       setCopiedId(id)
+      toast.success("Panoya Kopyalandı", {
+        description: `${text} başarıyla panoya kopyalandı.`
+      })
       setTimeout(() => setCopiedId(null), 2000)
     }
   }
@@ -845,7 +853,39 @@ export default function InventoryDashboardPage() {
               </TableHeader>
 
               <TableBody>
-                {paginatedProducts.length > 0 ? (
+                {isLoading ? (
+                  Array.from({ length: pageSize }).map((_, i) => (
+                    <TableRow key={`skeleton-${i}`} className="border-slate-800/60">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="w-10 h-10 rounded-lg shrink-0 bg-slate-800/80" />
+                          <div className="space-y-1.5 flex-1">
+                            <Skeleton className="h-4 w-44 bg-slate-800" />
+                            <Skeleton className="h-3 w-28 bg-slate-800/60" />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-20 rounded-full bg-slate-800" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-32 bg-slate-800/70" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-5 w-16 mx-auto rounded-full bg-slate-800/70" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Skeleton className="h-4 w-20 ml-auto bg-slate-800" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-5 w-24 mx-auto rounded-full bg-slate-800" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-7 w-16 mx-auto rounded-md bg-slate-800" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : paginatedProducts.length > 0 ? (
                   paginatedProducts.map((product) => {
                     const stockStatus = calculateStockStatus(product.stock_quantity, product.min_stock_level)
                     const isPhone = product.imei !== null && product.imei.length === 15
