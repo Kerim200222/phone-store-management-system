@@ -1109,6 +1109,41 @@
   - Anonim dış erişimlerin engellenmesiyle potansiyel veri sızıntılarının (data leak) ve yetki yükseltme açıklarının önüne geçildi.
 - **Referans:** `PR #104 (feature/G31-supabase-rls-policies)`
 
+---
+
+## 📅 Gün 32: Güvenlik, Test ve Canlıya Alma - Hata Yakalama ve Edge Case Çözümleri
+
+- **Tarih:** 26 Ekim 2026
+- **Konu:** Hafta 7: Güvenlik, Test ve Canlıya Alma (Launch) kapsamında; projenin internete açılması ve canlı kullanıma sunulması öncesinde olası tüm sistem çökmelerinin, bağlantı kopmalarının ve geçersiz rota erişimlerinin önlenmesi amacıyla **Next.js Hata Yakalama (`error.tsx`) & Bulunamadı (`not-found.tsx`) Sayfalarının Tasarlanması**; internet koptuğunda veya Supabase yanıt vermediğinde verilerin kaybolmaması için merkezi hata çözümleyici (`lib/error-handler.ts`), çevrimdışı ağ izleme bandı (`components/network/network-status-banner.tsx`) ve form try-catch bloklarının güçlendirilmesi.
+- **Yapılan Çalışmalar:**
+  1. **Next.js 404 Sayfaları Tasarımı (`app/not-found.tsx` & `app/dashboard/not-found.tsx`):**
+     - Kök dizin ve Dashboard için iki ayrı zengin 404 sayfası geliştirildi.
+     - Koyu tema, cam efektli kartlar (`backdrop-blur-xl`), neon mavi/cyan arka plan parlamaları ve telefon mağazasına özel arama/kurtarma estetiği uygulandı.
+     - "Dashboard'a Dön", "POS Satış", "Teknik Servis" ve "CMD+K Global Arama" kısayol butonları ile kullanıcı dostu yönlendirme sağlandı.
+  2. **Next.js Hata Yakalama Sınırları (`app/error.tsx`, `app/dashboard/error.tsx` & `app/global-error.tsx`):**
+     - Uygulama genelinde ve dashboard modüllerinde çalışma zamanı (runtime) çökmelerini izole eden hata sınırları (Error Boundaries) kodlandı.
+     - "Yeniden Dene (`reset`)", "Sayfayı Yenile" ve "Hata Raporu Kopyala" işlevleri entegre edildi.
+     - Kök layout çökmelerine karşı `app/global-error.tsx` güvenlik zırhı oluşturuldu.
+  3. **Merkezi Hata ve Edge Case Çözümleyici (`lib/error-handler.ts`):**
+     - Ağ kopması (`Failed to fetch`, `offline`), zaman aşımı (`timeout`), yetki ihlali (`42501` / RLS), mükerrer kayıt (`23505` / unique constraint) ve oturum düşmesi (`JWT expired`) durumlarını tespit edip kullanıcıya anlaşılır Türkçe mesajlar üreten `parseAppError` motoru yazıldı.
+  4. **Gerçek Zamanlı Çevrimdışı/Çevrimiçi Ağ İzleme Bandı (`components/network/network-status-banner.tsx`):**
+     - Tarayıcının `online` ve `offline` olaylarını dinleyen modern reaktif bileşen geliştirildi ve Dashboard layout'una monte edildi.
+     - İnternet kesildiğinde kullanıcıyı form doldururken uyaran, bağlantı geri geldiğinde yeşil bildirimle doğrulayan kesintisiz kullanıcı deneyimi sağlandı.
+  5. **Tüm Kritik Formlara Gelişmiş Try-Catch ve Edge Case Koruması:**
+     - **Yeni Ürün Formu (`/dashboard/inventory/new`):** Mükerrer barkod veya ağ kopmalarında verilerin silinmesini önleyen akıllı geri bildirim mekanizması.
+     - **Teknik Servis Kayıt Formu (`/dashboard/service/new`):** Müşteri ve bilet oluşturma adımlarında ağ hatası koruması.
+     - **POS Hızlı Satış (`/dashboard/pos`):** Tahsilat esnasında internet koptuğunda sepetin korunması ve kullanıcıya rehberlik edilmesi.
+     - **2. El Cihaz Alım Formu (`/dashboard/purchases/new`):** Sözleşme oluşturma sürecinde hata izolasyonu.
+     - **Kullanıcı Girişi (`/login`):** Ağ kopması veya hatalı şifrelerde net kullanıcı mesajları.
+     - **Servis Detay & Maliyet Paneli (`/dashboard/service/[id]`):** Parça ve işçilik kaydedilirken edge case koruması.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` ve `npm run lint` çalıştırılarak tüm statik/dinamik rotalar ve hata sayfaları sıfır hata ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Dağıtık web uygulamalarında internet kesintisi ve veritabanı gecikmelerinin kullanıcıyı sistemden koparmadan, verilerini koruyarak ve doğru yönlendirerek yönetilmesinin profesyonel bir yazılımın en temel kalite göstergesi olduğu pekiştirildi.
+  - Next.js App Router mimarisinde `error.tsx` ve `not-found.tsx` hiyerarşisinin (root vs dashboard nested) sayfa yenilemelerini ve layout kaybını önlemedeki etkisi kavrandı.
+- **Referans:** `PR #105 (feature/G32-error-handling-edge-cases)`
+
+
 
 
 
