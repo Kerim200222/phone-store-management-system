@@ -42,6 +42,7 @@ import { processSecondhandDevicePurchase } from "@/lib/purchase-service"
 import { PurchaseContractModal } from "@/components/purchases/purchase-contract-modal"
 import { CustomerModal } from "@/components/customers/customer-modal"
 import { toast } from "sonner"
+import { parseAppError } from "@/lib/error-handler"
 
 interface CustomerDbClient {
   from(table: string): {
@@ -288,15 +289,19 @@ export default function NewPurchasePage() {
         setContractData(contract)
         setIsContractModalOpen(true)
       } else {
-        const errorMsg = result.error || "İşlem kaydedilirken bir hata oluştu."
-        setSubmitError(errorMsg)
-        toast.error("Satın Alma Başarısız", { description: errorMsg })
+        const parsed = parseAppError(result.error, "Satın Alma Başarısız")
+        setSubmitError(parsed.userMessage)
+        toast.error(parsed.title, { description: parsed.userMessage })
       }
     } catch (err: unknown) {
       console.error("Purchase error:", err)
-      const errorMsg = err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu."
-      setSubmitError(errorMsg)
-      toast.error("Alım İşlemi Hatası", { description: errorMsg })
+      const parsed = parseAppError(err, "Alım İşlemi Hatası")
+      setSubmitError(parsed.userMessage)
+      toast.error(parsed.title, { 
+        description: parsed.isNetwork
+          ? "İnternet bağlantısı koptu. Sözleşme taslağınız yerel hafızada korundu, lütfen bağlantınızı kontrol edip tekrar deneyin."
+          : parsed.userMessage 
+      })
     } finally {
       setIsSubmitting(false)
     }

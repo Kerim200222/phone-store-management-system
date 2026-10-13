@@ -32,6 +32,7 @@ import { INITIAL_CUSTOMERS } from "@/types/customer"
 import { createClient } from "@/utils/supabase/client"
 import { processPOSTransaction } from "@/lib/pos-checkout"
 import { toast } from "sonner"
+import { parseAppError } from "@/lib/error-handler"
 
 type CategoryFilter = "all" | "Telefon" | "Aksesuar" | "Yedek Parça"
 
@@ -341,14 +342,19 @@ export default function POSPage() {
           description: `Fiş No: ${result.transactionNumber} • Tutar: ₺${cartSummary.grand_total.toLocaleString("tr-TR")}`
         })
       } else {
-        const errText = result.error || "Bilinmeyen hata"
-        setScanNotification(`❌ Satış işlemi başarısız: ${errText}`)
-        toast.error("Satış Tamamlanamadı", { description: errText })
+        const parsed = parseAppError(result.error, "Satış Tamamlanamadı")
+        setScanNotification(`❌ Satış işlemi başarısız: ${parsed.userMessage}`)
+        toast.error(parsed.title, { description: parsed.userMessage })
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Satış işlemi sırasında beklenmeyen hata:", err)
-      setScanNotification("❌ Satış işlemi tamamlanırken bir hata oluştu.")
-      toast.error("Satış Hatası", { description: "İşlem sırasında beklenmeyen bir hata oluştu." })
+      const parsed = parseAppError(err, "Satış Tamamlanamadı")
+      setScanNotification(`❌ ${parsed.userMessage}`)
+      toast.error(parsed.title, { 
+        description: parsed.isNetwork 
+          ? "İnternet bağlantısı koptu. Sepetiniz korunmaktadır, lütfen bağlantınızı kontrol edip tekrar deneyin."
+          : parsed.userMessage 
+      })
     } finally {
       setIsCheckingOut(false)
     }
