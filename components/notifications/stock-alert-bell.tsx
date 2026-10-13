@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import Link from "next/link"
 import {
   Bell,
@@ -29,7 +29,7 @@ interface StockAlertBellProps {
   pollInterval?: number
 }
 
-export function StockAlertBell({
+export const StockAlertBell = React.memo(function StockAlertBell({
   threshold = 5,
   pollInterval = 60000,
 }: StockAlertBellProps) {
@@ -97,11 +97,13 @@ export function StockAlertBell({
   const criticalCount = summary?.criticalCount ?? 0
   const warningCount = summary?.warningCount ?? 0
 
-  // Filtreleme
-  const filteredProducts: LowStockProduct[] = (summary?.products || []).filter((product) => {
-    if (activeFilter === "all") return true
-    return product.severity === activeFilter
-  })
+  // Filtreleme (useMemo ile gereksiz hesaplamaları önleme)
+  const filteredProducts: LowStockProduct[] = useMemo(() => {
+    return (summary?.products || []).filter((product) => {
+      if (activeFilter === "all") return true
+      return product.severity === activeFilter
+    })
+  }, [summary?.products, activeFilter])
 
   // Para birimi formatlama
   const formatCurrency = (val: number) => {
@@ -359,4 +361,5 @@ export function StockAlertBell({
       )}
     </div>
   )
-}
+})
+StockAlertBell.displayName = "StockAlertBell"

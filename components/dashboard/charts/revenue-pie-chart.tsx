@@ -60,7 +60,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   return null
 }
 
-export function RevenuePieChart({
+export const RevenuePieChart = React.memo(function RevenuePieChart({
   data,
   totalRevenue,
   isLoading,
@@ -175,4 +175,5 @@ export function RevenuePieChart({
       </CardContent>
     </Card>
   )
-}
+})
+RevenuePieChart.displayName = "RevenuePieChart"
