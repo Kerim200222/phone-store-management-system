@@ -28,6 +28,7 @@ import { NavItemConfig } from "@/types/auth"
 import { CustomAvatar } from "@/components/ui/custom-avatar"
 import { GlobalCommandPalette } from "@/components/search/global-command-palette"
 import { StockAlertBell } from "@/components/notifications/stock-alert-bell"
+import { NetworkStatusBanner } from "@/components/network/network-status-banner"
 
 const navItems: NavItemConfig[] = [
   {
@@ -340,7 +341,9 @@ export default function DashboardLayout({
       {/* 3. ANA İÇERİK ALANI + ÜST HEADER                                          */}
       {/* ========================================================================= */}
       <div className="lg:pl-64 flex flex-col flex-1 relative z-10">
-        
+        {/* Çevrimdışı / Çevrimiçi Ağ Durumu Uyarısı (Gün 32) */}
+        <NetworkStatusBanner />
+
         {/* Üst Header Bar */}
         <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-950/80 px-4 sm:px-6 lg:px-8 backdrop-blur-md">
           {/* Sol Kısım: Hamburger Menü + Sayfa Başlığı / Breadcrumb */}
