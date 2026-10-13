@@ -1006,6 +1006,41 @@
   - SQL tarafında RPC fonksiyonu yazarak istemci tarafındaki gereksiz veri transferinin engellenmesi ve performans optimizasyonu pekiştirildi.
 - **Referans:** `PR #101 (feature/G28-low-stock-alert-notification)`
 
+---
+
+## 📅 Gün 29: Raporlama ve İleri Düzey Özellikler - Global Arama (Command Palette CMD+K / CTRL+K & Multi-Entity API)
+
+- **Tarih:** 23 Ekim 2026
+- **Konu:** Hafta 6: Raporlama ve İleri Düzey Özellikler kapsamında; telefon mağazası yönetim sisteminin tüm sayfalarında tek bir klavye kısayolu (`CMD+K` veya `CTRL+K`) ile çağrılabilen hızlı **Command Palette (Global Arama)** altyapısının kurulması; müşteri adı, telefon, IMEI, bilet numarası veya ürün adı girildiğinde Supabase veritabanında çoklu varlık (multi-entity) paralel arama gerçekleştiren `/api/search` API rotasının geliştirilmesi ve Header çubuğuna entegrasyonu.
+- **Yapılan Çalışmalar:**
+  1. **Kütüphane & Bileşen Altyapısı (`cmdk` & `@radix-ui/react-dialog`):**
+     - Projeye `cmdk` ve Radix UI dialog paketleri entegre edildi.
+     - Shadcn UI mimarisine uygun `components/ui/dialog.tsx` ve `components/ui/command.tsx` (`CommandDialog`, `CommandInput`, `CommandList`, `CommandGroup`, `CommandItem`, `CommandShortcut`) bileşenleri koyu tema ve cam efektli estetikle üretildi.
+  2. **Veri Modelleri (`types/global-search.ts`):**
+     - `SearchResultType = "customer" | "product" | "service_ticket" | "navigation"` tipleri modellendi.
+     - `ServiceTicketSearchResult`, `ProductSearchResult`, `CustomerSearchResult`, `NavigationSearchResult` ve `GlobalSearchResponse` arayüzleri oluşturuldu.
+  3. **Çoklu Varlık Arama API Rotası (`app/api/search/route.ts`):**
+     - `GET /api/search?q=...` sorgusu için `Promise.allSettled` ile Supabase üzerinde paralel 3 sorgu çalıştırıldı:
+       - `service_tickets`: `ticket_number`, `customer_name`, `device_model`, `imei` alanlarında `ilike` arama.
+       - `products`: `name`, `barcode`, `imei`, `brand`, `model` alanlarında `ilike` arama ve kategori birleştirmesi.
+       - `customers`: `name`, `phone`, `email` alanlarında `ilike` arama.
+     - Hızlı gezinme kısayolları (POS, Stok, 2. El Alım, Kasa, Servis, Ayarlar) ile birleştirildi.
+     - Canlı bağlantı ve dev/test ortamı için zengin Mock veri kümesi yedeklendi.
+  4. **Command Palette Bileşeni (`components/search/global-command-palette.tsx`):**
+     - `CMD+K` ve `CTRL+K` global klavye kısayolları dinlendi.
+     - 180ms debounced arama ile sunucu trafiği optimize edildi.
+     - Sonuçlar 4 kategoriye ayrılarak (Teknik Servis Biletleri, Ürünler & Cihazlar, Müşteriler, Hızlı Sayfalar) renkli ikonlar, durum rozetleri ve klavye ipuçlarıyla (`↑↓ Gezin`, `↵ Seç`, `ESC Kapat`) listelendi.
+     - Seçilen sonuca tıklandığında ilgili sayfaya otomatik `router.push` geçişi sağlandı.
+  5. **Dashboard Header Entegrasyonu (`app/dashboard/layout.tsx`):**
+     - Header barının merkezine arama kutusu ve klavye kısayolu rozeti (`⌘K`) yerleştirildi.
+     - Mobil ekranlar için kompakt arama ikonu desteği sağlandı.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` ile tüm sayfalar ve bileşenler sıfır hata ve sıfır TypeScript uyarısı ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Mağazada satış veya servis anında müşterinin 15 haneli IMEI numarasını veya bilet numarasını saniyeler içinde aratarak ilgili cihaza tek tuşla ulaşmanın operasyonel hızı ne denli artırdığı gözlemlendi.
+  - `cmdk` kütüphanesinin klavye erişilebilirliği (focus management, ARIA etiketleri) ve debounced fetch pratikleri pekiştirildi.
+- **Referans:** `PR #102 (feature/G29-global-command-palette-search)`
+
 
 
 

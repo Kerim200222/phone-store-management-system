@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge"
 import { useRoleAccess } from "@/hooks/use-role-access"
 import { NavItemConfig } from "@/types/auth"
 import { CustomAvatar } from "@/components/ui/custom-avatar"
+import { GlobalCommandPalette } from "@/components/search/global-command-palette"
 import { StockAlertBell } from "@/components/notifications/stock-alert-bell"
 
 const navItems: NavItemConfig[] = [
@@ -364,8 +365,18 @@ export default function DashboardLayout({
             </div>
           </div>
 
+          {/* Orta Kısım: Gün 29 Global Arama (Command Palette CMD+K / CTRL+K) */}
+          <div className="flex-1 max-w-sm lg:max-w-md mx-2 sm:mx-4 hidden sm:block">
+            <GlobalCommandPalette />
+          </div>
+
           {/* Sağ Kısım: Düşük Stok Bildirim Çanı + Kullanıcı Profili + Rol Rozeti + Çıkış Yap Butonu */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Mobilde Komut Paleti Açma Butonu */}
+            <div className="sm:hidden">
+              <GlobalCommandPalette triggerClassName="w-9 px-0 justify-center" />
+            </div>
+
             {/* Gün 28: Düşük Stok Uyarı Sistemi (Notification Bell) */}
             <StockAlertBell threshold={5} />
 
