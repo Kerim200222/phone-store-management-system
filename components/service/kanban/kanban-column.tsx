@@ -23,7 +23,13 @@ interface KanbanColumnProps {
   onNotifyCustomer?: (ticket: ServiceTicketDisplay) => void
 }
 
-export function KanbanColumn({
+const kanbanCurrencyFormatter = new Intl.NumberFormat("tr-TR", {
+  style: "currency",
+  currency: "TRY",
+  maximumFractionDigits: 0,
+})
+
+export const KanbanColumn = React.memo(function KanbanColumn({
   config,
   tickets,
   onStatusChange,
@@ -47,15 +53,11 @@ export function KanbanColumn({
   }
 
   // Kolondaki toplam tahmini tutar
-  const totalCost = tickets.reduce((sum, t) => sum + (Number(t.estimated_cost) || 0), 0)
+  const totalCost = React.useMemo(() => {
+    return tickets.reduce((sum, t) => sum + (Number(t.estimated_cost) || 0), 0)
+  }, [tickets])
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("tr-TR", {
-      style: "currency",
-      currency: "TRY",
-      maximumFractionDigits: 0,
-    }).format(val)
-  }
+  const formatCurrency = (val: number) => kanbanCurrencyFormatter.format(val)
 
   return (
     <div className={`flex flex-col bg-slate-900/60 rounded-2xl border ${config.columnBorder} overflow-hidden shadow-lg min-w-[280px] lg:min-w-0 flex-1`}>
@@ -137,4 +139,5 @@ export function KanbanColumn({
       )}
     </div>
   )
-}
+})
+KanbanColumn.displayName = "KanbanColumn"
