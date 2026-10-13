@@ -554,3 +554,52 @@ VALUES
         'iade', 4500.00, 0.00, 0.00, 0.00, '[]'::jsonb
     )
 ON CONFLICT (id) DO NOTHING;
+
+-- ==============================================================================
+-- 11. PERFORMANS VE İNDEKS OPTİMİZASYONLARI (GÜN 33)
+-- ==============================================================================
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Ürünler
+CREATE INDEX IF NOT EXISTS idx_products_low_stock_active ON public.products (stock_quantity ASC, name ASC) WHERE is_active = TRUE AND stock_quantity < 10;
+CREATE INDEX IF NOT EXISTS idx_products_imei_active ON public.products (imei) WHERE imei IS NOT NULL AND is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_products_category_active_created ON public.products (category_id, is_active, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_products_barcode_active ON public.products (barcode) WHERE barcode IS NOT NULL AND is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_products_name_trgm ON public.products USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_model_trgm ON public.products USING gin (model gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_products_brand_trgm ON public.products USING gin (brand gin_trgm_ops);
+
+-- Müşteriler
+CREATE INDEX IF NOT EXISTS idx_customers_active_name ON public.customers (is_active, full_name ASC);
+CREATE INDEX IF NOT EXISTS idx_customers_active_phone ON public.customers (phone) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_customers_full_name_trgm ON public.customers USING gin (full_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_customers_phone_trgm ON public.customers USING gin (phone gin_trgm_ops);
+
+-- Kasa & İşlemler
+CREATE INDEX IF NOT EXISTS idx_transactions_customer_date ON public.transactions (customer_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_type_status_date ON public.transactions (type, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transaction_items_tx_prod ON public.transaction_items (transaction_id, product_id);
+
+-- Teknik Servis
+CREATE INDEX IF NOT EXISTS idx_repair_tickets_status_updated ON public.repair_tickets (status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_repair_tickets_assigned_status ON public.repair_tickets (assigned_to, status);
+CREATE INDEX IF NOT EXISTS idx_repair_tickets_customer_created ON public.repair_tickets (customer_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_repair_tickets_ticket_number_trgm ON public.repair_tickets USING gin (ticket_number gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_repair_tickets_device_model_trgm ON public.repair_tickets USING gin (device_model gin_trgm_ops);
+
+-- Kullanıcı Profilleri
+CREATE INDEX IF NOT EXISTS idx_profiles_role_active ON public.profiles (role, is_active);
+
+-- İndeks İzleme Görünümü
+CREATE OR REPLACE VIEW public.v_index_performance_stats AS
+SELECT
+    schemaname AS schema_name,
+    relname AS table_name,
+    indexrelname AS index_name,
+    idx_scan AS number_of_scans,
+    idx_tup_read AS tuples_read,
+    idx_tup_fetch AS tuples_fetched,
+    pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
+FROM pg_stat_user_indexes
+WHERE schemaname = 'public'
+ORDER BY idx_scan DESC;
