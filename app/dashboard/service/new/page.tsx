@@ -43,6 +43,7 @@ import { createServiceTicket } from "@/lib/service-ticket-service"
 import { ServiceTicketModal } from "@/components/service/service-ticket-modal"
 import { CustomerModal } from "@/components/customers/customer-modal"
 import { toast } from "sonner"
+import { parseAppError } from "@/lib/error-handler"
 
 interface CustomerDbClient {
   from(table: string): {
@@ -300,14 +301,18 @@ export default function NewServiceTicketPage() {
         setReceiptData(receipt)
         setIsReceiptModalOpen(true)
       } else {
-        const errorMsg = result.error || "Kayıt açılırken bir hata meydana geldi."
-        setSubmitError(errorMsg)
-        toast.error("Servis Kaydı Oluşturulamadı", { description: errorMsg })
+        const parsed = parseAppError(result.error, "Servis Kaydı Oluşturulamadı")
+        setSubmitError(parsed.userMessage)
+        toast.error(parsed.title, { description: parsed.userMessage })
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu."
-      setSubmitError(msg)
-      toast.error("Servis Kaydı Hatası", { description: msg })
+      const parsed = parseAppError(err, "Servis Kaydı Hatası")
+      setSubmitError(parsed.userMessage)
+      toast.error(parsed.title, { 
+        description: parsed.isNetwork
+          ? "İnternet bağlantısı koptu. Form verileriniz korunmaktadır, lütfen bağlantınızı kontrol edip tekrar deneyin."
+          : parsed.userMessage 
+      })
     } finally {
       setIsSubmitting(false)
     }

@@ -48,6 +48,7 @@ import { ServiceDeliveryModal } from "@/components/service/delivery/service-deli
 import { UniversalReceiptModal } from "@/components/receipt/universal-receipt-modal"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
+import { parseAppError } from "@/lib/error-handler"
 
 export default function ServiceTicketDetailPage() {
   const params = useParams()
@@ -178,12 +179,14 @@ export default function ServiceTicketDetailPage() {
         )
         setTimeout(() => setIsSavedSuccess(false), 3000)
       } else {
-        toast.error("Kaydetme Başarısız", { description: result.message || "Bir hata oluştu." })
+        const parsed = parseAppError(result.message, "Kaydetme Başarısız")
+        toast.error(parsed.title, { description: parsed.userMessage })
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn("Kaydetme hatası:", err)
-      setSaveMessage("Kayıt sırasında bir hata oluştu.")
-      toast.error("Kayıt Hatası", { description: "Veritabanı güncellenirken hata oluştu." })
+      const parsed = parseAppError(err, "Kayıt Hatası")
+      setSaveMessage(parsed.userMessage)
+      toast.error(parsed.title, { description: parsed.userMessage })
     } finally {
       setIsSaving(false)
     }

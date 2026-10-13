@@ -49,6 +49,7 @@ import {
 import { createClient } from "@/utils/supabase/client"
 import { CustomImage } from "@/components/ui/custom-image"
 import { toast } from "sonner"
+import { parseAppError } from "@/lib/error-handler"
 
 interface CategoryOption {
   id: string
@@ -495,7 +496,41 @@ export default function NewProductPage() {
       const { error } = await db.from("products").insert([payload])
 
       if (error) {
-        console.warn("Supabase insert warning, saved locally:", error)
+        console.warn("Supabase insert uyarısı / fallback:", error)
+        const parsed = parseAppError(error, "Ürün Veritabanına Yazılamadı")
+        
+        if (parsed.code === "23505") {
+          // Mükerrer barkod veya IMEI
+          setFeedback({
+            type: "error",
+            message: parsed.userMessage
+          })
+          toast.error("Mükerrer Kayıt Hatası", {
+            description: parsed.userMessage
+          })
+          setIsSubmitting(false)
+          return
+        }
+
+        if (parsed.isPermission) {
+          // RLS yetki hatası
+          setFeedback({
+            type: "error",
+            message: parsed.userMessage
+          })
+          toast.error("Yetki Hatası (RLS)", {
+            description: parsed.userMessage
+          })
+          setIsSubmitting(false)
+          return
+        }
+
+        // Çevrimdışı veya bağlantı hatası durumunda yerel koruma
+        if (parsed.isNetwork) {
+          toast.warning("Çevrimdışı Kayıt", {
+            description: "İnternet bağlantısı kurulamadı. Ürün yerel önbelleğe alındı."
+          })
+        }
       }
 
       setLastInsertedProduct({
@@ -505,7 +540,7 @@ export default function NewProductPage() {
 
       setFeedback({
         type: "success",
-        message: `"${data.name}" ürünü ve Supabase Storage görseli başarıyla sisteme kaydedildi!`
+        message: `"${data.name}" ürünü ve görseli başarıyla sisteme kaydedildi!`
       })
 
       toast.success("Ürün Başarıyla Eklendi", {
@@ -538,14 +573,25 @@ export default function NewProductPage() {
         imageUrl: "",
         isActive: true
       })
-    } catch {
-      setFeedback({
-        type: "success",
-        message: `"${data.name}" yerel önbelleğe ve simülasyona başarıyla eklendi.`
-      })
-      toast.success("Ürün Kaydedildi", {
-        description: `"${data.name}" simülasyon modunda envantere eklendi.`
-      })
+    } catch (err: unknown) {
+      const parsed = parseAppError(err, "Ürün Eklenemedi")
+      if (parsed.isNetwork) {
+        setFeedback({
+          type: "error",
+          message: parsed.userMessage
+        })
+        toast.error("Ağ Hatası", {
+          description: parsed.userMessage
+        })
+      } else {
+        setFeedback({
+          type: "success",
+          message: `"${data.name}" yerel önbelleğe ve simülasyona başarıyla eklendi.`
+        })
+        toast.success("Ürün Kaydedildi", {
+          description: `"${data.name}" simülasyon modunda envantere eklendi.`
+        })
+      }
     } finally {
       setIsSubmitting(false)
     }

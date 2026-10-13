@@ -967,39 +967,6 @@
 
 ---
 
-## 📅 Gün 30: UI/UX Cilasının Atılması - Sonner Toast Bildirimleri, Skeleton Loading & Tipografi İyileştirmeleri
-
-- **Tarih:** 24 Ekim 2026
-- **Konu:** Hafta 6: Raporlama ve İleri Düzey Özellikler ve Proje Final Cilası kapsamında; uygulamanın tüm kritik form ve veri işlem akışlarına kullanıcı deneyimini zirveye taşıyan zengin **Toast Bildirimleri (Sonner)** entegrasyonu; veri yüklenirken sayfa sıçramalarını (CLS) önleyen ve modern bir bekleme hissi sağlayan **Skeleton Loading (İskelet Yükleme)** bileşenlerinin kazandırılması; koyu tema, tipografi, seçim (selection) ve kaydırma çubuğu (scrollbar) tutarsızlıklarının giderilerek profesyonel bir kurumsal kimliğe kavuşturulması.
-- **Yapılan Çalışmalar:**
-  1. **Sonner Toast Bildirim Altyapısı (`components/ui/sonner.tsx` & `app/layout.tsx`):**
-     - Projeye modern React bildirim motoru `sonner` dahil edildi.
-     - Koyu temaya ve Tailwind sınıflarına tam uyumlu, cam efektli (`backdrop-blur-md`), renk kodlu (Yeşil: Başarı, Kırmızı: Hata, Sarı: Uyarı, Mavi: Bilgi) ve kapatma butonlu `Toaster` bileşeni inşa edildi.
-     - `app/layout.tsx` kök layout seviyesinde `Toaster` monte edilerek tüm sayfalarda kesintisiz bildirim akışı sağlandı.
-  2. **Tüm Form ve Operasyonel Akışlara Toast Bildirimlerinin Bağlanması:**
-     - **Yeni Ürün Ekleme (`/dashboard/inventory/new`):** Başarılı ürün kaydı, geçersiz görsel formatı ve dosya boyutu aşımlarında zengin bildirimler (`toast.success`, `toast.error`).
-     - **Teknik Servis Bilet Kaydı (`/dashboard/service/new`):** Müşteri seçimi eksikliği, yeni müşteri kaydı ve bilet açılışında anlık bildirimler.
-     - **Teknik Servis Süreç Yönetimi (`/dashboard/service/[id]`):** Parça maliyetlerinin kaydedilmesi, "Onarımı Tamamla" buton aksiyonu ve "Teslim Et / Tahsilat Yap" adımlarında tutar ve işlem numarası içeren bildirimler.
-     - **2. El Cihaz Alım Formu (`/dashboard/purchases/new`):** Müşteri kabulü, sözleşme oluşturulması ve envanter kaydında toast geri bildirimleri.
-     - **POS Hızlı Satış (`/dashboard/pos`):** Sepete ürün ekleme/miktar artırma, maksimum stok uyarısı (`toast.warning`), barkod okuyucu eşleşmeleri ve satış tamamlama/tahsilat fişi kesiminde detaylı bildirimler.
-     - **Kullanıcı Girişi (`/login`):** Başarılı oturum açma, demo modu ve hatalı şifre uyarıları.
-     - **Sistem Ayarları (`/dashboard/settings`):** Profil güncelleme, şifre değiştirme ve mağaza parametrelerinin kaydedilmesi.
-     - **Envanter Panosu (`/dashboard/inventory`):** Barkod ve IMEI panoya kopyalandığında kullanıcıya kopyalama onayı.
-  3. **Skeleton Loading (İskelet Yükleme) Bileşenleri (`components/ui/skeleton.tsx`):**
-     - Shadcn UI standartlarında `Skeleton`, `TableSkeleton` ve `CardSkeleton` bileşenleri kodlandı.
-     - **Envanter Tablosu (`/dashboard/inventory`):** Supabase'den ürünler yüklenirken ham boşluk veya spinner yerine ürün görseli, adı, kategorisi, fiyatı ve stok rozetini simüle eden tam 7 sütunlu animasyonlu iskelet satırları gösterildi.
-     - **Cihaz Geçmişi & IMEI Sorgulama (`/dashboard/service/history`):** Cihaz künye kartı, istatistik kutuları ve dikey zaman çizelgesi için katmanlı Skeleton blokları geliştirildi.
-  4. **Tipografi, Renk ve Scrollbar Tutarsızlıklarının Giderilmesi:**
-     - `app/layout.tsx` içerisinde `html` etiketine `className="dark"` ve `lang="tr"` sabitlendi; Geist font ailesi `font-sans` ve `bg-slate-950 text-slate-100` zeminine bağlandı.
-     - `app/globals.css` içerisine modern koyu tema kaydırma çubuğu (`::-webkit-scrollbar`), yarı saydam parça rayları ve hover geçişleri eklendi.
-     - Metin seçimi için neon cyan parlama stili (`selection:bg-cyan-500/30 selection:text-cyan-200`) tanımlandı.
-  5. **Derleme & Kalite Kontrolü:**
-     - `npm run build` komutu çalıştırılarak tüm Next.js rotaları sıfır hata ve sıfır TypeScript/ESLint uyarısı ile derlendi.
-- **Teknik Kazanım & Karşılaşılan Durumlar:**
-  - Modern web uygulamalarında `alert()` veya statik metinler yerine `toast` bildirimleri kullanmanın kullanıcı güvenini ve arayüz akıcılığını ne derece yükselttiği deneyimlendi.
-  - Veri yüklenirken Skeleton animasyonlarının sayfa yerleşim kaymalarını (Cumulative Layout Shift - CLS) sıfırlayarak kullanıcıya anlık görsel geri bildirim sağladığı kavrandı.
-- **Referans:** `PR #103 (feature/G30-ui-ux-polish-sonner-skeleton-typography)`
-
 ## 📅 Gün 28: Raporlama ve İleri Düzey Özellikler - Düşük Stok Uyarı Sistemi (Supabase RPC & Notification Bell)
 
 - **Tarih:** 22 Ekim 2026
@@ -1073,6 +1040,110 @@
   - Mağazada satış veya servis anında müşterinin 15 haneli IMEI numarasını veya bilet numarasını saniyeler içinde aratarak ilgili cihaza tek tuşla ulaşmanın operasyonel hızı ne denli artırdığı gözlemlendi.
   - `cmdk` kütüphanesinin klavye erişilebilirliği (focus management, ARIA etiketleri) ve debounced fetch pratikleri pekiştirildi.
 - **Referans:** `PR #102 (feature/G29-global-command-palette-search)`
+
+---
+
+## 📅 Gün 30: UI/UX Cilasının Atılması - Sonner Toast Bildirimleri, Skeleton Loading & Tipografi İyileştirmeleri
+
+- **Tarih:** 24 Ekim 2026
+- **Konu:** Hafta 6: Raporlama ve İleri Düzey Özellikler ve Proje Final Cilası kapsamında; uygulamanın tüm kritik form ve veri işlem akışlarına kullanıcı deneyimini zirveye taşıyan zengin **Toast Bildirimleri (Sonner)** entegrasyonu; veri yüklenirken sayfa sıçramalarını (CLS) önleyen ve modern bir bekleme hissi sağlayan **Skeleton Loading (İskelet Yükleme)** bileşenlerinin kazandırılması; koyu tema, tipografi, seçim (selection) ve kaydırma çubuğu (scrollbar) tutarsızlıklarının giderilerek profesyonel bir kurumsal kimliğe kavuşturulması.
+- **Yapılan Çalışmalar:**
+  1. **Sonner Toast Bildirim Altyapısı (`components/ui/sonner.tsx` & `app/layout.tsx`):**
+     - Projeye modern React bildirim motoru `sonner` dahil edildi.
+     - Koyu temaya ve Tailwind sınıflarına tam uyumlu, cam efektli (`backdrop-blur-md`), renk kodlu (Yeşil: Başarı, Kırmızı: Hata, Sarı: Uyarı, Mavi: Bilgi) ve kapatma butonlu `Toaster` bileşeni inşa edildi.
+     - `app/layout.tsx` kök layout seviyesinde `Toaster` monte edilerek tüm sayfalarda kesintisiz bildirim akışı sağlandı.
+  2. **Tüm Form ve Operasyonel Akışlara Toast Bildirimlerinin Bağlanması:**
+     - **Yeni Ürün Ekleme (`/dashboard/inventory/new`):** Başarılı ürün kaydı, geçersiz görsel formatı ve dosya boyutu aşımlarında zengin bildirimler (`toast.success`, `toast.error`).
+     - **Teknik Servis Bilet Kaydı (`/dashboard/service/new`):** Müşteri seçimi eksikliği, yeni müşteri kaydı ve bilet açılışında anlık bildirimler.
+     - **Teknik Servis Süreç Yönetimi (`/dashboard/service/[id]`):** Parça maliyetlerinin kaydedilmesi, "Onarımı Tamamla" buton aksiyonu ve "Teslim Et / Tahsilat Yap" adımlarında tutar ve işlem numarası içeren bildirimler.
+     - **2. El Cihaz Alım Formu (`/dashboard/purchases/new`):** Müşteri kabulü, sözleşme oluşturulması ve envanter kaydında toast geri bildirimleri.
+     - **POS Hızlı Satış (`/dashboard/pos`):** Sepete ürün ekleme/miktar artırma, maksimum stok uyarısı (`toast.warning`), barkod okuyucu eşleşmeleri ve satış tamamlama/tahsilat fişi kesiminde detaylı bildirimler.
+     - **Kullanıcı Girişi (`/login`):** Başarılı oturum açma, demo modu ve hatalı şifre uyarıları.
+     - **Sistem Ayarları (`/dashboard/settings`):** Profil güncelleme, şifre değiştirme ve mağaza parametrelerinin kaydedilmesi.
+     - **Envanter Panosu (`/dashboard/inventory`):** Barkod ve IMEI panoya kopyalandığında kullanıcıya kopyalama onayı.
+  3. **Skeleton Loading (İskelet Yükleme) Bileşenleri (`components/ui/skeleton.tsx`):**
+     - Shadcn UI standartlarında `Skeleton`, `TableSkeleton` ve `CardSkeleton` bileşenleri kodlandı.
+     - **Envanter Tablosu (`/dashboard/inventory`):** Supabase'den ürünler yüklenirken ham boşluk veya spinner yerine ürün görseli, adı, kategorisi, fiyatı ve stok rozetini simüle eden tam 7 sütunlu animasyonlu iskelet satırları gösterildi.
+     - **Cihaz Geçmişi & IMEI Sorgulama (`/dashboard/service/history`):** Cihaz künye kartı, istatistik kutuları ve dikey zaman çizelgesi için katmanlı Skeleton blokları geliştirildi.
+  4. **Tipografi, Renk ve Scrollbar Tutarsızlıklarının Giderilmesi:**
+     - `app/layout.tsx` içerisinde `html` etiketine `className="dark"` ve `lang="tr"` sabitlendi; Geist font ailesi `font-sans` ve `bg-slate-950 text-slate-100` zeminine bağlandı.
+     - `app/globals.css` içerisine modern koyu tema kaydırma çubuğu (`::-webkit-scrollbar`), yarı saydam parça rayları ve hover geçişleri eklendi.
+     - Metin seçimi için neon cyan parlama stili (`selection:bg-cyan-500/30 selection:text-cyan-200`) tanımlandı.
+  5. **Derleme & Kalite Kontrolü:**
+     - `npm run build` komutu çalıştırılarak tüm Next.js rotaları sıfır hata ve sıfır TypeScript/ESLint uyarısı ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Modern web uygulamalarında `alert()` veya statik metinler yerine `toast` bildirimleri kullanmanın kullanıcı güvenini ve arayüz akıcılığını ne derece yükselttiği deneyimlendi.
+  - Veri yüklenirken Skeleton animasyonlarının sayfa yerleşim kaymalarını (Cumulative Layout Shift - CLS) sıfırlayarak kullanıcıya anlık görsel geri bildirim sağladığı kavrandı.
+- **Referans:** `PR #103 (feature/G30-ui-ux-polish-sonner-skeleton-typography)`
+
+---
+
+## 📅 Gün 31: Güvenlik, Test ve Canlıya Alma - Supabase RLS (Satır Bazlı Güvenlik) Politikaları
+
+- **Tarih:** 25 Ekim 2026
+- **Konu:** Hafta 7: Güvenlik, Test ve Canlıya Alma (Launch) kapsamında; telefon mağazası yönetim sistemi veritabanının dış tehditlere ve yetkisiz erişimlere karşı korunması amacıyla tüm tablolarda **Supabase Row Level Security (RLS)** ve **FORCE ROW LEVEL SECURITY** kurallarının aktif edilmesi; 'anon' (oturum açmamış) kullanıcıların hassas iş verilerine erişiminin tamamen bloke edilmesi; 'authenticated' personeller için rol tabanlı (Admin ve Personel) ince ayarlı SQL yetkilendirme script'lerinin (`10_row_level_security_policies.sql`) geliştirilmesi ve Ayarlar paneline canlı RLS Güvenlik Denetim Merkezi entegrasyonu.
+- **Yapılan Çalışmalar:**
+  1. **Güvenlik Yardımcı Fonksiyonları & Enjeksiyon Koruması (`is_admin`, `is_active_staff`, `current_user_role`):**
+     - `SECURITY DEFINER` ve `SET search_path = public` güvenlik parametreleriyle çalışan SQL fonksiyonları yazıldı.
+     - Sonsuz özyinelemeyi (infinite recursion) engelleyen ve `auth.uid()` üzerinden aktif personel/admin kontrolü yapan güvenli yetkilendirme mekanizması kuruldu.
+  2. **Tüm 9 Temel Tabloda RLS ve FORCE RLS Aktivasyonu:**
+     - `roles`, `profiles`, `categories`, `products`, `customers`, `transactions`, `transaction_items`, `repair_tickets`, `repair_ticket_parts` tablolarının tamamında `ALTER TABLE ... ENABLE ROW LEVEL SECURITY;` ve `ALTER TABLE ... FORCE ROW LEVEL SECURITY;` zorunlu kılındı.
+     - FORCE RLS sayesinde tablo sahibinin veya bağlantı havuzlarının (connection pooler) dahi güvenlik politikalarını atlatması engellendi.
+  3. **Rol Bazlı İnce Ayarlı SQL Politikaları (24 Adet Güvenlik Kuralı):**
+     - **Roller & Kategoriler:** Yalnızca aktif personel okuyabilir (`SELECT`); yeni kategori ve rol ekleme/düzenleme yalnızca `Admin` yetkisindedir.
+     - **Kullanıcı Profilleri:** Personel çalışma arkadaşlarını görebilir; kendi profil bilgilerini (isim, telefon, avatar) güncelleyebilir; fakat yetki yükseltme (privilege escalation) saldırılarını önlemek amacıyla kendi rolünü (`role` veya `role_id`) değiştiremez.
+     - **Ürünler & Envanter:** Personel ürün listeleyebilir, ekleyebilir ve satış anında stok düşümü yapabilir. Envanter silme (DELETE) suiistimalleri önlemek için yalnızca `Admin` yetkisine bağlandı.
+     - **Müşteriler & Kasa (Finans):** Müşteri rehberi ve satış hareketleri personelin erişimine açık; geçmiş işlem kayıtlarının silinmesi mali denetim bütünlüğü gereği yalnızca `Admin` yetkisindedir.
+     - **Teknik Servis Biletleri & Parçalar:** Teknisyen arıza fişi açabilir, durumunu güncelleyebilir ve kullanılan parçaları ekleyebilir; kayıt silme yalnızca `Admin` yetkisindedir.
+     - **Supabase Storage (`product-images`):** Ürün resimlerinin CDN üzerinden genel okunması serbest bırakılırken, yükleme/güncelleme/silme anonim kullanıcılara kapatılıp yalnızca oturum açmış personele sınırlandırıldı.
+  4. **Güvenlik Durumu Görünümü (`v_rls_security_status`):**
+     - Veritabanı yöneticisinin tüm tablolardaki RLS aktiflik durumunu ve politika sayılarını tek sorguda raporlayabilmesi için dinamik SQL görünümü tanımlandı.
+  5. **TypeScript RLS Manifesti & Canlı Denetim Merkezi (`lib/rls-security-service.ts` & `/dashboard/settings`):**
+     - Tüm 9 tabloya ait RLS politika şemasını modelleyen TypeScript servisi kodlandı.
+     - Sistem Ayarları > Şifre ve Güvenlik sekmesine modern cam efektli "Supabase RLS Denetim Merkezi & Veritabanı Koruma Matrisi" paneli monte edildi.
+     - Yöneticiye tek tuşla 9 tablo üzerinde canlı RLS doğrulama testi (`runRLSSecuritySelfAudit`) çalıştırma ve Sonner toast bildirimi alma kabiliyeti kazandırıldı.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` ve `npm run lint` komutları çalıştırılarak 22 Next.js rotası sıfır hata ve sıfır TypeScript/ESLint uyarısı ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Çok kullanıcılı kurumsal web uygulamalarında veritabanı güvenliğinin yalnızca frontend veya API rotalarında değil, veritabanı motoru seviyesinde (PostgreSQL RLS) kurgulanmasının sıfır güven (Zero Trust) mimarisi açısından hayati olduğu kavrandı.
+  - Anonim dış erişimlerin engellenmesiyle potansiyel veri sızıntılarının (data leak) ve yetki yükseltme açıklarının önüne geçildi.
+- **Referans:** `PR #104 (feature/G31-supabase-rls-policies)`
+
+---
+
+## 📅 Gün 32: Güvenlik, Test ve Canlıya Alma - Hata Yakalama ve Edge Case Çözümleri
+
+- **Tarih:** 26 Ekim 2026
+- **Konu:** Hafta 7: Güvenlik, Test ve Canlıya Alma (Launch) kapsamında; projenin internete açılması ve canlı kullanıma sunulması öncesinde olası tüm sistem çökmelerinin, bağlantı kopmalarının ve geçersiz rota erişimlerinin önlenmesi amacıyla **Next.js Hata Yakalama (`error.tsx`) & Bulunamadı (`not-found.tsx`) Sayfalarının Tasarlanması**; internet koptuğunda veya Supabase yanıt vermediğinde verilerin kaybolmaması için merkezi hata çözümleyici (`lib/error-handler.ts`), çevrimdışı ağ izleme bandı (`components/network/network-status-banner.tsx`) ve form try-catch bloklarının güçlendirilmesi.
+- **Yapılan Çalışmalar:**
+  1. **Next.js 404 Sayfaları Tasarımı (`app/not-found.tsx` & `app/dashboard/not-found.tsx`):**
+     - Kök dizin ve Dashboard için iki ayrı zengin 404 sayfası geliştirildi.
+     - Koyu tema, cam efektli kartlar (`backdrop-blur-xl`), neon mavi/cyan arka plan parlamaları ve telefon mağazasına özel arama/kurtarma estetiği uygulandı.
+     - "Dashboard'a Dön", "POS Satış", "Teknik Servis" ve "CMD+K Global Arama" kısayol butonları ile kullanıcı dostu yönlendirme sağlandı.
+  2. **Next.js Hata Yakalama Sınırları (`app/error.tsx`, `app/dashboard/error.tsx` & `app/global-error.tsx`):**
+     - Uygulama genelinde ve dashboard modüllerinde çalışma zamanı (runtime) çökmelerini izole eden hata sınırları (Error Boundaries) kodlandı.
+     - "Yeniden Dene (`reset`)", "Sayfayı Yenile" ve "Hata Raporu Kopyala" işlevleri entegre edildi.
+     - Kök layout çökmelerine karşı `app/global-error.tsx` güvenlik zırhı oluşturuldu.
+  3. **Merkezi Hata ve Edge Case Çözümleyici (`lib/error-handler.ts`):**
+     - Ağ kopması (`Failed to fetch`, `offline`), zaman aşımı (`timeout`), yetki ihlali (`42501` / RLS), mükerrer kayıt (`23505` / unique constraint) ve oturum düşmesi (`JWT expired`) durumlarını tespit edip kullanıcıya anlaşılır Türkçe mesajlar üreten `parseAppError` motoru yazıldı.
+  4. **Gerçek Zamanlı Çevrimdışı/Çevrimiçi Ağ İzleme Bandı (`components/network/network-status-banner.tsx`):**
+     - Tarayıcının `online` ve `offline` olaylarını dinleyen modern reaktif bileşen geliştirildi ve Dashboard layout'una monte edildi.
+     - İnternet kesildiğinde kullanıcıyı form doldururken uyaran, bağlantı geri geldiğinde yeşil bildirimle doğrulayan kesintisiz kullanıcı deneyimi sağlandı.
+  5. **Tüm Kritik Formlara Gelişmiş Try-Catch ve Edge Case Koruması:**
+     - **Yeni Ürün Formu (`/dashboard/inventory/new`):** Mükerrer barkod veya ağ kopmalarında verilerin silinmesini önleyen akıllı geri bildirim mekanizması.
+     - **Teknik Servis Kayıt Formu (`/dashboard/service/new`):** Müşteri ve bilet oluşturma adımlarında ağ hatası koruması.
+     - **POS Hızlı Satış (`/dashboard/pos`):** Tahsilat esnasında internet koptuğunda sepetin korunması ve kullanıcıya rehberlik edilmesi.
+     - **2. El Cihaz Alım Formu (`/dashboard/purchases/new`):** Sözleşme oluşturma sürecinde hata izolasyonu.
+     - **Kullanıcı Girişi (`/login`):** Ağ kopması veya hatalı şifrelerde net kullanıcı mesajları.
+     - **Servis Detay & Maliyet Paneli (`/dashboard/service/[id]`):** Parça ve işçilik kaydedilirken edge case koruması.
+  6. **Derleme & Kalite Kontrolü:**
+     - `npm run build` ve `npm run lint` çalıştırılarak tüm statik/dinamik rotalar ve hata sayfaları sıfır hata ile derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Dağıtık web uygulamalarında internet kesintisi ve veritabanı gecikmelerinin kullanıcıyı sistemden koparmadan, verilerini koruyarak ve doğru yönlendirerek yönetilmesinin profesyonel bir yazılımın en temel kalite göstergesi olduğu pekiştirildi.
+  - Next.js App Router mimarisinde `error.tsx` ve `not-found.tsx` hiyerarşisinin (root vs dashboard nested) sayfa yenilemelerini ve layout kaybını önlemedeki etkisi kavrandı.
+- **Referans:** `PR #105 (feature/G32-error-handling-edge-cases)`
+
+
 
 
 

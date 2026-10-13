@@ -157,51 +157,116 @@ CREATE TRIGGER on_auth_user_created
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ------------------------------------------------------------------------------
--- 7. ROW LEVEL SECURITY (RLS) POLİTİKALARI
+-- 6.1 GÜVENLİK YARDIMCI FONKSİYONLARI (SECURITY DEFINER FUNCTIONS - Gün 31)
+-- ------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+DECLARE
+    current_role VARCHAR(50);
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN FALSE;
+    END IF;
+    SELECT p.role INTO current_role
+    FROM public.profiles p
+    WHERE p.id = auth.uid() AND p.is_active = TRUE
+    LIMIT 1;
+    RETURN (current_role = 'Admin');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION public.is_active_staff()
+RETURNS BOOLEAN AS $$
+DECLARE
+    user_exists BOOLEAN;
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN FALSE;
+    END IF;
+    SELECT EXISTS (
+        SELECT 1 
+        FROM public.profiles p
+        WHERE p.id = auth.uid() 
+          AND p.is_active = TRUE 
+          AND p.role IN ('Admin', 'Personel')
+    ) INTO user_exists;
+    RETURN user_exists;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- ------------------------------------------------------------------------------
+-- 7. ROW LEVEL SECURITY (RLS) POLİTİKALARI (Gün 31: Üretim Düzeyi RLS)
 -- ------------------------------------------------------------------------------
 ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.roles FORCE ROW LEVEL SECURITY;
 
--- Roller: Herkes okuyabilir
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.categories FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products FORCE ROW LEVEL SECURITY;
+
+-- Roller
 DROP POLICY IF EXISTS "Roller herkes tarafından okunabilir" ON public.roles;
-CREATE POLICY "Roller herkes tarafından okunabilir" ON public.roles FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "roles_select_authenticated" ON public.roles;
+CREATE POLICY "roles_select_authenticated" ON public.roles FOR SELECT TO authenticated USING (public.is_active_staff());
+
+DROP POLICY IF EXISTS "roles_admin_manage" ON public.roles;
+CREATE POLICY "roles_admin_manage" ON public.roles FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 -- Profiller
 DROP POLICY IF EXISTS "Kullanıcılar tüm profilleri görüntüleyebilir" ON public.profiles;
-CREATE POLICY "Kullanıcılar tüm profilleri görüntüleyebilir" ON public.profiles FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "profiles_select_authenticated" ON public.profiles;
+CREATE POLICY "profiles_select_authenticated" ON public.profiles FOR SELECT TO authenticated USING (public.is_active_staff());
 
 DROP POLICY IF EXISTS "Kullanıcılar kendi profillerini güncelleyebilir" ON public.profiles;
-CREATE POLICY "Kullanıcılar kendi profillerini güncelleyebilir" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
+CREATE POLICY "profiles_update_own" ON public.profiles FOR UPDATE TO authenticated
+USING (auth.uid() = id AND public.is_active_staff())
+WITH CHECK (
+    auth.uid() = id 
+    AND (
+        public.is_admin() 
+        OR (
+            role = (SELECT p.role FROM public.profiles p WHERE p.id = auth.uid())
+            AND role_id = (SELECT p.role_id FROM public.profiles p WHERE p.id = auth.uid())
+            AND is_active = TRUE
+        )
+    )
+);
 
 DROP POLICY IF EXISTS "Adminler tüm profilleri yönetebilir" ON public.profiles;
-CREATE POLICY "Adminler tüm profilleri yönetebilir" ON public.profiles FOR ALL TO authenticated
-USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'Admin'));
+DROP POLICY IF EXISTS "profiles_admin_all" ON public.profiles;
+CREATE POLICY "profiles_admin_all" ON public.profiles FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 -- Kategoriler
 DROP POLICY IF EXISTS "Kategoriler tüm kullanıcılar tarafından görüntülenebilir" ON public.categories;
-CREATE POLICY "Kategoriler tüm kullanıcılar tarafından görüntülenebilir" ON public.categories FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "categories_select_authenticated" ON public.categories;
+CREATE POLICY "categories_select_authenticated" ON public.categories FOR SELECT TO authenticated USING (public.is_active_staff());
 
 DROP POLICY IF EXISTS "Sadece Admin kategorileri değiştirebilir" ON public.categories;
-CREATE POLICY "Sadece Admin kategorileri değiştirebilir" ON public.categories FOR ALL TO authenticated
-USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'Admin'));
+DROP POLICY IF EXISTS "categories_admin_manage" ON public.categories;
+CREATE POLICY "categories_admin_manage" ON public.categories FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 -- Ürünler
 DROP POLICY IF EXISTS "Ürünler tüm kullanıcılar tarafından görüntülenebilir" ON public.products;
-CREATE POLICY "Ürünler tüm kullanıcılar tarafından görüntülenebilir" ON public.products FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "products_select_authenticated" ON public.products;
+CREATE POLICY "products_select_authenticated" ON public.products FOR SELECT TO authenticated USING (public.is_active_staff());
 
 DROP POLICY IF EXISTS "Yetkili kullanıcılar ürün ekleyebilir ve güncelleyebilir" ON public.products;
-CREATE POLICY "Yetkili kullanıcılar ürün ekleyebilir ve güncelleyebilir" ON public.products FOR INSERT TO authenticated
-WITH CHECK (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('Admin', 'Personel')));
+DROP POLICY IF EXISTS "products_insert_staff" ON public.products;
+CREATE POLICY "products_insert_staff" ON public.products FOR INSERT TO authenticated WITH CHECK (public.is_active_staff());
 
 DROP POLICY IF EXISTS "Yetkili kullanıcılar ürün güncelleyebilir" ON public.products;
-CREATE POLICY "Yetkili kullanıcılar ürün güncelleyebilir" ON public.products FOR UPDATE TO authenticated
-USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('Admin', 'Personel')));
+DROP POLICY IF EXISTS "products_update_staff" ON public.products;
+CREATE POLICY "products_update_staff" ON public.products FOR UPDATE TO authenticated USING (public.is_active_staff()) WITH CHECK (public.is_active_staff());
 
 DROP POLICY IF EXISTS "Sadece Admin ürün silebilir" ON public.products;
-CREATE POLICY "Sadece Admin ürün silebilir" ON public.products FOR DELETE TO authenticated
-USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'Admin'));
+DROP POLICY IF EXISTS "products_delete_admin" ON public.products;
+CREATE POLICY "products_delete_admin" ON public.products FOR DELETE TO authenticated USING (public.is_admin());
 
 -- ------------------------------------------------------------------------------
 -- 8. BAŞLANGIÇ VERİLERİ (SEED)
@@ -325,26 +390,61 @@ CREATE INDEX IF NOT EXISTS idx_transaction_items_product_id ON public.transactio
 CREATE INDEX IF NOT EXISTS idx_transaction_items_imei ON public.transaction_items(imei) WHERE imei IS NOT NULL;
 
 -- ------------------------------------------------------------------------------
--- 12. KASA & MÜŞTERİ RLS POLİTİKALARI
+-- 12. KASA & MÜŞTERİ RLS POLİTİKALARI (Gün 31: Üretim Düzeyi RLS)
 -- ------------------------------------------------------------------------------
 ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.customers FORCE ROW LEVEL SECURITY;
+
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transactions FORCE ROW LEVEL SECURITY;
+
 ALTER TABLE public.transaction_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transaction_items FORCE ROW LEVEL SECURITY;
 
+-- Müşteriler Politikaları
 DROP POLICY IF EXISTS "Yetkili kullanıcılar müşterileri görebilir" ON public.customers;
-CREATE POLICY "Yetkili kullanıcılar müşterileri görebilir" ON public.customers FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "customers_select_staff" ON public.customers;
+CREATE POLICY "customers_select_staff" ON public.customers FOR SELECT TO authenticated USING (public.is_active_staff());
+
 DROP POLICY IF EXISTS "Yetkili kullanıcılar müşteri yönetebilir" ON public.customers;
-CREATE POLICY "Yetkili kullanıcılar müşteri yönetebilir" ON public.customers FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "customers_insert_staff" ON public.customers;
+CREATE POLICY "customers_insert_staff" ON public.customers FOR INSERT TO authenticated WITH CHECK (public.is_active_staff());
 
+DROP POLICY IF EXISTS "customers_update_staff" ON public.customers;
+CREATE POLICY "customers_update_staff" ON public.customers FOR UPDATE TO authenticated USING (public.is_active_staff()) WITH CHECK (public.is_active_staff());
+
+DROP POLICY IF EXISTS "customers_delete_admin" ON public.customers;
+CREATE POLICY "customers_delete_admin" ON public.customers FOR DELETE TO authenticated USING (public.is_admin());
+
+-- Kasa İşlemleri Politikaları
 DROP POLICY IF EXISTS "Yetkili kullanıcılar işlemleri görebilir" ON public.transactions;
-CREATE POLICY "Yetkili kullanıcılar işlemleri görebilir" ON public.transactions FOR SELECT TO authenticated USING (true);
-DROP POLICY IF EXISTS "Yetkili kullanıcılar işlem yönetebilir" ON public.transactions;
-CREATE POLICY "Yetkili kullanıcılar işlem yönetebilir" ON public.transactions FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "transactions_select_staff" ON public.transactions;
+CREATE POLICY "transactions_select_staff" ON public.transactions FOR SELECT TO authenticated USING (public.is_active_staff());
 
+DROP POLICY IF EXISTS "Yetkili kullanıcılar işlem yönetebilir" ON public.transactions;
+DROP POLICY IF EXISTS "transactions_insert_staff" ON public.transactions;
+CREATE POLICY "transactions_insert_staff" ON public.transactions FOR INSERT TO authenticated WITH CHECK (public.is_active_staff());
+
+DROP POLICY IF EXISTS "transactions_update_staff" ON public.transactions;
+CREATE POLICY "transactions_update_staff" ON public.transactions FOR UPDATE TO authenticated USING (public.is_active_staff()) WITH CHECK (public.is_active_staff());
+
+DROP POLICY IF EXISTS "transactions_delete_admin" ON public.transactions;
+CREATE POLICY "transactions_delete_admin" ON public.transactions FOR DELETE TO authenticated USING (public.is_admin());
+
+-- İşlem Kalemleri Politikaları
 DROP POLICY IF EXISTS "Yetkili kullanıcılar işlem detaylarını görebilir" ON public.transaction_items;
-CREATE POLICY "Yetkili kullanıcılar işlem detaylarını görebilir" ON public.transaction_items FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "transaction_items_select_staff" ON public.transaction_items;
+CREATE POLICY "transaction_items_select_staff" ON public.transaction_items FOR SELECT TO authenticated USING (public.is_active_staff());
+
 DROP POLICY IF EXISTS "Yetkili kullanıcılar işlem detayları yönetebilir" ON public.transaction_items;
-CREATE POLICY "Yetkili kullanıcılar işlem detayları yönetebilir" ON public.transaction_items FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "transaction_items_insert_staff" ON public.transaction_items;
+CREATE POLICY "transaction_items_insert_staff" ON public.transaction_items FOR INSERT TO authenticated WITH CHECK (public.is_active_staff());
+
+DROP POLICY IF EXISTS "transaction_items_update_staff" ON public.transaction_items;
+CREATE POLICY "transaction_items_update_staff" ON public.transaction_items FOR UPDATE TO authenticated USING (public.is_active_staff()) WITH CHECK (public.is_active_staff());
+
+DROP POLICY IF EXISTS "transaction_items_delete_admin" ON public.transaction_items;
+CREATE POLICY "transaction_items_delete_admin" ON public.transaction_items FOR DELETE TO authenticated USING (public.is_admin());
 
 -- ------------------------------------------------------------------------------
 -- 13. MÜŞTERİ VE KASA SEED VERİLERİ
@@ -402,14 +502,24 @@ CREATE TRIGGER trigger_repair_tickets_updated_at
     EXECUTE FUNCTION public.handle_updated_at();
 
 -- ------------------------------------------------------------------------------
--- 15. TEKNİK SERVİS RLS VE SEED VERİLERİ (Day 5 - Closes #44)
+-- 15. TEKNİK SERVİS RLS VE SEED VERİLERİ (Gün 31: Üretim Düzeyi RLS)
 -- ------------------------------------------------------------------------------
 ALTER TABLE public.repair_tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.repair_tickets FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Yetkili kullanıcılar servis kayıtlarını görebilir" ON public.repair_tickets;
-CREATE POLICY "Yetkili kullanıcılar servis kayıtlarını görebilir" ON public.repair_tickets FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "repair_tickets_select_staff" ON public.repair_tickets;
+CREATE POLICY "repair_tickets_select_staff" ON public.repair_tickets FOR SELECT TO authenticated USING (public.is_active_staff());
+
 DROP POLICY IF EXISTS "Yetkili kullanıcılar servis kayıtlarını yönetebilir" ON public.repair_tickets;
-CREATE POLICY "Yetkili kullanıcılar servis kayıtlarını yönetebilir" ON public.repair_tickets FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "repair_tickets_insert_staff" ON public.repair_tickets;
+CREATE POLICY "repair_tickets_insert_staff" ON public.repair_tickets FOR INSERT TO authenticated WITH CHECK (public.is_active_staff());
+
+DROP POLICY IF EXISTS "repair_tickets_update_staff" ON public.repair_tickets;
+CREATE POLICY "repair_tickets_update_staff" ON public.repair_tickets FOR UPDATE TO authenticated USING (public.is_active_staff()) WITH CHECK (public.is_active_staff());
+
+DROP POLICY IF EXISTS "repair_tickets_delete_admin" ON public.repair_tickets;
+CREATE POLICY "repair_tickets_delete_admin" ON public.repair_tickets FOR DELETE TO authenticated USING (public.is_admin());
 
 INSERT INTO public.repair_tickets (
     id, ticket_number, customer_id, device_brand, device_model, imei, device_password, 

@@ -31,6 +31,7 @@ import {
   CardTitle 
 } from "@/components/ui/card"
 import { toast } from "sonner"
+import { parseAppError } from "@/lib/error-handler"
 
 function LoginFormContent() {
   const router = useRouter()
@@ -85,18 +86,9 @@ function LoginFormContent() {
         }
 
         // Kullanıcı dostu Türkçe hata mesajları
-        let errDesc = error.message
-        if (error.message.includes("Invalid login credentials")) {
-          errDesc = "E-posta adresi veya şifre hatalı. Lütfen kontrol ediniz."
-          setErrorMessage(errDesc)
-        } else if (error.message.includes("Email not confirmed")) {
-          errDesc = "E-posta adresiniz henüz onaylanmamış."
-          setErrorMessage(errDesc)
-        } else {
-          errDesc = `Giriş başarısız: ${error.message}`
-          setErrorMessage(errDesc)
-        }
-        toast.error("Giriş Yapılamadı", { description: errDesc })
+        const parsed = parseAppError(error, "Giriş Yapılamadı")
+        setErrorMessage(parsed.userMessage)
+        toast.error(parsed.title, { description: parsed.userMessage })
         setLoading(false)
         return
       }
