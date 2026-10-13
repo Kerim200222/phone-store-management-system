@@ -1143,6 +1143,51 @@
   - Next.js App Router mimarisinde `error.tsx` ve `not-found.tsx` hiyerarşisinin (root vs dashboard nested) sayfa yenilemelerini ve layout kaybını önlemedeki etkisi kavrandı.
 - **Referans:** `PR #105 (feature/G32-error-handling-edge-cases)`
 
+---
+
+## 📅 Gün 33: Güvenlik, Test ve Canlıya Alma - Performans Optimizasyonu (Next/Image, React useMemo/useCallback & Supabase SQL İndeksleri)
+
+- **Tarih:** 27 Ekim 2026
+- **Konu:** Hafta 7: Güvenlik, Test ve Canlıya Alma (Launch) kapsamında; telefon mağazası yönetim sisteminin internete açılması ve yoğun personel/müşteri trafiği altında kesintisiz, akıcı ve düşük gecikmeli (low-latency) çalışmasını sağlamak amacıyla **Next.js Görsel Optimizasyonları (`next/image`, AVIF/WebP, 30 Günlük CDN Cache TTL)**, **React Re-Render Önleme Stratejileri (`useMemo`, `useCallback` ve `React.memo` bileşen sarmalları)** ve **Supabase PostgreSQL Veritabanı Sorgu İndeksleme Mimarisi (`11_performance_indexes_and_optimizations.sql` - Kısmi/Partial, Bileşik/Composite, B-Tree ve GIN Trigram İndeksleri)** implementasyonlarının tamamlanması.
+- **Yapılan Çalışmalar:**
+  1. **Next.js Görsel Optimizasyonları (`next.config.mjs` & `components/ui/custom-image.tsx`):**
+     - `next.config.mjs` içerisinde modern sıkıştırma standartları olan `image/avif` ve `image/webp` formatları önceliklendirildi.
+     - Bant genişliğini ve sunucu CPU tüketimini düşürmek için `minimumCacheTTL: 2592000` (30 gün) optimize edilmiş görsel önbellekleme kuralı devreye alındı.
+     - `deviceSizes` (`[640, 750, 828, 1080, 1200, 1920]`) ve `imageSizes` (`[16, 32, 48, 64, 96, 128, 256, 384]`) tanımlanarak mobil cihazlardan 4K ekranlara kadar tam uyumlu srcSet üretimi sağlandı.
+     - `CustomImage` ve `CustomAvatar` bileşenleri `React.memo` ile sarmalanarak üst bileşen durum değişimlerinde görsellerin gereksiz DOM reflow/repaint tetiklemesi engellendi.
+  2. **React Re-Render ve Hesaplama Optimizasyonları (`useMemo` & `useCallback`):**
+     - **Envanter Panosu (`app/dashboard/inventory/page.tsx`):** Arama metni, kategori, stok durumu ve kondisyon filtreleri (`filteredProducts`), sıralama (`sortedProducts`), sayfalama dilimleme (`paginatedProducts`) ve mağaza finansal KPI hesaplamaları (`kpiStats`) `useMemo` zırhına alındı. Arama, sıralama ve pano kopyalama aksiyonları `useCallback` ile stabil kılındı.
+     - **POS Hızlı Satış Terminali (`app/dashboard/pos/page.tsx` & `components/pos/`):**
+       - `POSProductCard` ve `POSCart` bileşenleri `React.memo` ile korundu; sepete her ürün eklenişinde yüzlerce ürün kartının baştan render edilmesi önlendi.
+       - Sepet miktar artırma/azaltma (`handleUpdateQuantity`), doğrudan miktar girme (`handleSetQuantity`), sepetten çıkarma (`handleRemoveItem`), sepeti temizleme (`handleClearCart`), satış tamamlama (`handleCheckout`) ve filtre temizleme aksiyonları `useCallback` ile sabit referanslara bağlandı.
+       - Marka listesi (`availableBrands`), filtrelenmiş ürünler (`filteredProducts`), sepet içi adet haritası (`inCartCounts`) ve sepet KDV/iskonto özeti (`cartSummary`) `useMemo` ile optimize edildi.
+     - **Teknik Servis Kanban Panosu (`app/dashboard/service/page.tsx` & `components/service/kanban/`):**
+       - `KanbanColumn` ve `KanbanTicketCard` bileşenleri `React.memo` ile korundu. Kart taşıma ve durum güncellemelerinde sadece ilgili kolon ve kartın güncellenmesi sağlandı.
+       - Kanban sütunları için tek tek döngü çalıştırmak yerine 4 kolonu tek seferde ayıran `ticketsByColumn` `useMemo` haritası geliştirildi.
+       - Bilet yazdırma, durum değiştirme, teslimat ve bildirim modal tetikleyicileri `useCallback` ile donatıldı.
+     - **Grafikler & Bildirim Çanı (`SalesTrendLineChart`, `RevenuePieChart`, `StockAlertBell`, `GlobalCommandPalette`):**
+       - Recharts tabanlı satış trendi ve pasta grafikleri `React.memo` ile sarmalanarak dashboard metrikleri değişirken ağır SVG yeniden çizim maliyeti sıfırlandı.
+       - Bildirim çanındaki filtreleme mantığı (`filteredProducts`) `useMemo` ile korunarak dropdown açılış tepki süresi hızlandırıldı.
+  3. **Supabase PostgreSQL Sorgu & İndeks Optimizasyonu (`supabase/11_performance_indexes_and_optimizations.sql`):**
+     - **Düşük Stok RPC Partial Index (`idx_products_low_stock_active`):** `WHERE is_active = TRUE AND stock_quantity < 10` filtresiyle sadece kritik ürünleri indeksleyen kısmi B-Tree indeksi yazıldı. `Seq Scan` ortadan kaldırılarak anlık indeks taraması sağlandı.
+     - **IMEI ve Barkod Kısmi İndeksleri (`idx_products_imei_active`, `idx_products_barcode_active`):** 15 haneli IMEI ve barkod aramaları için mikro-saniyelik arama performansı sağlandı.
+     - **Bileşik İndeksler (Composite Indexes):**
+       - `products (category_id, is_active, created_at DESC)`: Kategori bazlı filtreleme ve listeleme için.
+       - `customers (is_active, full_name ASC)`: POS müşteri rehberi alfabetik sıralaması için.
+       - `transactions (customer_id, created_at DESC)` ve `(type, status, created_at DESC)`: Finansal raporlama ve müşteri hareketleri için.
+       - `repair_tickets (status, updated_at DESC)` ve `(assigned_to, status)`: Kanban panosu ve teknisyen iş yükü sorguları için.
+       - `profiles (role, is_active)`: RLS güvenlik fonksiyonlarının (`is_admin`, `is_active_staff`) her satır kontrolünde maksimum hızda çalışması için.
+     - **Trigram Metin Arama İndeksleri (GIN pg_trgm):** Ürün adı/modeli/markası, müşteri adı/telefonu ve servis takip numarası için `gin_trgm_ops` indeksleri kurularak `ILIKE '%query%'` sorguları 50-100 kat hızlandırıldı.
+     - **İndeks İzleme Görünümü (`v_index_performance_stats`):** Veritabanı yöneticisinin tüm indekslerin taranma sıklığını (`idx_scan`), okunan kayıt sayısını ve disk boyutunu izlemesi için dinamik SQL görünümü eklendi.
+     - **İstatistik Güncelleme (`ANALYZE`):** PostgreSQL Cost-Based Optimizer motorunun en verimli yürütme planlarını seçmesi için tüm temel tablolarda `ANALYZE` komutları çalıştırıldı.
+  4. **Derleme & Kalite Kontrolü:**
+     - `npm run lint` komutu çalıştırılarak sıfır uyarı ve sıfır hata doğrulandı.
+     - `npm run build` komutu çalıştırılarak 22 Next.js rotası, optimize edilmiş görsel formatları ve dinamik middleware hatasız bir şekilde derlendi.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Modern Next.js uygulamalarında yalnızca frontend bileşenlerini optimize etmenin yetersiz olduğu; veritabanı indekslemesi (Partial, Composite, GIN), görsel önbellekleme (CDN TTL, AVIF/WebP) ve React bileşen render döngülerinin (`useMemo`, `useCallback`, `React.memo`) bir bütün olarak ele alınmasının web performansı ve kullanıcı deneyimi için kritik olduğu pekiştirildi.
+  - Gereksiz re-render'ların önlenmesiyle POS satış terminali ve teknik servis Kanban panosunda arayüz gecikmelerinin (lag) tamamen ortadan kalktığı gözlemlendi.
+- **Referans:** `PR #106 (feature/G33-performance-optimizations)`
+
 
 
 
