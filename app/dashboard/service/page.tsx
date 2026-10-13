@@ -82,23 +82,21 @@ export default function ServiceKanbanPage() {
   }, [loadTickets])
 
   // Durum Değiştirme (Optimistic UI Update)
-  const handleStatusChange = async (ticketId: string, newStatus: KanbanColumnId) => {
+  const handleStatusChange = useCallback(async (ticketId: string, newStatus: KanbanColumnId) => {
     // Anlık state güncellemesi
     setTickets((prev) =>
       prev.map((t) => (t.id === ticketId ? { ...t, status: newStatus, updated_at: new Date().toISOString() } : t))
     )
 
     // Detay modalı açıksa onun da state'ini güncelle
-    if (selectedTicketForDetail && selectedTicketForDetail.id === ticketId) {
-      setSelectedTicketForDetail((prev) => (prev ? { ...prev, status: newStatus } : null))
-    }
+    setSelectedTicketForDetail((prev) => (prev && prev.id === ticketId ? { ...prev, status: newStatus } : prev))
 
     // Veritabanı güncellemesi
     await updateServiceTicketStatus(ticketId, newStatus)
-  }
+  }, [])
 
   // Fiş Yazdırma Modalı Açma
-  const handlePrintTicket = (ticket: ServiceTicketDisplay) => {
+  const handlePrintTicket = useCallback((ticket: ServiceTicketDisplay) => {
     const printPayload: ServiceTicketReceiptData = {
       ticketNumber: ticket.ticket_number,
       date: ticket.created_at,
@@ -141,38 +139,36 @@ export default function ServiceKanbanPage() {
     }
     setReceiptData(printPayload)
     setIsReceiptModalOpen(true)
-  }
+  }, [])
 
   // Detay Modalı Açma
-  const handleViewDetails = (ticket: ServiceTicketDisplay) => {
+  const handleViewDetails = useCallback((ticket: ServiceTicketDisplay) => {
     setSelectedTicketForDetail(ticket)
     setIsDetailModalOpen(true)
-  }
+  }, [])
 
   // Gün 24: Teslimat Modalı Açma
-  const handleOpenDeliverModal = (ticket: ServiceTicketDisplay) => {
+  const handleOpenDeliverModal = useCallback((ticket: ServiceTicketDisplay) => {
     setSelectedTicketForAction(ticket)
     setIsDeliveryModalOpen(true)
-  }
+  }, [])
 
   // Gün 24: Müşteri Bildirimi Modalı Açma
-  const handleOpenNotifyModal = (ticket: ServiceTicketDisplay) => {
+  const handleOpenNotifyModal = useCallback((ticket: ServiceTicketDisplay) => {
     setSelectedTicketForAction(ticket)
     setIsNotifyModalOpen(true)
-  }
+  }, [])
 
   // Gün 24: Teslimat ve Kasa Tahsilatı Başarılı
-  const handleDeliverySuccess = (result: ServiceDeliveryResult, updatedTicket: ServiceTicketDisplay) => {
+  const handleDeliverySuccess = useCallback((result: ServiceDeliveryResult, updatedTicket: ServiceTicketDisplay) => {
     setTickets((prev) =>
       prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t))
     )
-    if (selectedTicketForDetail && selectedTicketForDetail.id === updatedTicket.id) {
-      setSelectedTicketForDetail(updatedTicket)
-    }
-  }
+    setSelectedTicketForDetail((prev) => (prev && prev.id === updatedTicket.id ? updatedTicket : prev))
+  }, [])
 
   // Gün 24: Teslim Fişi / Makbuzunu Yazdır
-  const handlePrintDeliveryReceipt = (
+  const handlePrintDeliveryReceipt = useCallback((
     result: ServiceDeliveryResult,
     payload: ServiceDeliveryCheckoutPayload
   ) => {
@@ -180,7 +176,7 @@ export default function ServiceKanbanPage() {
     const receipt = formatServiceDeliveryToReceipt(selectedTicketForAction, payload)
     setUniversalReceiptData(receipt)
     setIsUniversalReceiptOpen(true)
-  }
+  }, [selectedTicketForAction])
 
   // Filtreleme Mantığı
   const filteredTickets = useMemo(() => {
@@ -202,6 +198,23 @@ export default function ServiceKanbanPage() {
       return matchesSearch && matchesPriority && matchesBrand
     })
   }, [tickets, searchQuery, priorityFilter, brandFilter])
+
+  // Kolon bazlı gruplanmış biletler (Kanban sütunlarının gereksiz filtreleme maliyetini sıfırlar)
+  const ticketsByColumn = useMemo(() => {
+    const map: Record<KanbanColumnId, ServiceTicketDisplay[]> = {
+      bekliyor: [],
+      islemde: [],
+      parca_bekliyor: [],
+      tamamlandi: []
+    }
+    filteredTickets.forEach((t) => {
+      const statusKey = t.status as KanbanColumnId
+      if (statusKey in map) {
+        map[statusKey].push(t)
+      }
+    })
+    return map
+  }, [filteredTickets])
 
   // İstatistikler
   const stats = useMemo(() => {
@@ -449,21 +462,18 @@ export default function ServiceKanbanPage() {
       {viewMode === "kanban" ? (
         /* KANBAN SÜTUNLARI */
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start overflow-x-auto pb-4">
-          {KANBAN_COLUMNS.map((colConfig) => {
-            const columnTickets = filteredTickets.filter((t) => t.status === colConfig.id)
-            return (
-              <KanbanColumn
-                key={colConfig.id}
-                config={colConfig}
-                tickets={columnTickets}
-                onStatusChange={handleStatusChange}
-                onPrintTicket={handlePrintTicket}
-                onViewDetails={handleViewDetails}
-                onDeliverTicket={handleOpenDeliverModal}
-                onNotifyCustomer={handleOpenNotifyModal}
-              />
-            )
-          })}
+          {KANBAN_COLUMNS.map((colConfig) => (
+            <KanbanColumn
+              key={colConfig.id}
+              config={colConfig}
+              tickets={ticketsByColumn[colConfig.id] || []}
+              onStatusChange={handleStatusChange}
+              onPrintTicket={handlePrintTicket}
+              onViewDetails={handleViewDetails}
+              onDeliverTicket={handleOpenDeliverModal}
+              onNotifyCustomer={handleOpenNotifyModal}
+            />
+          ))}
         </div>
       ) : (
         /* TABLO GÖRÜNÜMÜ */

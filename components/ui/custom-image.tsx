@@ -34,7 +34,7 @@ export interface CustomImageProps extends Omit<ImageProps, "src"> {
   showSkeleton?: boolean
 }
 
-export function CustomImage({
+export const CustomImage = React.memo(function CustomImage({
   src,
   alt,
   className = "",
@@ -136,4 +136,5 @@ export function CustomImage({
       />
     </div>
   )
-}
+})
+CustomImage.displayName = "CustomImage"

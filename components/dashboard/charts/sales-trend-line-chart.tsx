@@ -77,7 +77,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   return null
 }
 
-export function SalesTrendLineChart({ data, isLoading }: SalesTrendLineChartProps) {
+export const SalesTrendLineChart = React.memo(function SalesTrendLineChart({ data, isLoading }: SalesTrendLineChartProps) {
   if (isLoading) {
     return (
       <Card className="bg-slate-900/80 border-slate-800 shadow-xl">
@@ -208,4 +208,5 @@ export function SalesTrendLineChart({ data, isLoading }: SalesTrendLineChartProp
       </CardContent>
     </Card>
   )
-}
+})
+SalesTrendLineChart.displayName = "SalesTrendLineChart"

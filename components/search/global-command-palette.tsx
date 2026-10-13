@@ -31,7 +31,7 @@ interface GlobalCommandPaletteProps {
   triggerClassName?: string
 }
 
-export function GlobalCommandPalette({ triggerClassName }: GlobalCommandPaletteProps) {
+export const GlobalCommandPalette = React.memo(function GlobalCommandPalette({ triggerClassName }: GlobalCommandPaletteProps) {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
   const [loading, setLoading] = React.useState(false)
@@ -90,11 +90,11 @@ export function GlobalCommandPalette({ triggerClassName }: GlobalCommandPaletteP
   }, [query])
 
   // 3. Yönlendirme ve Modalı Kapatma
-  const handleSelect = (url: string) => {
+  const handleSelect = React.useCallback((url: string) => {
     setOpen(false)
     setQuery("")
     router.push(url)
-  }
+  }, [router])
 
   const hasAnyResults =
     results.tickets.length > 0 ||
@@ -356,4 +356,5 @@ export function GlobalCommandPalette({ triggerClassName }: GlobalCommandPaletteP
       </CommandDialog>
     </>
   )
-}
+})
+GlobalCommandPalette.displayName = "GlobalCommandPalette"

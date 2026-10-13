@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo, useCallback } from "react"
 import Link from "next/link"
 import { 
   Package, 
@@ -320,9 +320,6 @@ const initialInventoryProducts: InventoryItem[] = [
 ]
 
 export default function InventoryDashboardPage() {
-  const supabase = createClient()
-  const db = supabase as unknown as InventoryDbClient
-
   const [products, setProducts] = useState<InventoryItem[]>(initialInventoryProducts)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -344,6 +341,8 @@ export default function InventoryDashboardPage() {
   useEffect(() => {
     async function loadProductsFromSupabase() {
       try {
+        const supabase = createClient()
+        const db = supabase as unknown as InventoryDbClient
         const { data, error } = await db
           .from("products")
           .select("*")
@@ -399,41 +398,44 @@ export default function InventoryDashboardPage() {
     }
 
     loadProductsFromSupabase()
-  }, [db])
+  }, [])
 
   // Arama veya Filtreler Değiştiğinde Sayfayı 1'e Sıfırla
-  const handleSearchChange = (val: string) => {
+  const handleSearchChange = useCallback((val: string) => {
     setSearchQuery(val)
     setCurrentPage(1)
-  }
+  }, [])
 
-  const handleCategoryFilter = (cat: string) => {
+  const handleCategoryFilter = useCallback((cat: string) => {
     setSelectedCategory(cat)
     setCurrentPage(1)
-  }
+  }, [])
 
-  const handleStockFilter = (status: StockStatusType) => {
+  const handleStockFilter = useCallback((status: StockStatusType) => {
     setSelectedStockStatus(status)
     setCurrentPage(1)
-  }
+  }, [])
 
-  const handleConditionFilter = (cond: string) => {
+  const handleConditionFilter = useCallback((cond: string) => {
     setSelectedCondition(cond)
     setCurrentPage(1)
-  }
+  }, [])
 
   // Sıralama Değiştirme
-  const toggleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-    } else {
-      setSortField(field)
-      setSortOrder("desc")
-    }
-  }
+  const toggleSort = useCallback((field: SortField) => {
+    setSortField((prevField) => {
+      if (prevField === field) {
+        setSortOrder((prevOrder) => (prevOrder === "asc" ? "desc" : "asc"))
+        return prevField
+      } else {
+        setSortOrder("desc")
+        return field
+      }
+    })
+  }, [])
 
   // Panoya Kopyalama (IMEI veya Barkod)
-  const copyToClipboard = (text: string, id: string) => {
+  const copyToClipboard = useCallback((text: string, id: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(text)
       setCopiedId(id)
@@ -442,7 +444,7 @@ export default function InventoryDashboardPage() {
       })
       setTimeout(() => setCopiedId(null), 2000)
     }
-  }
+  }, [])
 
   // Dinamik Filtreleme ve Arama Mantığı
   const filteredProducts = useMemo(() => {
@@ -497,7 +499,9 @@ export default function InventoryDashboardPage() {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
   const startIndex = (currentPage - 1) * pageSize
   const endIndex = Math.min(startIndex + pageSize, totalItems)
-  const paginatedProducts = sortedProducts.slice(startIndex, endIndex)
+  const paginatedProducts = useMemo(() => {
+    return sortedProducts.slice(startIndex, endIndex)
+  }, [sortedProducts, startIndex, endIndex])
 
   // Canlı Dinamik KPI İstatistikleri (Tüm Envanter Üzerinden)
   const kpiStats = useMemo(() => {

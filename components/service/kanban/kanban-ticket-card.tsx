@@ -34,7 +34,13 @@ interface KanbanTicketCardProps {
   onNotifyCustomer?: (ticket: ServiceTicketDisplay) => void
 }
 
-export function KanbanTicketCard({
+const currencyFormatter = new Intl.NumberFormat("tr-TR", {
+  style: "currency",
+  currency: "TRY",
+  maximumFractionDigits: 0,
+})
+
+export const KanbanTicketCard = React.memo(function KanbanTicketCard({
   ticket,
   onStatusChange,
   onPrintTicket,
@@ -46,13 +52,7 @@ export function KanbanTicketCard({
   const [showActionsMenu, setShowActionsMenu] = useState(false)
 
   // Para birimi formatlama
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("tr-TR", {
-      style: "currency",
-      currency: "TRY",
-      maximumFractionDigits: 0,
-    }).format(val)
-  }
+  const formatCurrency = (val: number) => currencyFormatter.format(val)
 
   // Geçen süre formatı
   const getTimeAgo = (dateStr: string) => {
@@ -357,4 +357,5 @@ export function KanbanTicketCard({
       </div>
     </div>
   )
-}
+})
+KanbanTicketCard.displayName = "KanbanTicketCard"

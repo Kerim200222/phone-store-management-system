@@ -20,7 +20,18 @@ interface POSProductCardProps {
   onAddToCart: (product: POSProduct) => void
 }
 
-export function POSProductCard({
+function getCategoryIcon(category: string) {
+  switch (category) {
+    case "Telefon":
+      return <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
+    case "Yedek Parça":
+      return <Wrench className="w-3.5 h-3.5 text-amber-400" />
+    default:
+      return <Package className="w-3.5 h-3.5 text-emerald-400" />
+  }
+}
+
+export const POSProductCard = React.memo(function POSProductCard({
   product,
   inCartQuantity,
   onAddToCart,
@@ -28,17 +39,6 @@ export function POSProductCard({
   const isOutOfStock = product.stock_quantity <= 0
   const isCriticalStock = product.stock_quantity > 0 && product.stock_quantity <= product.min_stock_level
   const isMaxInCart = inCartQuantity >= product.stock_quantity
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Telefon":
-        return <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
-      case "Yedek Parça":
-        return <Wrench className="w-3.5 h-3.5 text-amber-400" />
-      default:
-        return <Package className="w-3.5 h-3.5 text-emerald-400" />
-    }
-  }
 
   return (
     <div 
@@ -182,4 +182,5 @@ export function POSProductCard({
       </div>
     </div>
   )
-}
+})
+POSProductCard.displayName = "POSProductCard"

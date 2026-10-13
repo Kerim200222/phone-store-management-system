@@ -14,7 +14,7 @@ export interface CustomAvatarProps {
   badgeColor?: "emerald" | "amber" | "rose" | "cyan"
 }
 
-export function CustomAvatar({
+export const CustomAvatar = React.memo(function CustomAvatar({
   src,
   name = "Kullanıcı",
   size = 40,
@@ -79,4 +79,5 @@ export function CustomAvatar({
       )}
     </div>
   )
-}
+})
+CustomAvatar.displayName = "CustomAvatar"

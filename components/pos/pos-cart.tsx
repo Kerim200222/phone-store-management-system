@@ -46,7 +46,7 @@ interface POSCartProps {
   isCheckingOut: boolean
 }
 
-export function POSCart({
+export const POSCart = React.memo(function POSCart({
   items,
   summary,
   onUpdateQuantity,
@@ -415,4 +415,5 @@ export function POSCart({
       )}
     </div>
   )
-}
+})
+POSCart.displayName = "POSCart"

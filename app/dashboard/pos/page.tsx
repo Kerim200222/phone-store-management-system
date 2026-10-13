@@ -184,7 +184,7 @@ export default function POSPage() {
   }, [])
 
   // Sepet Miktarı Değiştirme
-  const handleUpdateQuantity = (id: string, delta: number) => {
+  const handleUpdateQuantity = useCallback((id: string, delta: number) => {
     setCart((prevCart) => {
       return prevCart
         .map((item) => {
@@ -202,10 +202,10 @@ export default function POSPage() {
         })
         .filter(Boolean) as CartItem[]
     })
-  }
+  }, [])
 
   // Sepet Miktarı Doğrudan Ayarlama
-  const handleSetQuantity = (id: string, qty: number) => {
+  const handleSetQuantity = useCallback((id: string, qty: number) => {
     setCart((prevCart) => {
       return prevCart
         .map((item) => {
@@ -220,19 +220,21 @@ export default function POSPage() {
           return item
         })
     })
-  }
+  }, [])
 
   // Sepetten Ürün Çıkarma
-  const handleRemoveItem = (id: string) => {
+  const handleRemoveItem = useCallback((id: string) => {
     setCart((prevCart) => prevCart.filter((item) => item.id !== id))
-  }
+  }, [])
 
   // Sepeti Temizleme
-  const handleClearCart = () => {
-    if (cart.length === 0) return
-    setCart([])
+  const handleClearCart = useCallback(() => {
+    setCart((prev) => {
+      if (prev.length === 0) return prev
+      return []
+    })
     setDiscountAmount(0)
-  }
+  }, [])
 
   // Barkod / IMEI ile Hızlı Ekleme
   const handleBarcodeSubmit = (e: React.FormEvent) => {
@@ -265,7 +267,7 @@ export default function POSPage() {
   }
 
   // Satışı Tamamlama ve Fiş Kesme (Supabase Transaction & Stok Düşümü)
-  const handleCheckout = async () => {
+  const handleCheckout = useCallback(async () => {
     if (cart.length === 0) return
     setIsCheckingOut(true)
 
@@ -358,16 +360,29 @@ export default function POSPage() {
     } finally {
       setIsCheckingOut(false)
     }
-  }
+  }, [cart, cartSummary, selectedCustomer, paymentMethod])
 
   // Yeni Satış Başlatma (Sepeti Sıfırla)
-  const handleNewSale = () => {
+  const handleNewSale = useCallback(() => {
     setCart([])
     setDiscountAmount(0)
     setSelectedCustomer(null)
     setPaymentMethod("cash")
     setReceipt(null)
-  }
+  }, [])
+
+  // Filtreleri Sıfırlama
+  const handleClearFilters = useCallback(() => {
+    setSearchQuery("")
+    setCategoryFilter("all")
+    setSelectedBrand("all")
+    setOnlyInStock(false)
+  }, [])
+
+  // Fiş Modalını Kapatma
+  const handleCloseReceipt = useCallback(() => {
+    setIsReceiptOpen(false)
+  }, [])
 
   // Benzersiz Markalar Listesi
   const availableBrands = useMemo(() => {
@@ -619,12 +634,7 @@ export default function POSPage() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => {
-                  setSearchQuery("")
-                  setCategoryFilter("all")
-                  setSelectedBrand("all")
-                  setOnlyInStock(false)
-                }}
+                onClick={handleClearFilters}
                 className="text-xs h-8 gap-1.5 border-slate-700"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -671,7 +681,7 @@ export default function POSPage() {
       <POSReceiptModal
         receipt={receipt}
         isOpen={isReceiptOpen}
-        onClose={() => setIsReceiptOpen(false)}
+        onClose={handleCloseReceipt}
         onNewSale={handleNewSale}
       />
     </div>
