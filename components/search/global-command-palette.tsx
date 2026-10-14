@@ -24,7 +24,9 @@ import {
 } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { GlobalSearchResponse } from "@/types/global-search"
+import { useDebounce } from "@/hooks/use-debounce"
 
 interface GlobalCommandPaletteProps {
   /** Harici tetikleme için isteğe bağlı buton sınıfı */
@@ -34,6 +36,7 @@ interface GlobalCommandPaletteProps {
 export const GlobalCommandPalette = React.memo(function GlobalCommandPalette({ triggerClassName }: GlobalCommandPaletteProps) {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
+  const debouncedQuery = useDebounce(query, 300)
   const [loading, setLoading] = React.useState(false)
   const [results, setResults] = React.useState<GlobalSearchResponse["results"]>({
     tickets: [],
@@ -43,6 +46,10 @@ export const GlobalCommandPalette = React.memo(function GlobalCommandPalette({ t
   })
 
   const router = useRouter()
+
+  // Kullanıcı tuşlara basarken debounce süresi dolana kadar arama hazırlığı
+  const isDebouncing = query.trim().length > 0 && query.trim() !== debouncedQuery.trim()
+  const isSearching = loading || isDebouncing
 
   // 1. Klavye Kısayolu Dinleyicisi (CMD+K & CTRL+K)
   React.useEffect(() => {
@@ -57,14 +64,26 @@ export const GlobalCommandPalette = React.memo(function GlobalCommandPalette({ t
     return () => document.removeEventListener("keydown", down)
   }, [])
 
-  // 2. Debounced Arama İstekleri
+  // 2. Debounced Arama İstekleri (300ms useDebounce hook entegrasyonu)
   React.useEffect(() => {
+    const trimmed = debouncedQuery.trim()
+    if (!trimmed) {
+      setResults({
+        tickets: [],
+        products: [],
+        customers: [],
+        navigation: [],
+      })
+      setLoading(false)
+      return
+    }
+
     let active = true
+    setLoading(true)
 
     const fetchResults = async () => {
-      setLoading(true)
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+        const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`)
         if (!res.ok) throw new Error("Arama başarısız")
         const data: GlobalSearchResponse = await res.json()
         if (active) {
@@ -79,15 +98,12 @@ export const GlobalCommandPalette = React.memo(function GlobalCommandPalette({ t
       }
     }
 
-    const timer = setTimeout(() => {
-      fetchResults()
-    }, 180)
+    fetchResults()
 
     return () => {
       active = false
-      clearTimeout(timer)
     }
-  }, [query])
+  }, [debouncedQuery])
 
   // 3. Yönlendirme ve Modalı Kapatma
   const handleSelect = React.useCallback((url: string) => {
@@ -131,15 +147,43 @@ export const GlobalCommandPalette = React.memo(function GlobalCommandPalette({ t
             onValueChange={setQuery}
             className="text-sm placeholder:text-slate-500 text-white"
           />
-          {loading && (
+          {isSearching && (
             <div className="absolute right-4 top-3.5 flex items-center gap-1.5 text-xs text-cyan-400">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+              <span className="text-[11px] text-slate-400 hidden sm:inline">Aranıyor...</span>
             </div>
           )}
         </div>
 
         <CommandList className="max-h-[380px] p-2">
-          {!loading && !hasAnyResults && (
+          {/* Arama Sürerken İskelet (Skeleton) Yükleme Geri Bildirimi */}
+          {isSearching && (
+            <div className="p-2 space-y-2.5">
+              <div className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-900/60 border border-slate-800/40">
+                <Skeleton className="h-7 w-7 rounded-md bg-slate-800 shrink-0" />
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <Skeleton className="h-3.5 w-44 bg-slate-800" />
+                  <Skeleton className="h-2.5 w-28 bg-slate-800/60" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-900/60 border border-slate-800/40">
+                <Skeleton className="h-7 w-7 rounded-md bg-slate-800 shrink-0" />
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <Skeleton className="h-3.5 w-36 bg-slate-800" />
+                  <Skeleton className="h-2.5 w-24 bg-slate-800/60" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-900/60 border border-slate-800/40">
+                <Skeleton className="h-7 w-7 rounded-md bg-slate-800 shrink-0" />
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <Skeleton className="h-3.5 w-52 bg-slate-800" />
+                  <Skeleton className="h-2.5 w-32 bg-slate-800/60" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!isSearching && query.trim() !== "" && !hasAnyResults && (
             <CommandEmpty className="py-10 text-center text-sm text-slate-400">
               <div className="flex flex-col items-center justify-center gap-2">
                 <Search className="h-8 w-8 text-slate-600 mb-1" />
