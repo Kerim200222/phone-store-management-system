@@ -22,18 +22,41 @@ import { useRoleAccess } from "@/hooks/use-role-access"
 import { getDateRange, DateFilterType } from "@/lib/date-filters"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import dynamic from "next/dynamic"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SummaryCard } from "@/components/dashboard/summary-card"
 import { TopProductsCard } from "@/components/dashboard/top-products-card"
 import { ProfitLossCard } from "@/components/dashboard/profit-loss-card"
-import { SalesTrendLineChart } from "@/components/dashboard/charts/sales-trend-line-chart"
-import { RevenuePieChart } from "@/components/dashboard/charts/revenue-pie-chart"
 import { 
   getDashboardAnalytics, 
   formatCurrency 
 } from "@/lib/dashboard-analytics-service"
 import { DashboardAnalyticsData } from "@/types/dashboard-analytics"
+
+// Code Splitting & Lazy Loading: Recharts kütüphanesini istemci tarafında dinamik yükle (Hafif Bundle)
+const SalesTrendLineChart = dynamic(
+  () =>
+    import("@/components/dashboard/charts/sales-trend-line-chart").then(
+      (mod) => mod.SalesTrendLineChart
+    ),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[280px] w-full bg-slate-900/60 rounded-xl" />,
+  }
+)
+
+const RevenuePieChart = dynamic(
+  () =>
+    import("@/components/dashboard/charts/revenue-pie-chart").then(
+      (mod) => mod.RevenuePieChart
+    ),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[280px] w-full bg-slate-900/60 rounded-xl" />,
+  }
+)
 
 export default function DashboardPage() {
   const { userEmail, isAdmin } = useRoleAccess()
