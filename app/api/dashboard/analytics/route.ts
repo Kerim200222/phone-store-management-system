@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { DateFilterType } from "@/lib/date-filters"
-import { getDashboardAnalytics } from "@/lib/dashboard-analytics-service"
+import { getCachedDashboardAnalytics } from "@/lib/cache-service"
 import { createClient } from "@/utils/supabase/server"
 
 export const dynamic = "force-dynamic"
 
 /**
  * ==============================================================================
- * GÜN 26 & TADİLAT: DASHBOARD ANALYTICS API ROUTE (AUTH PROTECTED)
+ * GÜN 26 & TADİLAT: DASHBOARD ANALYTICS API ROUTE (CACHED & AUTH PROTECTED)
  * ==============================================================================
  * GET /api/dashboard/analytics?period=today | this_week | this_month
  * ==============================================================================
@@ -38,13 +38,21 @@ export async function GET(request: NextRequest) {
     const period: DateFilterType =
       periodParam && validPeriods.includes(periodParam) ? periodParam : "this_week"
 
-    const result = await getDashboardAnalytics(period)
+    // 2. Next.js Data Cache (unstable_cache) üzerinden anında yanıt
+    const result = await getCachedDashboardAnalytics(period)
 
-    return NextResponse.json({
-      success: true,
-      data: result.data,
-      source: result.source,
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        data: result.data,
+        source: result.source,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+        },
+      }
+    )
   } catch (error) {
     console.error("Dashboard Analytics API Hatası:", error)
     return NextResponse.json(

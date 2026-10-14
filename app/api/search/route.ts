@@ -488,5 +488,9 @@ interface DbCustomerRow {
     },
   }
 
-  return NextResponse.json(response)
+  return NextResponse.json(response, {
+    headers: {
+      "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+    },
+  })
 }
