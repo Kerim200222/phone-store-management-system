@@ -26,6 +26,10 @@ interface ServiceDbClient {
         data: Record<string, unknown>[] | null
         error: { message: string } | null
       }>
+      limit(count: number): Promise<{
+        data: Record<string, unknown>[] | null
+        error: { message: string } | null
+      }>
     }
     insert(payload: unknown[] | Record<string, unknown>[]): {
       select(): Promise<{
@@ -33,6 +37,10 @@ interface ServiceDbClient {
         error: { message: string } | null
       }>
     }
+    upsert(payload: unknown | unknown[]): Promise<{
+      data: Record<string, unknown>[] | null
+      error: { message: string } | null
+    }>
     update(payload: Record<string, unknown>): {
       eq(column: string, value: unknown): Promise<{
         data: Record<string, unknown>[] | null
@@ -122,37 +130,102 @@ export async function createServiceTicket(
   values: ServiceTicketFormValues,
   customer: POSCustomerSelect
 ): Promise<CreateServiceTicketResult> {
+  // ==============================================================================
+  // BUG-06 DÜZELTMESİ (FAIL-FAST IMEI DOĞRULAMASI VE VERİ KAYBI ÖNLEME):
+  // Eğer kullanıcı IMEI alanını doldurmuşsa; boşluk, tire vb. ayraçları temizle.
+  // Temizlenen değer tam olarak 15 haneli rakam (digit) değilse, alanı sessizce
+  // null yapmak yerine işlemi DERHAL durdur (Fail-Fast) ve kullanıcıya hata dön.
+  // ==============================================================================
+  let formattedImei: string | null = null
+  if (values.imei && values.imei.trim().length > 0) {
+    const rawImei = values.imei.trim()
+    const cleanImei = rawImei.replace(/[\s-]/g, "")
+    if (!/^\d{15}$/.test(cleanImei)) {
+      return {
+        success: false,
+        ticketId: "",
+        ticketNumber: "",
+        error: "Lütfen 15 haneli geçerli bir IMEI numarası giriniz.",
+      }
+    }
+    formattedImei = cleanImei
+  }
+
   const ticketNumber = generateServiceTicketNumber()
   const physicalConditionStr = formatPhysicalConditionNotes(values)
   const accessoriesStr = formatAccessoriesList(values)
   const { passwordText, patternNotes } = formatPasswordInfo(values)
 
-  const payload = {
-    ticket_number: ticketNumber,
-    customer_id: customer.id.startsWith("cust-") ? null : customer.id, // Geçerli UUID kontrolü
-    device_brand: values.deviceBrand.trim(),
-    device_model: values.deviceModel.trim(),
-    imei: values.imei && values.imei.trim().length === 15 ? values.imei.trim() : null,
-    serial_number: values.serialNumber ? values.serialNumber.trim() : null,
-    device_password: passwordText,
-    pattern_code: patternNotes,
-    physical_condition: physicalConditionStr,
-    has_accessories: accessoriesStr,
-    issue_description: `[${values.issueCategory}] ${values.issueDescription.trim()}`,
-    technician_notes: values.technicianNotes ? values.technicianNotes.trim() : null,
-    status: "bekliyor",
-    estimated_cost: Number(values.estimatedCost) || 0,
-    labor_cost: 0,
-    parts_total_cost: 0,
-    actual_cost: Number(values.estimatedCost) || 0,
-    parts_used: [],
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }
+  // ==============================================================================
+  // BUG-05 DÜZELTMESİ (DEMO MÜŞTERİ FOREIGN KEY VE NOT-NULL GÜVENLİĞİ):
+  // Supabase 'repair_tickets' tablosundaki 'customer_id' kolonu NOT NULL ve
+  // public.customers(id) tablosuna FOREIGN KEY ile bağlıdır.
+  // İstemcideki demo müşteriler ('cust-' ile başlayan ID'ler) doğrudan null yapılırsa
+  // NOT NULL hatası, string olarak verilirse geçersiz UUID format hatası oluşur.
+  // Bu sebeple:
+  // 1. customer.id geçerli bir UUID formatında ise doğrudan kullanılır.
+  // 2. Demo müşteri seçilmişse; veritabanındaki mevcut kayıtlı müşterilerden geçerli
+  //    bir UUID çekilir veya varsayılan Genel Müşteri UUID'si ('c1111111-1111-1111-1111-111111111111') atanır.
+  // 3. Veritabanında hiç müşteri yoksa, 'Genel Müşteri' kaydı eklenerek foreign key garantilenir.
+  // ==============================================================================
+  const isUuid = (val: string | null | undefined): boolean =>
+    Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val))
+
+  let targetCustomerId = isUuid(customer.id) ? customer.id : null
 
   try {
     const supabase = createClient()
     const db = supabase as unknown as ServiceDbClient
+
+    if (!targetCustomerId) {
+      // Veritabanındaki ilk kayıtlı müşteriyi bulmayı dene
+      const { data: dbCustomers } = await db
+        .from("customers")
+        .select("id")
+        .limit(1)
+
+      if (dbCustomers && dbCustomers.length > 0 && dbCustomers[0].id) {
+        targetCustomerId = String(dbCustomers[0].id)
+      } else {
+        // Tabloda müşteri bulunamadıysa seed müşterisi ('c1111111-1111-1111-1111-111111111111') veya Genel Müşteri oluştur
+        const fallbackId = "c1111111-1111-1111-1111-111111111111"
+        try {
+          await db.from("customers").upsert({
+            id: fallbackId,
+            full_name: customer.full_name || "Genel Müşteri",
+            phone: customer.phone || "05000000000",
+            email: "musteri@phonestore.local",
+            balance: 0,
+          })
+        } catch {
+          // Devam et
+        }
+        targetCustomerId = fallbackId
+      }
+    }
+
+    const payload = {
+      ticket_number: ticketNumber,
+      customer_id: targetCustomerId,
+      device_brand: values.deviceBrand.trim(),
+      device_model: values.deviceModel.trim(),
+      imei: formattedImei,
+      serial_number: values.serialNumber ? values.serialNumber.trim() : null,
+      device_password: passwordText,
+      pattern_code: patternNotes,
+      physical_condition: physicalConditionStr,
+      has_accessories: accessoriesStr,
+      issue_description: `[${values.issueCategory}] ${values.issueDescription.trim()}`,
+      technician_notes: values.technicianNotes ? values.technicianNotes.trim() : null,
+      status: "bekliyor",
+      estimated_cost: Number(values.estimatedCost) || 0,
+      labor_cost: 0,
+      parts_total_cost: 0,
+      actual_cost: Number(values.estimatedCost) || 0,
+      parts_used: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
 
     // Supabase repair_tickets tablosuna kayıt
     const { data, error } = await db.from("repair_tickets").insert([payload]).select()
@@ -183,7 +256,26 @@ export async function createServiceTicket(
     ticketNumber,
     message: "Servis kaydı yerel ve geçici belleğe başarıyla işlendi.",
     ticketData: {
-      ...payload,
+      ticket_number: ticketNumber,
+      customer_id: customer.id,
+      device_brand: values.deviceBrand.trim(),
+      device_model: values.deviceModel.trim(),
+      imei: formattedImei,
+      serial_number: values.serialNumber ? values.serialNumber.trim() : null,
+      device_password: passwordText,
+      pattern_code: patternNotes,
+      physical_condition: physicalConditionStr,
+      has_accessories: accessoriesStr,
+      issue_description: `[${values.issueCategory}] ${values.issueDescription.trim()}`,
+      technician_notes: values.technicianNotes ? values.technicianNotes.trim() : null,
+      status: "bekliyor",
+      estimated_cost: Number(values.estimatedCost) || 0,
+      labor_cost: 0,
+      parts_total_cost: 0,
+      actual_cost: Number(values.estimatedCost) || 0,
+      parts_used: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       id: localTicketId,
     },
   }
