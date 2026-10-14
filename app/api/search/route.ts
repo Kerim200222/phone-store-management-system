@@ -273,15 +273,34 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   const lowerQuery = query.toLowerCase()
 
-  // 1. Navigasyon Filtreleme
+  // 1. Navigasyon Filtreleme (Her zaman erişilebilir)
   const matchedNav = NAVIGATION_ITEMS.filter(
     (item) =>
       item.title.toLowerCase().includes(lowerQuery) ||
       item.subtitle.toLowerCase().includes(lowerQuery) ||
       item.badge?.toLowerCase().includes(lowerQuery)
   )
+
+  // Oturum açılmamışsa veri tabanı kayıtlarını arama, yalnızca navigasyon sonuçlarını dön (Zero-Trust)
+  if (!user) {
+    const safeResponse: GlobalSearchResponse = {
+      query,
+      totalCount: matchedNav.length,
+      results: {
+        tickets: [],
+        products: [],
+        customers: [],
+        navigation: matchedNav,
+      },
+    }
+    return NextResponse.json(safeResponse)
+  }
 
   let tickets: ServiceTicketSearchResult[] = []
   let products: ProductSearchResult[] = []
