@@ -308,13 +308,28 @@ export async function GET(request: NextRequest) {
 
   try {
     // 2. Supabase Paralel Çoklu Arama
+    // ==========================================================================
+    // BUG-01 DÜZELTMESİ:
+    // 1) Tablo adı 'service_tickets' yerine projenin şemasındaki 'repair_tickets' yapıldı.
+    // 2) customers tablosundaki 'name' kolonu yerine 'full_name' kullanıldı.
+    // 3) Bilet müşteri ilişkisi 'customers(full_name)' JOIN'i ile güvene alındı.
+    // ==========================================================================
     const [ticketsRes, productsRes, customersRes] = await Promise.allSettled([
-      // A) Biletler (Bilet No, Müşteri Adı, Cihaz Modeli, IMEI)
+      // A) Biletler (repair_tickets: Bilet No, Cihaz Modeli, Marka, IMEI, Müşteri)
       supabase
-        .from("service_tickets")
-        .select("id, ticket_number, customer_name, device_model, imei, status, fault_description")
+        .from("repair_tickets")
+        .select(`
+          id,
+          ticket_number,
+          device_brand,
+          device_model,
+          imei,
+          status,
+          issue_description,
+          customers ( full_name )
+        `)
         .or(
-          `ticket_number.ilike.%${query}%,customer_name.ilike.%${query}%,device_model.ilike.%${query}%,imei.ilike.%${query}%`
+          `ticket_number.ilike.%${query}%,device_model.ilike.%${query}%,device_brand.ilike.%${query}%,imei.ilike.%${query}%`
         )
         .limit(6),
 
@@ -327,64 +342,67 @@ export async function GET(request: NextRequest) {
         )
         .limit(6),
 
-      // C) Müşteriler (İsim, Telefon, E-posta)
+      // C) Müşteriler (full_name, Telefon, E-posta)
       supabase
         .from("customers")
-        .select("id, name, phone, email")
-        .or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
+        .select("id, full_name, phone, email")
+        .or(`full_name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
         .limit(6),
     ])
 
-interface DbTicketRow {
-  id: string
-  ticket_number?: string | null
-  customer_name?: string | null
-  device_model?: string | null
-  imei?: string | null
-  status?: string | null
-  fault_description?: string | null
-}
+    interface DbRepairTicketRow {
+      id: string
+      ticket_number?: string | null
+      device_brand?: string | null
+      device_model?: string | null
+      imei?: string | null
+      status?: string | null
+      issue_description?: string | null
+      customers?: { full_name?: string | null } | null
+    }
 
-interface DbProductRow {
-  id: string
-  name: string
-  barcode?: string | null
-  imei?: string | null
-  brand?: string | null
-  model?: string | null
-  stock_quantity?: number | null
-  sale_price?: number | null
-  category_id?: string | null
-  categories?: { name?: string | null } | null
-}
+    interface DbProductRow {
+      id: string
+      name: string
+      barcode?: string | null
+      imei?: string | null
+      brand?: string | null
+      model?: string | null
+      stock_quantity?: number | null
+      sale_price?: number | null
+      category_id?: string | null
+      categories?: { name?: string | null } | null
+    }
 
-interface DbCustomerRow {
-  id: string
-  name?: string | null
-  phone?: string | null
-  email?: string | null
-}
+    interface DbCustomerRow {
+      id: string
+      full_name?: string | null
+      phone?: string | null
+      email?: string | null
+    }
 
-    // Sonuçları Ayrıştırma - Biletler
+    // Sonuçları Ayrıştırma - Biletler (repair_tickets)
     if (ticketsRes.status === "fulfilled" && !ticketsRes.value.error && ticketsRes.value.data) {
-      const rows = ticketsRes.value.data as unknown as DbTicketRow[]
+      const rows = ticketsRes.value.data as unknown as DbRepairTicketRow[]
       tickets = rows.map((t) => {
-        const ticketNum = t.ticket_number || `Bilet #${t.id.slice(0, 8)}`
+        const ticketNum = t.ticket_number || `Bilet #${String(t.id).slice(0, 8)}`
+        const custName = t.customers?.full_name || "Müşteri"
+        const deviceName = `${t.device_brand ? t.device_brand + " " : ""}${t.device_model || "Cihaz"}`
         return {
           id: String(t.id),
           ticketNumber: ticketNum,
-          title: `${ticketNum} — ${t.device_model || "Cihaz"}`,
-          subtitle: `Müşteri: ${t.customer_name || "Bilinmiyor"}${t.imei ? ` • IMEI: ${t.imei}` : ""}`,
+          title: `${ticketNum} — ${deviceName}`,
+          subtitle: `Müşteri: ${custName}${t.imei ? ` • IMEI: ${t.imei}` : ""}`,
           type: "service_ticket" as const,
           url: t.imei
             ? `/dashboard/service/history?imei=${encodeURIComponent(t.imei)}`
             : `/dashboard/service`,
-          customerName: t.customer_name || "",
-          deviceModel: t.device_model || "",
+          customerName: custName,
+          deviceModel: deviceName,
           imei: t.imei || null,
-          status: t.status || "Beklemede",
+          status: t.status || "Bekliyor",
           badge: t.status || "Servis",
-          badgeVariant: t.status === "Tamamlandı" ? "default" : "secondary",
+          badgeVariant: t.status === "tamamlandi" ? "default" : "secondary",
         }
       })
     }
@@ -421,12 +439,12 @@ interface DbCustomerRow {
       })
     }
 
-    // Sonuçları Ayrıştırma - Müşteriler
+    // Sonuçları Ayrıştırma - Müşteriler (full_name)
     if (customersRes.status === "fulfilled" && !customersRes.value.error && customersRes.value.data) {
       const rows = customersRes.value.data as unknown as DbCustomerRow[]
       customers = rows.map((c) => ({
         id: String(c.id),
-        title: c.name || "İsimsiz Müşteri",
+        title: c.full_name || "İsimsiz Müşteri",
         subtitle: `Tel: ${c.phone || "—"}${c.email ? ` • ${c.email}` : ""}`,
         type: "customer" as const,
         url: "/dashboard/customers",
