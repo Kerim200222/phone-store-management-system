@@ -140,7 +140,7 @@ export default function NewServiceTicketPage() {
         const db = supabase as unknown as CustomerDbClient
         const { data, error } = await db
           .from("customers")
-          .select("*")
+          .select("id, full_name, phone, balance")
           .order("full_name", { ascending: true })
 
         if (data && Array.isArray(data) && data.length > 0 && !error) {

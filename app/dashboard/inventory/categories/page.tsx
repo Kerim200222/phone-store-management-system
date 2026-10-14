@@ -231,7 +231,7 @@ interface CategoryDbClient {
       try {
         const { data, error } = await db
           .from("categories")
-          .select("*")
+          .select("id, name, slug, description, is_active, created_at")
           .order("name", { ascending: true })
 
         if (data && Array.isArray(data) && data.length > 0 && !error) {

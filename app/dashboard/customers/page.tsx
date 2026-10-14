@@ -116,7 +116,7 @@ export default function CustomersDashboardPage() {
       const db = supabase as unknown as CustomerDbClient
       const { data, error } = await db
         .from("customers")
-        .select("*")
+        .select("id, full_name, phone, email, tc_identity, city, district, address, balance, notes, created_at, updated_at")
         .order("created_at", { ascending: false })
 
       if (error) {
