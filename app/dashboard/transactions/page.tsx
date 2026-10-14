@@ -9,7 +9,6 @@ import {
   ArrowDownLeft, 
   CreditCard, 
   Banknote, 
-  Download,
   Printer,
   RefreshCw,
   Plus
@@ -161,7 +160,7 @@ export default function TransactionsDashboardPage() {
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false)
 
   // SWR ile Canlı Veri Çekme ve Otomatik Yenileme
-  const { data: transactionsData, error, isLoading, isValidating, mutate } = useSWR<TransactionItemRow[]>(
+  const { data: transactionsData, isLoading, isValidating, mutate } = useSWR<TransactionItemRow[]>(
     "dashboard-transactions-list",
     fetchTransactionsFromDb,
     {
