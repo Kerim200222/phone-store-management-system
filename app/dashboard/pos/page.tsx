@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { POSProductCard } from "@/components/pos/pos-product-card"
+import { VirtualizedProductGrid } from "@/components/pos/virtualized-product-grid"
 import { POSCart } from "@/components/pos/pos-cart"
 import { POSReceiptModal } from "@/components/pos/pos-receipt-modal"
 import { 
@@ -848,16 +848,13 @@ export default function POSPage() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5">
-              {filteredProducts.map((product) => (
-                <POSProductCard
-                  key={product.id}
-                  product={product}
-                  inCartQuantity={inCartCounts[product.id] || 0}
-                  onAddToCart={handleAddToCart}
-                />
-              ))}
-            </div>
+            <VirtualizedProductGrid
+              products={filteredProducts}
+              inCartCounts={inCartCounts}
+              onAddToCart={handleAddToCart}
+              onClearFilters={handleClearFilters}
+              columnsCount={3}
+            />
           )}
         </div>
 

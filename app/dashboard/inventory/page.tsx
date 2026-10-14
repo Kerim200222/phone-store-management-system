@@ -23,7 +23,8 @@ import {
   Boxes,
   X,
   TrendingUp,
-  MapPin
+  MapPin,
+  Zap
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -40,6 +41,7 @@ import {
 import { createClient } from "@/utils/supabase/client"
 import { CustomImage } from "@/components/ui/custom-image"
 import { Skeleton } from "@/components/ui/skeleton"
+import { VirtualizedInventoryTable } from "@/components/inventory/virtualized-inventory-table"
 import { toast } from "sonner"
 
 interface InventoryDbClient {
@@ -332,6 +334,9 @@ export default function InventoryDashboardPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(5)
   const [isLoading, setIsLoading] = useState(true)
+
+  // Enterprise Virtualization: Büyük veri setlerinde DOM şişmesini önleyen sanallaştırma modu
+  const [viewMode, setViewMode] = useState<"virtualized" | "paginated">("virtualized")
 
   // Seçili Ürün Detay Modalı (Modal/Drawer state)
   const [selectedProductForDetail, setSelectedProductForDetail] = useState<InventoryItem | null>(null)
@@ -824,11 +829,58 @@ export default function InventoryDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* DATA TABLE ALANI (Shadcn Table) */}
-      <Card className="bg-slate-900/70 border-slate-800 shadow-md overflow-hidden">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
+      {/* GÖRÜNÜM MODU SEÇİCİ & VIRTUALIZATION KONTROLÜ */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 px-1">
+        <div className="flex items-center gap-1.5 p-1 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+          <button
+            type="button"
+            onClick={() => setViewMode("virtualized")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all ${
+              viewMode === "virtualized"
+                ? "bg-cyan-600 text-white shadow-sm"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-300" />
+            <span>Virtualization Modu (1000+ Ürün / 60 FPS)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode("paginated")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all ${
+              viewMode === "paginated"
+                ? "bg-slate-800 text-white shadow-sm"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <span>Sayfalı Tablo</span>
+          </button>
+        </div>
+
+        <div className="text-[11px] text-slate-500 font-mono">
+          {filteredProducts.length} ürün listeleniyor • DOM optimizasyonu aktif
+        </div>
+      </div>
+
+      {/* VIRTUALIZATION MODU AKTİFSE DOĞRUDAN SANAL LİSTE BİLEŞENİNİ GÖSTER */}
+      {viewMode === "virtualized" ? (
+        <VirtualizedInventoryTable
+          products={filteredProducts}
+          isLoading={isLoading}
+          sortField={sortField}
+          sortOrder={sortOrder}
+          onToggleSort={toggleSort}
+          onSelectProduct={setSelectedProductForDetail}
+          onCopyImei={(imei) => copyToClipboard(imei, imei)}
+          copiedImei={copiedId}
+        />
+      ) : (
+        /* KLASİK SAYFALI TABLO */
+        <Card className="bg-slate-900/70 border-slate-800 shadow-md overflow-hidden">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader className="bg-slate-950/80">
                 <TableRow className="border-slate-800 hover:bg-transparent">
                   <TableHead className="text-xs text-slate-300 font-semibold cursor-pointer" onClick={() => toggleSort("name")}>
@@ -1230,6 +1282,7 @@ export default function InventoryDashboardPage() {
 
         </CardContent>
       </Card>
+      )}
 
       {/* SEÇİLİ ÜRÜN DETAY MODAL DİYALOĞU (Quick View Modal) */}
       {selectedProductForDetail && (
