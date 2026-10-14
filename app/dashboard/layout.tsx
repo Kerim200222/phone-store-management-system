@@ -182,6 +182,7 @@ export default function DashboardLayout({
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={true}
                   className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group ${
                     isActive
                       ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/10 text-cyan-300 border border-cyan-500/30 shadow-sm shadow-cyan-500/10 font-semibold"
@@ -291,6 +292,7 @@ export default function DashboardLayout({
                     <Link
                       key={item.href}
                       href={item.href}
+                      prefetch={true}
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                         isActive
