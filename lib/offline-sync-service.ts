@@ -48,12 +48,18 @@ export async function syncOfflineTransactions(): Promise<SyncProcessResult> {
 
     for (const item of pendingTransactions) {
       try {
+        // ======================================================================
+        // BUG-03 DÜZELTMESİ (FİŞ NUMARASI MUTABAKATI):
+        // Çevrimdışı modda müşteriye verilen fişteki 'transactionNumber'
+        // sunucuya aktarılırken korunur; yeni rastgele numara üretilmez.
+        // ======================================================================
         const checkoutRes = await processPOSTransaction({
           items: item.items,
           summary: item.summary,
           customer: item.customer,
           paymentMethod: item.paymentMethod,
           notes: `${item.notes || ""} [Çevrimdışı Kesildi: ${new Date(item.createdAt).toLocaleString("tr-TR")}]`,
+          existingTransactionNumber: item.transactionNumber,
         })
 
         if (checkoutRes.success) {
