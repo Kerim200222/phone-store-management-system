@@ -1,0 +1,41 @@
+{
+  "name": "Telefon Mağazası Yönetim Sistemi",
+  "short_name": "TelefonMağazası",
+  "description": "Telefon Mağazası Stok Takip, POS Satış, İkinci El Cihaz ve Teknik Servis Yönetim Sistemi",
+  "start_url": "/dashboard/pos",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#06b6d4",
+  "orientation": "portrait-primary",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Hızlı POS Satış",
+      "short_name": "POS",
+      "description": "Kasa satış terminalini aç",
+      "url": "/dashboard/pos",
+      "icons": [{ "src": "/favicon.ico", "sizes": "64x64" }]
+    },
+    {
+      "name": "Teknik Servis Panosu",
+      "short_name": "Servis",
+      "description": "Kanban servis takip panosunu aç",
+      "url": "/dashboard/service",
+      "icons": [{ "src": "/favicon.ico", "sizes": "64x64" }]
+    },
+    {
+      "name": "Ürün Envanteri",
+      "short_name": "Stok",
+      "description": "Ürün ve IMEI stok listesini aç",
+      "url": "/dashboard/inventory",
+      "icons": [{ "src": "/favicon.ico", "sizes": "64x64" }]
+    }
+  ]
+}

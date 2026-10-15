@@ -11,10 +11,15 @@ import {
   ShoppingBag,
   Zap,
   Store,
-  X
+  X,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  CloudOff
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { POSProductCard } from "@/components/pos/pos-product-card"
 import { POSCart } from "@/components/pos/pos-cart"
 import { POSReceiptModal } from "@/components/pos/pos-receipt-modal"
@@ -30,9 +35,16 @@ import {
 } from "@/types/pos"
 import { INITIAL_CUSTOMERS } from "@/types/customer"
 import { createClient } from "@/utils/supabase/client"
-import { processPOSTransaction } from "@/lib/pos-checkout"
+import { processPOSTransaction, generateTransactionNumber } from "@/lib/pos-checkout"
 import { toast } from "sonner"
 import { parseAppError } from "@/lib/error-handler"
+import { useNetworkStatus } from "@/hooks/use-network-status"
+import {
+  saveOfflineTransaction,
+  getPendingOfflineCount,
+  clearSyncedTransactions,
+} from "@/lib/offline-storage"
+import { syncOfflineTransactions } from "@/lib/offline-sync-service"
 
 type CategoryFilter = "all" | "Telefon" | "Aksesuar" | "Yedek Parça"
 
@@ -71,6 +83,64 @@ export default function POSPage() {
   const [selectedBrand, setSelectedBrand] = useState<string>("all")
   const [onlyInStock, setOnlyInStock] = useState(false)
   const [scanNotification, setScanNotification] = useState<string | null>(null)
+
+  // Offline-First ve Ağ Durumu Yönetimi
+  const { isOnline } = useNetworkStatus()
+  const [pendingOfflineCount, setPendingOfflineCount] = useState(0)
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  // Bekleyen çevrimdışı satış sayısını güncelleme
+  const refreshPendingCount = useCallback(async () => {
+    try {
+      const count = await getPendingOfflineCount()
+      setPendingOfflineCount(count)
+    } catch (e) {
+      console.warn("Kuyruk sayısı okunamadı:", e)
+    }
+  }, [])
+
+  // Bekleyen çevrimdışı satışları senkronize etme fonksiyonu
+  const handleTriggerSync = useCallback(async () => {
+    if (isSyncing) return
+    setIsSyncing(true)
+    try {
+      const res = await syncOfflineTransactions()
+      if (res.syncedCount > 0) {
+        toast.success("Çevrimdışı Satışlar Senkronize Edildi", {
+          description: `${res.syncedCount} adet çevrimdışı işlem Supabase veritabanına başarıyla aktarıldı.`,
+        })
+        await clearSyncedTransactions()
+      }
+      if (res.failedCount > 0) {
+        toast.warning("Bazı İşlemler Senkronize Edilemedi", {
+          description: `${res.failedCount} işlem bekletiliyor, tekrar denenecek.`,
+        })
+      }
+    } catch (err) {
+      console.error("Senkronizasyon hatası:", err)
+      toast.error("Senkronizasyon Başarısız", {
+        description: "Sunucuya ulaşılamadı. Bağlantı kurulduğunda tekrar deneyin.",
+      })
+    } finally {
+      setIsSyncing(false)
+      refreshPendingCount()
+    }
+  }, [isSyncing, refreshPendingCount])
+
+  useEffect(() => {
+    refreshPendingCount()
+  }, [refreshPendingCount])
+
+  // İnternet geri geldiğinde arka planda otomatik senkronizasyon (Background Sync)
+  useEffect(() => {
+    if (isOnline) {
+      getPendingOfflineCount().then((count) => {
+        if (count > 0) {
+          handleTriggerSync()
+        }
+      })
+    }
+  }, [isOnline, handleTriggerSync])
 
   // Supabase Veritabanından Ürünleri ve Müşterileri Çekme
   useEffect(() => {
@@ -266,10 +336,90 @@ export default function POSPage() {
     setTimeout(() => setScanNotification(null), 3500)
   }
 
-  // Satışı Tamamlama ve Fiş Kesme (Supabase Transaction & Stok Düşümü)
+  // Çevrimdışı Satış Gerçekleştirme (IndexedDB Kuyruğuna Alma)
+  const processOfflineCheckout = useCallback(async () => {
+    const offlineTxNumber = generateTransactionNumber()
+    const offlineTxId = `offline-${Date.now()}`
+    const dateStr = new Date().toLocaleDateString("tr-TR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+
+    await saveOfflineTransaction({
+      id: offlineTxId,
+      transactionNumber: offlineTxNumber,
+      createdAt: new Date().toISOString(),
+      items: [...cart],
+      summary: { ...cartSummary },
+      customer: selectedCustomer,
+      paymentMethod,
+      notes: selectedCustomer
+        ? `Müşteri: ${selectedCustomer.full_name} (${selectedCustomer.phone}) [ÇEVRİMDIŞI KUYRUK]`
+        : "Hızlı POS Perakende Satışı [ÇEVRİMDIŞI KUYRUK]",
+    })
+
+    // 1. Yerel ürün stoklarını düşür
+    setProducts((prev) =>
+      prev.map((p) => {
+        const cartItem = cart.find((c) => c.product.id === p.id)
+        if (cartItem) {
+          return {
+            ...p,
+            stock_quantity: Math.max(0, p.stock_quantity - cartItem.quantity),
+          }
+        }
+        return p
+      })
+    )
+
+    // 2. Fiş Verisini Oluştur (Çevrimdışı Fiş)
+    const offlineReceipt: SaleReceipt = {
+      receipt_no: `${offlineTxNumber} (Çevrimdışı)`,
+      transaction_id: offlineTxId,
+      date: dateStr,
+      cashier_name: "Kasa Personeli (Offline Mod)",
+      customer: selectedCustomer,
+      items: [...cart],
+      summary: { ...cartSummary },
+      payment_method: paymentMethod,
+    }
+
+    setReceipt(offlineReceipt)
+    setIsReceiptOpen(true)
+    setCart([])
+    setDiscountAmount(0)
+    refreshPendingCount()
+
+    setScanNotification(
+      `🔌 Çevrimdışı Satış Fişi Kesildi: ${offlineTxNumber} IndexedDB kuyruğuna kaydedildi.`
+    )
+    toast.success("Çevrimdışı Satış Fişi Kesildi", {
+      description: `Fiş No: ${offlineTxNumber} • Satış yerel IndexedDB kuyruğuna alındı. İnternet bağlantısı sağlandığında otomatik senkronize edilecektir.`,
+    })
+  }, [cart, cartSummary, selectedCustomer, paymentMethod, refreshPendingCount])
+
+  // Satışı Tamamlama ve Fiş Kesme (Offline-First / Supabase Transaction & Stok Düşümü)
   const handleCheckout = useCallback(async () => {
     if (cart.length === 0) return
     setIsCheckingOut(true)
+
+    // 1. Durum Kontrolü: İnternet Yoksa Doğrudan Offline-First Kuyruğuna Al
+    if (!isOnline) {
+      try {
+        await processOfflineCheckout()
+      } catch (offErr) {
+        console.error("Çevrimdışı kayıt hatası:", offErr)
+        toast.error("Çevrimdışı Kayıt Hatası", {
+          description: "Satış yerel depolamaya yazılamadı.",
+        })
+      } finally {
+        setIsCheckingOut(false)
+      }
+      return
+    }
 
     try {
       // Supabase Transaction:
@@ -345,22 +495,28 @@ export default function POSPage() {
         })
       } else {
         const parsed = parseAppError(result.error, "Satış Tamamlanamadı")
-        setScanNotification(`❌ Satış işlemi başarısız: ${parsed.userMessage}`)
-        toast.error(parsed.title, { description: parsed.userMessage })
+        // Ağ hatası ise otomatik çevrimdışı kuyruğa yedekle
+        if (parsed.isNetwork) {
+          await processOfflineCheckout()
+        } else {
+          setScanNotification(`❌ Satış işlemi başarısız: ${parsed.userMessage}`)
+          toast.error(parsed.title, { description: parsed.userMessage })
+        }
       }
     } catch (err: unknown) {
       console.error("Satış işlemi sırasında beklenmeyen hata:", err)
       const parsed = parseAppError(err, "Satış Tamamlanamadı")
-      setScanNotification(`❌ ${parsed.userMessage}`)
-      toast.error(parsed.title, { 
-        description: parsed.isNetwork 
-          ? "İnternet bağlantısı koptu. Sepetiniz korunmaktadır, lütfen bağlantınızı kontrol edip tekrar deneyin."
-          : parsed.userMessage 
-      })
+      if (parsed.isNetwork) {
+        // Ağ kesintisiyse otomatik çevrimdışı fiş olarak kaydet
+        await processOfflineCheckout()
+      } else {
+        setScanNotification(`❌ ${parsed.userMessage}`)
+        toast.error(parsed.title, { description: parsed.userMessage })
+      }
     } finally {
       setIsCheckingOut(false)
     }
-  }, [cart, cartSummary, selectedCustomer, paymentMethod])
+  }, [cart, cartSummary, selectedCustomer, paymentMethod, isOnline, processOfflineCheckout])
 
   // Yeni Satış Başlatma (Sepeti Sıfırla)
   const handleNewSale = useCallback(() => {
@@ -462,19 +618,69 @@ export default function POSPage() {
           </div>
         </div>
 
-        {/* Hızlı İstatistik Rozetleri */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        {/* Hızlı İstatistik ve Ağ Durumu Rozetleri */}
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {/* Ağ Durumu Rozeti */}
+          {isOnline ? (
+            <Badge variant="outline" className="bg-emerald-950/60 border-emerald-800/80 text-emerald-300 text-xs gap-1.5 py-1.5 px-2.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Çevrimiçi</span>
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="bg-amber-950/90 border-amber-700 text-amber-300 text-xs gap-1.5 py-1.5 px-2.5 shadow-sm animate-pulse">
+              <WifiOff className="w-3.5 h-3.5 text-amber-400" />
+              <span>Çevrimdışı Kasa Modu</span>
+            </Badge>
+          )}
+
+          {/* Çevrimdışı Kuyruk ve Senkronizasyon Düğmesi */}
+          {pendingOfflineCount > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleTriggerSync}
+              disabled={isSyncing}
+              className="h-8 text-xs gap-1.5 bg-cyan-950/70 border-cyan-700 text-cyan-200 hover:bg-cyan-900 transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${isSyncing ? "animate-spin" : ""}`} />
+              <span>Kuyruk: <strong>{pendingOfflineCount}</strong> ({isSyncing ? "Eşitleniyor..." : "Eşitle"})</span>
+            </Button>
+          )}
+
           <div className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs flex items-center gap-2 text-slate-300">
             <Package className="w-4 h-4 text-cyan-400" />
-            <span>Katalog: <strong className="text-white">{products.length}</strong> Ürün</span>
+            <span>Katalog: <strong className="text-white">{products.length}</strong></span>
           </div>
 
           <div className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs flex items-center gap-2 text-slate-300">
             <ShoppingBag className="w-4 h-4 text-emerald-400" />
-            <span>Sepette: <strong className="text-emerald-400">{cartSummary.total_quantity}</strong> Adet</span>
+            <span>Sepette: <strong className="text-emerald-400">{cartSummary.total_quantity}</strong></span>
           </div>
         </div>
       </div>
+
+      {/* Çevrimdışı Kasa Uyarı Şeridi */}
+      {!isOnline && (
+        <div className="p-3.5 rounded-xl bg-amber-950/80 border border-amber-700/80 text-xs text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-lg animate-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-amber-900/60 border border-amber-700/50 text-amber-400">
+              <CloudOff className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-semibold text-amber-100">Offline-First Kasa Modu Devrede</p>
+              <p className="text-amber-300/80 text-[11px]">
+                İnternet bağlantısı kesildi. Yapılan satışlar yerel IndexedDB kuyruğuna kaydedilecek ve internet geri geldiğinde otomatik olarak Supabase ile senkronize edilecektir.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <span className="text-[11px] font-mono bg-amber-900/80 px-2 py-1 rounded border border-amber-600/60 text-amber-200">
+              Kuyruk: {pendingOfflineCount} bekleyen fiş
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Barkod Bildirim Şeridi */}
       {scanNotification && (
