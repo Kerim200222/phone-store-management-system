@@ -138,8 +138,8 @@ export const GlobalCommandPalette = React.memo(function GlobalCommandPalette({ t
         </kbd>
       </Button>
 
-      {/* Command Dialog (Shadcn Command Palette) */}
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      {/* Command Dialog (Shadcn Command Palette) - shouldFilter={false} ile sunucu sonuçlarının filtrelenmesi garanti altına alınır */}
+      <CommandDialog open={open} onOpenChange={setOpen} shouldFilter={false}>
         <div className="relative border-b border-slate-800/80">
           <CommandInput
             placeholder="İsim, IMEI, Bilet ID veya sayfa ara..."
@@ -203,6 +203,7 @@ export const GlobalCommandPalette = React.memo(function GlobalCommandPalette({ t
               {results.tickets.map((ticket) => (
                 <CommandItem
                   key={ticket.id}
+                  value={`${ticket.id} ${ticket.title} ${ticket.subtitle} ${ticket.ticketNumber} ${ticket.customerName || ""} ${ticket.imei || ""}`}
                   onSelect={() => handleSelect(ticket.url)}
                   className="flex items-center justify-between gap-3 group py-2"
                 >
@@ -248,6 +249,7 @@ export const GlobalCommandPalette = React.memo(function GlobalCommandPalette({ t
                 {results.products.map((product) => (
                   <CommandItem
                     key={product.id}
+                    value={`${product.id} ${product.title} ${product.subtitle} ${product.barcode || ""} ${product.imei || ""}`}
                     onSelect={() => handleSelect(product.url)}
                     className="flex items-center justify-between gap-3 group py-2"
                   >
@@ -296,6 +298,7 @@ export const GlobalCommandPalette = React.memo(function GlobalCommandPalette({ t
                 {results.customers.map((customer) => (
                   <CommandItem
                     key={customer.id}
+                    value={`${customer.id} ${customer.title} ${customer.subtitle} ${customer.phone || ""} ${customer.email || ""}`}
                     onSelect={() => handleSelect(customer.url)}
                     className="flex items-center justify-between gap-3 group py-2"
                   >
@@ -340,6 +343,7 @@ export const GlobalCommandPalette = React.memo(function GlobalCommandPalette({ t
                 {results.navigation.map((item) => (
                   <CommandItem
                     key={item.id}
+                    value={`${item.id} ${item.title} ${item.subtitle} ${item.badge || ""}`}
                     onSelect={() => handleSelect(item.url)}
                     className="flex items-center justify-between gap-3 group py-2"
                   >

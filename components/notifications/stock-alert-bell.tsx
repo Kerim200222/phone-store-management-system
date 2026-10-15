@@ -37,6 +37,7 @@ export const StockAlertBell = React.memo(function StockAlertBell({
   const [loading, setLoading] = useState(false)
   const [summary, setSummary] = useState<StockAlertSummary | null>(null)
   const [activeFilter, setActiveFilter] = useState<StockAlertFilter>("all")
+  const [isRead, setIsRead] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Veri yükleme
@@ -114,34 +115,43 @@ export const StockAlertBell = React.memo(function StockAlertBell({
     }).format(val)
   }
 
+  const hasUnread = totalCount > 0 && !isRead
+
+  const handleBellClick = () => {
+    setIsOpen((prev) => !prev)
+    setIsRead(true)
+  }
+
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
       {/* Bildirim Çanı Butonu */}
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={handleBellClick}
         aria-label="Düşük Stok Bildirimleri"
         aria-expanded={isOpen}
         className={`relative p-2 h-9 w-9 rounded-lg transition-all duration-200 ${
           isOpen
             ? "bg-slate-800 text-amber-400 ring-2 ring-amber-500/30"
             : "text-slate-300 hover:text-white hover:bg-slate-800/80"
-        } ${totalCount > 0 ? "text-amber-300" : ""}`}
+        } ${hasUnread ? "text-amber-300" : ""}`}
         title={
-          totalCount > 0
+          hasUnread
             ? `${totalCount} adet ürünün stoku kritik seviyede (< ${threshold})`
+            : totalCount > 0
+            ? `${totalCount} adet stok bildirimi (okundu)`
             : "Tüm stoklar güvenli seviyede"
         }
       >
         <Bell
           className={`w-5 h-5 transition-transform duration-200 ${
-            totalCount > 0 ? "animate-[bell-swing_2s_ease-in-out_infinite]" : ""
+            hasUnread ? "animate-[bell-swing_2s_ease-in-out_infinite]" : ""
           }`}
         />
 
-        {/* Rozet (Badge) */}
-        {totalCount > 0 && (
+        {/* Rozet (Badge) - Yalnızca okunmamış bildirim olduğunda gösterilir */}
+        {hasUnread && (
           <span className="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center">
             {outOfStockCount > 0 ? (
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
@@ -190,18 +200,25 @@ export const StockAlertBell = React.memo(function StockAlertBell({
               </div>
             </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={loadAlerts}
-              disabled={loading}
-              className="h-7 w-7 p-0 text-slate-400 hover:text-white hover:bg-slate-800"
-              title="Yenile"
-            >
-              <RefreshCw
-                className={`w-3.5 h-3.5 ${loading ? "animate-spin text-amber-400" : ""}`}
-              />
-            </Button>
+            <div className="flex items-center gap-2">
+              {isRead && totalCount > 0 && (
+                <span className="text-[10px] text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                  ✓ Okundu
+                </span>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={loadAlerts}
+                disabled={loading}
+                className="h-7 w-7 p-0 text-slate-400 hover:text-white hover:bg-slate-800"
+                title="Yenile"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${loading ? "animate-spin text-amber-400" : ""}`}
+                />
+              </Button>
+            </div>
           </div>
 
           {/* Filtre Butonları */}
