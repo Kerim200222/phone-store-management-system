@@ -1,6 +1,7 @@
 import { 
   ServiceTicketFormValues, 
   ServiceTicketDisplay, 
+  ServicePriority,
   KanbanColumnId,
   UpdateTicketCostPayload,
   ServiceDeliveryCheckoutPayload,
@@ -269,7 +270,7 @@ export async function createServiceTicket(
     issue_category: values.issueCategory,
     technician_notes: values.technicianNotes ? values.technicianNotes.trim() : null,
     status: "bekliyor",
-    priority: (values.priority as any) || "normal",
+    priority: (values.priority as ServicePriority) || "normal",
     estimated_cost: Number(values.estimatedCost) || 0,
     labor_cost: 0,
     parts_total_cost: 0,
