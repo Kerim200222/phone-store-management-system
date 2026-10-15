@@ -2,6 +2,8 @@ import { PurchaseFormValues } from "@/types/purchase"
 import { POSCustomerSelect, POSProduct } from "@/types/pos"
 import { createClient } from "@/utils/supabase/client"
 import { generateTransactionNumber } from "@/lib/pos-checkout"
+import { StoreEngine, emitGlobalSync, SYNC_EVENTS } from "@/lib/store-engine"
+import { TransactionItemRow } from "@/app/dashboard/transactions/page"
 
 export interface PurchaseResult {
   success: boolean
@@ -232,21 +234,80 @@ export async function processSecondhandDevicePurchase(
         .eq("id", customer.id)
     }
 
+    // 2.e. MERKEZİ MOTORU VE TÜM SAYFALARI GÜNCELLE
+    const savedProd = await StoreEngine.addProduct({
+      ...localProduct,
+      id: productId,
+    })
+
+    const trxItem: TransactionItemRow = {
+      id: transactionId,
+      trx_number: trxNumber,
+      customer: customer.full_name,
+      type: "purchase",
+      payment_method: values.paymentMethod,
+      total_amount: values.purchasePrice,
+      net_amount: values.purchasePrice,
+      notes: `İkinci El Alım: ${productName} (IMEI: ${values.imei})`,
+      date: new Date().toLocaleString("tr-TR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      raw_created_at: new Date().toISOString(),
+    }
+    await StoreEngine.recordTransaction(trxItem)
+
+    if (values.paymentMethod === "on_account") {
+      await StoreEngine.adjustCustomerBalance(customer.id, values.purchasePrice)
+    }
+
+    emitGlobalSync(SYNC_EVENTS.PURCHASE_DEVICE, { product: savedProd, transaction: trxItem })
+
     return {
       success: true,
       productId,
       transactionId,
       transactionNumber: trxNumber,
       productName,
-      newProduct: {
-        ...localProduct,
-        id: productId,
-      },
+      newProduct: savedProd,
       newCustomerBalance: newBalance,
       message: "İkinci el cihaz başarıyla sisteme kaydedildi ve kasadan para çıkışı yapıldı.",
     }
   } catch (err) {
-    console.warn("İkinci el alım işlemi fallback modunda çalıştırıldı:", err)
+    console.warn("İkinci el alım işlemi yerel kalıcı moda aktarılıyor:", err)
+
+    const savedProd = await StoreEngine.addProduct(localProduct)
+
+    const fallbackTrxItem: TransactionItemRow = {
+      id: fallbackTrxId,
+      trx_number: trxNumber,
+      customer: customer.full_name,
+      type: "purchase",
+      payment_method: values.paymentMethod,
+      total_amount: values.purchasePrice,
+      net_amount: values.purchasePrice,
+      notes: `İkinci El Alım: ${productName} (IMEI: ${values.imei}) [Kalıcı Çevrimdışı]`,
+      date: new Date().toLocaleString("tr-TR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      raw_created_at: new Date().toISOString(),
+    }
+    await StoreEngine.recordTransaction(fallbackTrxItem)
+
+    let offlineBal: number | undefined
+    if (values.paymentMethod === "on_account") {
+      offlineBal = customer.balance + values.purchasePrice
+      await StoreEngine.adjustCustomerBalance(customer.id, values.purchasePrice)
+    }
+
+    emitGlobalSync(SYNC_EVENTS.PURCHASE_DEVICE, { product: savedProd, transaction: fallbackTrxItem })
 
     return {
       success: true,
@@ -254,9 +315,9 @@ export async function processSecondhandDevicePurchase(
       transactionId: fallbackTrxId,
       transactionNumber: trxNumber,
       productName,
-      newProduct: localProduct,
-      newCustomerBalance: values.paymentMethod === "on_account" ? customer.balance + values.purchasePrice : undefined,
-      message: "İkinci el alım yerel modda simüle edildi, cihaz envantere eklendi ve kasa düşüldü.",
+      newProduct: savedProd,
+      newCustomerBalance: offlineBal,
+      message: "İkinci el alım yerel veritabanına kalıcı olarak eklendi, stok açıldı ve kasadan düşüldü.",
     }
   }
 }

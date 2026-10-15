@@ -40,7 +40,6 @@ import {
   calculateCartSummary 
 } from "@/types/pos"
 import { INITIAL_CUSTOMERS } from "@/types/customer"
-import { createClient } from "@/utils/supabase/client"
 import { processPOSTransaction, generateTransactionNumber } from "@/lib/pos-checkout"
 import { toast } from "sonner"
 import { parseAppError } from "@/lib/error-handler"
@@ -51,19 +50,9 @@ import {
   clearSyncedTransactions,
 } from "@/lib/offline-storage"
 import { syncOfflineTransactions } from "@/lib/offline-sync-service"
+import { useSyncedProducts, useSyncedCustomers } from "@/hooks/use-store-data"
 
 type CategoryFilter = "all" | "Telefon" | "Aksesuar" | "Yedek Parça"
-
-interface PosDbClient {
-  from(table: string): {
-    select(query?: string): {
-      order(column: string, options?: { ascending?: boolean }): Promise<{
-        data: Record<string, unknown>[] | null
-        error: { message: string } | null
-      }>
-    }
-  }
-}
 
 export default function POSPage() {
   // Veri Durumları
@@ -148,70 +137,53 @@ export default function POSPage() {
     }
   }, [isOnline, handleTriggerSync])
 
-  // Supabase Veritabanından Ürünleri ve Müşterileri Çekme
+  // Global Senkronize StoreEngine Verileri
+  const { products: syncedProducts, isLoading: isProductsLoading } = useSyncedProducts()
+  const { customers: syncedCustomers, isLoading: isCustomersLoading } = useSyncedCustomers()
+
   useEffect(() => {
-    async function loadData() {
-      setIsLoading(true)
-      try {
-        const supabase = createClient()
-        const db = supabase as unknown as PosDbClient
+    setIsLoading(isProductsLoading || isCustomersLoading)
+  }, [isProductsLoading, isCustomersLoading])
 
-        // 1. Ürünleri Çek (Yalnızca POS arayüzünde kullanılan alanlar)
-        const { data: prodData, error: prodErr } = await db
-          .from("products")
-          .select("id, name, brand, model, category, barcode, imei, condition, sale_price, purchase_price, stock_quantity, min_stock_level, shelf_location, description, image_url, battery_health, storage, color, is_active")
-          .order("name", { ascending: true })
-
-        if (prodData && Array.isArray(prodData) && prodData.length > 0 && !prodErr) {
-          const mapped: POSProduct[] = prodData.map((p) => ({
-            id: String(p.id || ""),
-            name: String(p.name || ""),
-            brand: String(p.brand || ""),
-            model: p.model ? String(p.model) : null,
-            category: String(p.category || "Aksesuar"),
-            barcode: p.barcode ? String(p.barcode) : null,
-            imei: p.imei ? String(p.imei) : null,
-            condition: (p.condition as "sıfır" | "ikinci el") || "sıfır",
-            sale_price: Number(p.sale_price) || 0,
-            purchase_price: Number(p.purchase_price) || 0,
-            stock_quantity: Number(p.stock_quantity) || 0,
-            min_stock_level: Number(p.min_stock_level) || 0,
-            shelf_location: p.shelf_location ? String(p.shelf_location) : null,
-            description: p.description ? String(p.description) : null,
-            image_url: p.image_url ? String(p.image_url) : null,
-            battery_health: p.battery_health ? Number(p.battery_health) : null,
-            storage: p.storage ? String(p.storage) : null,
-            color: p.color ? String(p.color) : null,
-            is_active: p.is_active !== false,
-          }))
-          setProducts(mapped)
-        }
-
-        // 2. Müşterileri Çek (Yalnızca POS müşteri seçimi alanları)
-        const { data: custData, error: custErr } = await db
-          .from("customers")
-          .select("id, full_name, phone, balance")
-          .order("full_name", { ascending: true })
-
-        if (custData && Array.isArray(custData) && custData.length > 0 && !custErr) {
-          const mappedCust: POSCustomerSelect[] = custData.map((c) => ({
-            id: String(c.id || ""),
-            full_name: String(c.full_name || ""),
-            phone: String(c.phone || ""),
-            balance: Number(c.balance) || 0,
-            customer_type: (c.full_name as string)?.includes("Ltd") ? "kurumsal" : "bireysel",
-          }))
-          setCustomers(mappedCust)
-        }
-      } catch (err) {
-        console.warn("POS veri yükleme hatası (Yerel veriler aktif):", err)
-      } finally {
-        setIsLoading(false)
-      }
+  useEffect(() => {
+    if (syncedProducts && syncedProducts.length > 0) {
+      const mapped: POSProduct[] = syncedProducts.map((p) => ({
+        id: String(p.id || ""),
+        name: String(p.name || ""),
+        brand: String(p.brand || ""),
+        model: p.model ? String(p.model) : null,
+        category: String(p.category || "Aksesuar"),
+        barcode: p.barcode ? String(p.barcode) : null,
+        imei: p.imei ? String(p.imei) : null,
+        condition: (p.condition as "sıfır" | "ikinci el") || "sıfır",
+        sale_price: Number(p.sale_price) || 0,
+        purchase_price: Number(p.purchase_price) || 0,
+        stock_quantity: Number(p.stock_quantity) || 0,
+        min_stock_level: Number(p.min_stock_level) || 0,
+        shelf_location: p.shelf_location ? String(p.shelf_location) : null,
+        description: p.description ? String(p.description) : null,
+        image_url: p.image_url ? String(p.image_url) : null,
+        battery_health: p.battery_health ? Number(p.battery_health) : null,
+        storage: p.storage ? String(p.storage) : null,
+        color: p.color ? String(p.color) : null,
+        is_active: p.is_active !== false,
+      }))
+      setProducts(mapped)
     }
+  }, [syncedProducts])
 
-    loadData()
-  }, [])
+  useEffect(() => {
+    if (syncedCustomers && syncedCustomers.length > 0) {
+      const mappedCust: POSCustomerSelect[] = syncedCustomers.map((c) => ({
+        id: String(c.id || ""),
+        full_name: String(c.full_name || ""),
+        phone: String(c.phone || ""),
+        balance: Number(c.balance) || 0,
+        customer_type: String(c.full_name || "").includes("Ltd") ? "kurumsal" : "bireysel",
+      }))
+      setCustomers(mappedCust)
+    }
+  }, [syncedCustomers])
 
   // Sepet Finansal Özeti (Dinamik Hesaplama)
   const cartSummary: CartSummary = useMemo(() => {

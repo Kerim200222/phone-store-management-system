@@ -38,42 +38,11 @@ import {
   SortOrder, 
   calculateStockStatus 
 } from "@/types/inventory"
-import { createClient } from "@/utils/supabase/client"
 import { CustomImage } from "@/components/ui/custom-image"
 import { Skeleton } from "@/components/ui/skeleton"
 import { VirtualizedInventoryTable } from "@/components/inventory/virtualized-inventory-table"
 import { toast } from "sonner"
-
-interface InventoryDbClient {
-  from(table: string): {
-    select(query?: string): {
-      order(column: string, options?: { ascending: boolean }): Promise<{
-        data: Array<{
-          id: string
-          name: string
-          brand: string
-          model: string | null
-          category_id: string
-          barcode: string | null
-          imei: string | null
-          condition: "sıfır" | "ikinci el"
-          battery_health?: number | null
-          cosmetic_condition?: string | null
-          storage?: string | null
-          color?: string | null
-          purchase_price: number
-          sale_price: number
-          stock_quantity: number
-          min_stock_level: number
-          description: string | null
-          image_url?: string | null
-          created_at: string
-        }> | null
-        error: unknown
-      }>
-    }
-  }
-}
+import { useSyncedProducts } from "@/hooks/use-store-data"
 
 // Zengin Örnek Envanter Veri Kümesi (Telefonlar, Aksesuarlar ve Yedek Parçalar)
 const initialInventoryProducts: InventoryItem[] = [
@@ -342,68 +311,17 @@ export default function InventoryDashboardPage() {
   const [selectedProductForDetail, setSelectedProductForDetail] = useState<InventoryItem | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  // Supabase'den canlı ürünleri çekip mock veriyle harmanla
+  // Enterprise Global StoreEngine Senkronizasyonu
+  const { products: syncedProducts, isLoading: isStoreLoading } = useSyncedProducts()
+
   useEffect(() => {
-    async function loadProductsFromSupabase() {
-      try {
-        const supabase = createClient()
-        const db = supabase as unknown as InventoryDbClient
-        const { data, error } = await db
-          .from("products")
-          .select("id, name, brand, model, category_id, barcode, imei, condition, battery_health, cosmetic_condition, storage, color, purchase_price, sale_price, stock_quantity, min_stock_level, description, image_url, is_active, created_at")
-          .order("created_at", { ascending: false })
-
-        if (data && Array.isArray(data) && data.length > 0 && !error) {
-          const mapped: InventoryItem[] = data.map((p) => {
-            const isPhone = p.imei !== null && p.imei.length === 15
-            const catName = isPhone 
-              ? "Telefon" 
-              : p.description?.includes("Parça") 
-                ? "Yedek Parça" 
-                : "Aksesuar"
-
-            return {
-              id: p.id,
-              name: p.name,
-              brand: p.brand,
-              model: p.model,
-              category: catName,
-              category_id: p.category_id,
-              barcode: p.barcode,
-              imei: p.imei,
-              condition: p.condition || "sıfır",
-              battery_health: p.battery_health,
-              cosmetic_condition: p.cosmetic_condition,
-              storage: p.storage,
-              color: p.color,
-              purchase_price: p.purchase_price,
-              sale_price: p.sale_price,
-              stock_quantity: p.stock_quantity,
-              min_stock_level: p.min_stock_level,
-              shelf_location: null,
-              description: p.description,
-              image_url: p.image_url || null,
-              is_active: true,
-              created_at: p.created_at
-            }
-          })
-
-          // Var olan ilk mock listesi ile Supabase'den gelenleri birleştir (id çakışmasını engelle)
-          setProducts((prev) => {
-            const existingIds = new Set(mapped.map(m => m.id))
-            const rest = prev.filter(p => !existingIds.has(p.id))
-            return [...mapped, ...rest]
-          })
-        }
-      } catch {
-        // Fallback initial list
-      } finally {
-        setIsLoading(false)
-      }
+    if (syncedProducts && syncedProducts.length > 0) {
+      setProducts(syncedProducts)
+      setIsLoading(false)
+    } else if (!isStoreLoading) {
+      setIsLoading(false)
     }
-
-    loadProductsFromSupabase()
-  }, [])
+  }, [syncedProducts, isStoreLoading])
 
   // Arama veya Filtreler Değiştiğinde Sayfayı 1'e Sıfırla
   const handleSearchChange = useCallback((val: string) => {
