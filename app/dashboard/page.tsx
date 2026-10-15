@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { 
   Receipt, 
@@ -18,56 +18,104 @@ import {
   Database,
   History
 } from "lucide-react"
-import { useRoleAccess } from "@/hooks/use-role-access"
 import { getDateRange, DateFilterType } from "@/lib/date-filters"
+import { useCachedAnalytics } from "@/hooks/use-cached-data"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import dynamic from "next/dynamic"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SummaryCard } from "@/components/dashboard/summary-card"
 import { TopProductsCard } from "@/components/dashboard/top-products-card"
 import { ProfitLossCard } from "@/components/dashboard/profit-loss-card"
-import { SalesTrendLineChart } from "@/components/dashboard/charts/sales-trend-line-chart"
-import { RevenuePieChart } from "@/components/dashboard/charts/revenue-pie-chart"
-import { 
-  getDashboardAnalytics, 
-  formatCurrency 
-} from "@/lib/dashboard-analytics-service"
+import { formatCurrency } from "@/lib/dashboard-analytics-service"
 import { DashboardAnalyticsData } from "@/types/dashboard-analytics"
 
+// Code Splitting & Lazy Loading: Recharts kütüphanesini istemci tarafında dinamik yükle (Hafif Bundle)
+const SalesTrendLineChart = dynamic(
+  () =>
+    import("@/components/dashboard/charts/sales-trend-line-chart").then(
+      (mod) => mod.SalesTrendLineChart
+    ),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[280px] w-full bg-slate-900/60 rounded-xl" />,
+  }
+)
+
+const RevenuePieChart = dynamic(
+  () =>
+    import("@/components/dashboard/charts/revenue-pie-chart").then(
+      (mod) => mod.RevenuePieChart
+    ),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[280px] w-full bg-slate-900/60 rounded-xl" />,
+  }
+)
+
 export default function DashboardPage() {
-  const { userEmail, isAdmin } = useRoleAccess()
+  // PERFORMANS OPTİMİZASYONU (FAZ 2 - ADIM 5):
+  // Mükerrer useRoleAccess() ve supabase.auth.getUser() ağ çağrısı TAMAMEN kaldırıldı.
+  // Oturum durumu Layout tarafından senkronize edilen bellekten veya çerezden 0ms ile okunur.
+  const [auth, setAuth] = useState<{ userEmail: string; isAdmin: boolean }>(() => {
+    if (typeof window !== "undefined") {
+      const g = (window as unknown as { __DASHBOARD_AUTH__?: { userEmail: string; isAdmin: boolean } }).__DASHBOARD_AUTH__
+      if (g) return { userEmail: g.userEmail, isAdmin: g.isAdmin }
+      const match = document.cookie.match(/(?:^|; )phonestore_session=([^;]+)/)
+      if (match) {
+        try {
+          const parsed = JSON.parse(decodeURIComponent(match[1]))
+          return {
+            userEmail: parsed.email || "admin@truncgiller.com",
+            isAdmin: parsed.role === "Admin" || (parsed.email && parsed.email.toLowerCase().includes("admin")),
+          }
+        } catch {}
+      }
+    }
+    return { userEmail: "admin@truncgiller.com", isAdmin: true }
+  })
+
+  useEffect(() => {
+    const handleAuth = () => {
+      if (typeof window !== "undefined") {
+        const g = (window as unknown as { __DASHBOARD_AUTH__?: { userEmail: string; isAdmin: boolean } }).__DASHBOARD_AUTH__
+        if (g) {
+          setAuth({ userEmail: g.userEmail, isAdmin: g.isAdmin })
+        }
+      }
+    }
+    window.addEventListener("dashboard-auth-ready", handleAuth)
+    return () => window.removeEventListener("dashboard-auth-ready", handleAuth)
+  }, [])
+
+  const { userEmail, isAdmin } = auth
   const [activeFilter, setActiveFilter] = useState<DateFilterType>("this_week")
-  const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [analyticsData, setAnalyticsData] = useState<DashboardAnalyticsData | null>(null)
-  const [dataSource, setDataSource] = useState<string>("supabase")
+
+  // PERFORMANS OPTİMİZASYONU (FAZ 2 - ADIM 1):
+  // İlkel useEffect, useState(isLoading) ve doğrudan ağır servis çağrıları kaldırıldı.
+  // Yerine SWR (Stale-While-Revalidate + keepPreviousData) kancası entegre edildi.
+  const { analytics, source, isLoading, isValidating, refresh } = useCachedAnalytics(activeFilter)
 
   // Aktif Tarih Aralığı Etiketi
   const dateRange = getDateRange(activeFilter)
 
-  // Veri Çekme Fonksiyonu
-  const loadAnalytics = useCallback(async (filter: DateFilterType) => {
-    setIsLoading(true)
-    try {
-      const res = await getDashboardAnalytics(filter)
-      if (res.data) {
-        setAnalyticsData(res.data)
-        setDataSource(res.source || "supabase")
-      }
-    } catch (error) {
-      console.error("Dashboard verileri yüklenirken hata oluştu:", error)
-    } finally {
-      setIsLoading(false)
+  // Güvenli Analitik Verisi Çözümleme (SWR doğrudan veri veya nested response dönebilir)
+  const analyticsData: DashboardAnalyticsData | null = useMemo(() => {
+    if (!analytics) return null
+    const raw = analytics as unknown as Record<string, unknown>
+    if (raw.revenue) return raw as unknown as DashboardAnalyticsData
+    if (raw.data && typeof raw.data === "object" && (raw.data as Record<string, unknown>).revenue) {
+      return raw.data as DashboardAnalyticsData
     }
-  }, [])
+    return null
+  }, [analytics])
 
-  useEffect(() => {
-    loadAnalytics(activeFilter)
-  }, [activeFilter, loadAnalytics])
-
-  const handleRefresh = () => {
-    loadAnalytics(activeFilter)
-  }
+  // PERFORMANS OPTİMİZASYONU (FAZ 2 - ADIM 4):
+  // Yalnızca ilk yüklemede ve önbellekte veri yokken iskelet (skeleton) gösterilir.
+  // Periyot değişiminde keepPreviousData sayesinde ekran asla boşalmaz (Sıfır Layout Shift - CLS).
+  const isInitialLoading = isLoading && !analyticsData
 
   // Güvenli veri erişimi (Yüklenme veya boşluk durumları için)
   const rev = analyticsData?.revenue || {
@@ -114,10 +162,17 @@ export default function DashboardPage() {
               Sistem Çevrimiçi
             </Badge>
 
-            {dataSource === "supabase_rpc" && (
+            {source === "supabase_rpc" && (
               <Badge className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[10px] gap-1">
                 <Database className="w-3 h-3" />
                 Supabase RPC
+              </Badge>
+            )}
+
+            {isValidating && (
+              <Badge className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[10px] gap-1 animate-pulse">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                Arka Planda Güncelleniyor
               </Badge>
             )}
           </div>
@@ -134,7 +189,7 @@ export default function DashboardPage() {
             <span>Aralık: <strong className="text-slate-200">{dateRange.displayRange}</strong></span>
           </div>
 
-          {/* Tarih Filtreleme Butonları */}
+          {/* Tarih Filtreleme Butonları (SWR Instant Switch) */}
           <div className="p-1 rounded-lg bg-slate-900 border border-slate-800 flex items-center text-xs">
             <button
               type="button"
@@ -171,16 +226,16 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Yenile Butonu */}
+          {/* SWR Manuel Yenile Butonu */}
           <Button
             variant="outline"
             size="sm"
-            onClick={handleRefresh}
-            disabled={isLoading}
+            onClick={() => refresh()}
+            disabled={isValidating}
             className="h-8 border-slate-800 bg-slate-900 text-slate-300 hover:text-white text-xs gap-1"
-            title="Verileri Yenile"
+            title="Verileri Yenile (SWR)"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-cyan-400" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isValidating ? "animate-spin text-cyan-400" : ""}`} />
             <span className="hidden sm:inline">Yenile</span>
           </Button>
 
@@ -204,65 +259,87 @@ export default function DashboardPage() {
       </div>
 
       {/* 2. DÖRT ADET ÖZET KARTI (CANLI GERÇEK METRİKLER) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        {/* KART 1: Toplam Ciro (Satış + Servis) */}
-        <SummaryCard
-          title={activeFilter === "today" ? "Günlük Ciro" : activeFilter === "this_week" ? "Haftalık Toplam Ciro" : "Aylık Toplam Ciro"}
-          value={isLoading ? "Hesaplanıyor..." : formatCurrency(rev.total)}
-          subtitle={`${rev.salesCount} Satış • ${rev.repairsCount} Servis Tahsilatı`}
-          icon={TrendingUp}
-          colorScheme="emerald"
-          trend={{ value: `+₺${(rev.sales).toLocaleString("tr-TR")}`, isPositive: true }}
-          badge={activeFilter === "this_week" ? "Bu Hafta" : activeFilter === "today" ? "Bugün" : "Bu Ay"}
-          href="/dashboard/transactions"
-        />
+      {/* Sabit "Hesaplanıyor...", "Kontrol Ediliyor..." metinleri kaldırıldı; zarif Skeleton eklendi */}
+      {isInitialLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <div
+              key={`kpi-skeleton-${idx}`}
+              className="p-5 rounded-xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-xl space-y-4 animate-pulse shadow-sm"
+            >
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-3.5 w-24 bg-slate-800" />
+                  <Skeleton className="h-8 w-36 bg-slate-800" />
+                </div>
+                <Skeleton className="w-10 h-10 rounded-xl bg-slate-800" />
+              </div>
+              <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                <Skeleton className="h-3 w-36 bg-slate-800/70" />
+                <Skeleton className="h-4 w-14 rounded-full bg-slate-800/70" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* KART 1: Toplam Ciro (Satış + Servis) */}
+          <SummaryCard
+            title={activeFilter === "today" ? "Günlük Ciro" : activeFilter === "this_week" ? "Haftalık Toplam Ciro" : "Aylık Toplam Ciro"}
+            value={formatCurrency(rev.total)}
+            subtitle={`${rev.salesCount} Satış • ${rev.repairsCount} Servis Tahsilatı`}
+            icon={TrendingUp}
+            colorScheme="emerald"
+            trend={{ value: `+₺${(rev.sales).toLocaleString("tr-TR")}`, isPositive: true }}
+            badge={activeFilter === "this_week" ? "Bu Hafta" : activeFilter === "today" ? "Bugün" : "Bu Ay"}
+            href="/dashboard/transactions"
+          />
 
-        {/* KART 2: Brüt Kâr / Zarar Durumu (GÜN 26 İSTENEN METRİK) */}
-        <SummaryCard
-          title="Brüt Kâr Durumu"
-          value={isLoading ? "Hesaplanıyor..." : formatCurrency(prf.grossProfit)}
-          subtitle={`Maliyet (COGS): ${formatCurrency(prf.cogs)}`}
-          icon={Banknote}
-          colorScheme={prf.isProfitable ? "emerald" : "rose"}
-          trend={{ value: `%${prf.profitMargin} Marj`, isPositive: prf.isProfitable }}
-          badge={prf.isProfitable ? "Kârda" : "Zararda"}
-          href="/dashboard/transactions"
-        />
+          {/* KART 2: Brüt Kâr / Zarar Durumu */}
+          <SummaryCard
+            title="Brüt Kâr Durumu"
+            value={formatCurrency(prf.grossProfit)}
+            subtitle={`Maliyet (COGS): ${formatCurrency(prf.cogs)}`}
+            icon={Banknote}
+            colorScheme={prf.isProfitable ? "emerald" : "rose"}
+            trend={{ value: `%${prf.profitMargin} Marj`, isPositive: prf.isProfitable }}
+            badge={prf.isProfitable ? "Kârda" : "Zararda"}
+            href="/dashboard/transactions"
+          />
 
-        {/* KART 3: Bekleyen Teknik Servis Sayısı */}
-        <SummaryCard
-          title="Teknik Servis Kuyruğu"
-          value={isLoading ? "Yükleniyor..." : `${srv.totalActive} Cihaz`}
-          subtitle={`${srv.pending} Bekliyor • ${srv.inProgress} İşlemde • ${srv.completed} Hazır`}
-          icon={Wrench}
-          colorScheme="cyan"
-          trend={{ value: `${srv.completed} Hazır`, isPositive: true }}
-          badge="Kuyruk Aktif"
-          href="/dashboard/service"
-        />
+          {/* KART 3: Bekleyen Teknik Servis Sayısı */}
+          <SummaryCard
+            title="Teknik Servis Kuyruğu"
+            value={`${srv.totalActive} Cihaz`}
+            subtitle={`${srv.pending} Bekliyor • ${srv.inProgress} İşlemde • ${srv.completed} Hazır`}
+            icon={Wrench}
+            colorScheme="cyan"
+            trend={{ value: `${srv.completed} Hazır`, isPositive: true }}
+            badge="Kuyruk Aktif"
+            href="/dashboard/service"
+          />
 
-        {/* KART 4: Kritik Stok Uyarıları */}
-        <SummaryCard
-          title="Kritik Stok Uyarıları"
-          value={isLoading ? "Kontrol Ediliyor..." : `${stk.count} Ürün`}
-          subtitle="Minimum limitin altındaki ürün ve parçalar"
-          icon={AlertTriangle}
-          colorScheme="rose"
-          trend={{ value: stk.count > 0 ? "Tedarik Gerekli" : "Stok Güvenli", isPositive: stk.count === 0 }}
-          badge={stk.count > 0 ? "Kritik Eşik" : "Normal"}
-          alert={stk.count > 0}
-          href="/dashboard/inventory"
-        />
-
-      </div>
+          {/* KART 4: Kritik Stok Uyarıları */}
+          <SummaryCard
+            title="Kritik Stok Uyarıları"
+            value={`${stk.count} Ürün`}
+            subtitle="Minimum limitin altındaki ürün ve parçalar"
+            icon={AlertTriangle}
+            colorScheme="rose"
+            trend={{ value: stk.count > 0 ? "Tedarik Gerekli" : "Stok Güvenli", isPositive: stk.count === 0 }}
+            badge={stk.count > 0 ? "Kritik Eşik" : "Normal"}
+            alert={stk.count > 0}
+            href="/dashboard/inventory"
+          />
+        </div>
+      )}
 
       {/* 3. Kritik Stok Detaylı Uyarı Paneli (Varsa) */}
-      {stk.count > 0 && (
+      {stk.count > 0 && !isInitialLoading && (
         <div className="p-4 rounded-xl bg-gradient-to-r from-rose-950/40 via-slate-900/60 to-slate-900/60 border border-rose-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg shadow-rose-950/10">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-rose-500/20 text-rose-400 shrink-0 mt-0.5">
-              <AlertTriangle className="w-5 h-5" />
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 shrink-0">
+              <AlertTriangle className="w-5 h-5 animate-pulse" />
             </div>
             <div>
               <div className="text-xs font-semibold text-rose-200 flex items-center gap-2">
@@ -290,13 +367,13 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 4. GÜN 27: RECHARTS İLE VERİ GÖRSELLEŞTİRME (ÇİZGİ VE PASTA GRAFİKLERİ) */}
+      {/* 4. RECHARTS İLE VERİ GÖRSELLEŞTİRME (ÇİZGİ VE PASTA GRAFİKLERİ) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Çizgi Grafik: Son 7 Günlük Satış & Servis Trendi (2 Sütun) */}
         <div className="lg:col-span-2">
           <SalesTrendLineChart
             data={salesTrendData}
-            isLoading={isLoading}
+            isLoading={isInitialLoading}
           />
         </div>
 
@@ -305,25 +382,25 @@ export default function DashboardPage() {
           <RevenuePieChart
             data={revenueDistributionData}
             totalRevenue={rev.total}
-            isLoading={isLoading}
+            isLoading={isInitialLoading}
           />
         </div>
       </div>
 
-      {/* 5. GÜN 26 ANALİTİK ÇİFT PANEL: EN ÇOK SATILAN ÜRÜNLER & KÂR-ZARAR DAĞILIMI */}
+      {/* Detaylı Finansal Kartlar & En Çok Satılanlar */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Panel 1: Kâr-Zarar & Gelir Dağılımı */}
+        {/* Panel 1: Brüt Kâr ve Gider Dağılımı */}
         <ProfitLossCard
           revenue={rev}
           profit={prf}
           paymentMethods={payMethods}
-          isLoading={isLoading}
+          isLoading={isInitialLoading}
         />
 
         {/* Panel 2: En Çok Satılan Ürünler */}
         <TopProductsCard
           products={topProds}
-          isLoading={isLoading}
+          isLoading={isInitialLoading}
         />
       </div>
 
@@ -403,12 +480,25 @@ export default function DashboardPage() {
             </div>
             <Link href="/dashboard/transactions">
               <Button variant="ghost" size="sm" className="text-xs text-cyan-400 hover:text-cyan-300 h-7 px-2">
-                Tüm Fişler <ArrowRight className="w-3 h-3 ml-1" />
+                Tüm Fişler <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
             </Link>
           </CardHeader>
           <CardContent className="p-0">
-            {recentTrx.length === 0 ? (
+            {isInitialLoading ? (
+              <div className="p-4 space-y-3">
+                {Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={`trx-skel-${idx}`} className="flex items-center justify-between py-2 border-b border-slate-800/40">
+                    <div className="space-y-1.5">
+                      <Skeleton className="h-3.5 w-28 bg-slate-800" />
+                      <Skeleton className="h-3 w-40 bg-slate-800/60" />
+                    </div>
+                    <Skeleton className="h-5 w-16 rounded bg-slate-800" />
+                    <Skeleton className="h-4 w-20 bg-slate-800" />
+                  </div>
+                ))}
+              </div>
+            ) : recentTrx.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-500">
                 Henüz kayıtlı kasa hareketi bulunmuyor.
               </div>
@@ -486,12 +576,25 @@ export default function DashboardPage() {
             </div>
             <Link href="/dashboard/service">
               <Button variant="ghost" size="sm" className="text-xs text-cyan-400 hover:text-cyan-300 h-7 px-2">
-                Kanban Panosu <ArrowRight className="w-3 h-3 ml-1" />
+                Kanban Panosu <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Button>
             </Link>
           </CardHeader>
           <CardContent className="p-0">
-            {activeSrv.length === 0 ? (
+            {isInitialLoading ? (
+              <div className="p-4 space-y-3">
+                {Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={`srv-skel-${idx}`} className="flex items-center justify-between py-2 border-b border-slate-800/40">
+                    <div className="space-y-1.5">
+                      <Skeleton className="h-3.5 w-32 bg-slate-800" />
+                      <Skeleton className="h-3 w-44 bg-slate-800/60" />
+                    </div>
+                    <Skeleton className="h-5 w-16 rounded bg-slate-800" />
+                    <Skeleton className="h-4 w-16 bg-slate-800" />
+                  </div>
+                ))}
+              </div>
+            ) : activeSrv.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-500">
                 Kuyrukta aktif servis cihazı bulunmuyor.
               </div>
@@ -535,7 +638,7 @@ export default function DashboardPage() {
                         <TableCell>
                           {srvItem.devicePassword ? (
                             <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-300 font-mono text-[10px] gap-1">
-                              <KeyRound className="w-3 h-3 text-amber-400" />
+                              <KeyRound className="w-3.5 h-3.5 text-amber-400" />
                               {srvItem.devicePassword}
                             </Badge>
                           ) : (

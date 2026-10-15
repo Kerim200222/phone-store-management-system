@@ -132,7 +132,7 @@ export default function NewPurchasePage() {
         const db = supabase as unknown as CustomerDbClient
         const { data, error } = await db
           .from("customers")
-          .select("*")
+          .select("id, full_name, phone, tc_identity, balance, city")
           .order("full_name", { ascending: true })
 
         if (data && Array.isArray(data) && data.length > 0 && !error) {

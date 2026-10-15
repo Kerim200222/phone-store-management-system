@@ -17,12 +17,18 @@ import {
   RefreshCw,
   CloudOff
 } from "lucide-react"
+import dynamic from "next/dynamic"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { VirtualizedProductGrid } from "@/components/pos/virtualized-product-grid"
 import { POSCart } from "@/components/pos/pos-cart"
-import { POSReceiptModal } from "@/components/pos/pos-receipt-modal"
+
+// Lazy Loading: Fiş kesme diyaloğunu yalnızca ihtiyaç duyulduğunda yükle
+const POSReceiptModal = dynamic(
+  () => import("@/components/pos/pos-receipt-modal").then((m) => m.POSReceiptModal),
+  { ssr: false }
+)
 import { 
   POSProduct, 
   CartItem, 
@@ -150,10 +156,10 @@ export default function POSPage() {
         const supabase = createClient()
         const db = supabase as unknown as PosDbClient
 
-        // 1. Ürünleri Çek
+        // 1. Ürünleri Çek (Yalnızca POS arayüzünde kullanılan alanlar)
         const { data: prodData, error: prodErr } = await db
           .from("products")
-          .select("*")
+          .select("id, name, brand, model, category, barcode, imei, condition, sale_price, purchase_price, stock_quantity, min_stock_level, shelf_location, description, image_url, battery_health, storage, color, is_active")
           .order("name", { ascending: true })
 
         if (prodData && Array.isArray(prodData) && prodData.length > 0 && !prodErr) {
@@ -181,10 +187,10 @@ export default function POSPage() {
           setProducts(mapped)
         }
 
-        // 2. Müşterileri Çek
+        // 2. Müşterileri Çek (Yalnızca POS müşteri seçimi alanları)
         const { data: custData, error: custErr } = await db
           .from("customers")
-          .select("*")
+          .select("id, full_name, phone, balance")
           .order("full_name", { ascending: true })
 
         if (custData && Array.isArray(custData) && custData.length > 0 && !custErr) {

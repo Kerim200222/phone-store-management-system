@@ -350,7 +350,7 @@ export default function InventoryDashboardPage() {
         const db = supabase as unknown as InventoryDbClient
         const { data, error } = await db
           .from("products")
-          .select("*")
+          .select("id, name, brand, model, category_id, barcode, imei, condition, battery_health, cosmetic_condition, storage, color, purchase_price, sale_price, stock_quantity, min_stock_level, description, image_url, is_active, created_at")
           .order("created_at", { ascending: false })
 
         if (data && Array.isArray(data) && data.length > 0 && !error) {

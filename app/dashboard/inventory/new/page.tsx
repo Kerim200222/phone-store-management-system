@@ -186,7 +186,7 @@ export default function NewProductPage() {
       try {
         const { data, error } = await db
           .from("categories")
-          .select("*")
+          .select("id, name, description")
           .order("name", { ascending: true })
 
         if (data && Array.isArray(data) && data.length > 0 && !error) {

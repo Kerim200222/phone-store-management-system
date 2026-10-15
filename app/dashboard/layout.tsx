@@ -104,7 +104,9 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  // Use custom RBAC hook
+  // PERFORMANS OPTİMİZASYONU (FAZ 2 - ADIM 5):
+  // Tekil Kimlik Doğrulama: Oturum sorgusu (supabase.auth.getUser) yalnızca Layout
+  // seviyesinde tek seferlik yapılır; alt sayfalara (page) hafıza/event üzerinden aktarılır.
   const { 
     userRole, 
     userEmail, 
@@ -112,6 +114,18 @@ export default function DashboardLayout({
     isLoading, 
     signOut 
   } = useRoleAccess()
+
+  // Oturum bilgisini alt sayfalara (page.tsx) sıfır ağ maliyetiyle yayınla
+  useEffect(() => {
+    if (typeof window !== "undefined" && userEmail) {
+      ;(window as unknown as { __DASHBOARD_AUTH__?: { userEmail: string; isAdmin: boolean; userRole: string } }).__DASHBOARD_AUTH__ = {
+        userEmail,
+        isAdmin,
+        userRole,
+      }
+      window.dispatchEvent(new CustomEvent("dashboard-auth-ready"))
+    }
+  }, [userEmail, isAdmin, userRole])
 
   // RBAC Navigation Filtering using useMemo
   const filteredNavItems = useMemo(() => {
@@ -182,6 +196,7 @@ export default function DashboardLayout({
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={true}
                   className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group ${
                     isActive
                       ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/10 text-cyan-300 border border-cyan-500/30 shadow-sm shadow-cyan-500/10 font-semibold"
@@ -291,6 +306,7 @@ export default function DashboardLayout({
                     <Link
                       key={item.href}
                       href={item.href}
+                      prefetch={true}
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                         isActive

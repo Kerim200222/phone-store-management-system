@@ -67,12 +67,14 @@ export async function processPOSTransaction({
   customer,
   paymentMethod,
   notes,
+  existingTransactionNumber,
 }: {
   items: CartItem[]
   summary: CartSummary
   customer: POSCustomerSelect | null
   paymentMethod: POSPaymentMethod
   notes?: string
+  existingTransactionNumber?: string
 }): Promise<CheckoutResult> {
   if (!items || items.length === 0) {
     return {
@@ -86,7 +88,10 @@ export async function processPOSTransaction({
     }
   }
 
-  const trxNumber = generateTransactionNumber()
+  // BUG-03 DÜZELTMESİ:
+  // Eğer çevrimdışı (offline) modda önceden bir fiş numarası kesilmişse o numara korunur.
+  // Yoksa yeni bir benzersiz işlem numarası üretilir.
+  const trxNumber = existingTransactionNumber || generateTransactionNumber()
   const supabase = createClient()
   const db = supabase as unknown as PosDbClient
 
@@ -134,11 +139,15 @@ export async function processPOSTransaction({
       }
     }
 
-    // 2. ADIM: RPC henüz veritabanında çalıştırılmamışsa İstemci Taraflı Supabase CRUD Adımları
-    // 2.a. transactions tablosuna kayıt at
+    // ==========================================================================
+    // BUG-02 DÜZELTMESİ (FAIL-FAST VE FİNANSAL GÜVENLİK):
+    // 2.a. transactions tablosuna ana fiş kaydı atılır.
+    // Eğer ana işlem kaydı başarısız olursa, kesinlikle stok düşümüne ve
+    // müşteri bakiye güncellemesine GEÇİLMEZ. İşlem DERHAL durdurulur (Fail-Fast).
+    // ==========================================================================
     const transactionInsertPayload = {
       transaction_number: trxNumber,
-      customer_id: customer?.id || null,
+      customer_id: customer && !customer.id.startsWith("cust-") ? customer.id : null,
       type: "sale",
       payment_method: paymentMethod,
       total_amount: summary.subtotal + summary.tax_amount,
@@ -156,11 +165,13 @@ export async function processPOSTransaction({
       .insert([transactionInsertPayload])
       .select()
 
-    const transactionId = createdTrx && createdTrx[0]?.id ? String(createdTrx[0].id) : `trx-${Date.now()}`
-
-    if (trxErr) {
-      console.warn("Transactions tablosuna doğrudan kayıt uyarısı:", trxErr.message)
+    // FAIL-FAST KONTROLÜ 1: Ana fiş kaydı doğrulaması
+    if (trxErr || !createdTrx || createdTrx.length === 0) {
+      console.error("BUG-02 GÜVENLİK UYARISI: transactions kaydı başarısız, stok düşümü engellendi:", trxErr?.message)
+      throw new Error(`Ana satış fişi veritabanına kaydedilemedi (${trxErr?.message || "Kayıt doğrulanamadı"}). Stok açığı oluşmaması için işlem iptal edildi.`)
     }
+
+    const transactionId = String(createdTrx[0].id)
 
     // 2.b. transaction_items tablosuna sepeti ekle
     const itemsPayload = items.map((item) => ({
@@ -179,11 +190,13 @@ export async function processPOSTransaction({
       .insert(itemsPayload)
       .select()
 
+    // FAIL-FAST KONTROLÜ 2: Kalemlerin yazılması doğrulaması
     if (itemsErr) {
-      console.warn("Transaction items tablosuna kayıt uyarısı:", itemsErr.message)
+      console.error("BUG-02 GÜVENLİK UYARISI: transaction_items kaydı başarısız, stok düşümü engellendi:", itemsErr.message)
+      throw new Error(`Sepet kalemleri veritabanına işlenemedi (${itemsErr.message}). Stok düşümü engellendi.`)
     }
 
-    // 2.c. Satılan ürünlerin stok miktarını düşür (products tablosu)
+    // 2.c. SADECE ANA FİŞ VE KALEMLER BAŞARIYLA YAZILDIKTAN SONRA STOK DÜŞÜLÜR
     for (const item of items) {
       const newStock = Math.max(0, item.product.stock_quantity - item.quantity)
       await db
@@ -197,7 +210,7 @@ export async function processPOSTransaction({
 
     // 2.d. Veresiye durumunda müşteri bakiyesini güncelle (customers tablosu)
     let newCustomerBalance: number | undefined
-    if (paymentMethod === "on_account" && customer) {
+    if (paymentMethod === "on_account" && customer && !customer.id.startsWith("cust-")) {
       newCustomerBalance = customer.balance - summary.grand_total
       await db
         .from("customers")
@@ -218,19 +231,19 @@ export async function processPOSTransaction({
       updatedCustomerBalance: newCustomerBalance,
       message: "Satış işlemi ve stok güncellemeleri başarıyla tamamlandı.",
     }
-  } catch (err) {
-    console.warn("Supabase checkout hatası (Hibrit simülasyon modu aktif):", err)
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Satış işlemi veritabanı hatası sebebiyle tamamlanamadı."
+    console.error("BUG-02 / POS Checkout Hatası:", errorMsg)
 
-    // Offline / Yerel simülasyon başarılı döndürülür
+    // FAIL-FAST PRENSİBİ: Hata durumunda asla yalancı başarı (false positive) dönülmez!
     return {
-      success: true,
-      transactionId: `local-trx-${Date.now()}`,
+      success: false,
+      transactionId: "",
       transactionNumber: trxNumber,
-      itemsCount: items.length,
-      netAmount: summary.grand_total,
-      updatedProducts,
-      updatedCustomerBalance: customer && paymentMethod === "on_account" ? customer.balance - summary.grand_total : undefined,
-      message: "Satış işlemi yerel state üzerinde başarıyla simüle edildi ve stoklar düşüldü.",
+      itemsCount: 0,
+      netAmount: 0,
+      updatedProducts: [],
+      error: errorMsg,
     }
   }
 }
