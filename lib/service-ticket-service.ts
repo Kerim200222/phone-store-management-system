@@ -250,6 +250,37 @@ export async function createServiceTicket(
 
   // Fallback (Offline / Dev Simülasyonu)
   const localTicketId = "ticket-" + Date.now()
+  const fallbackTicketItem: ServiceTicketDisplay = {
+    id: localTicketId,
+    ticket_number: ticketNumber,
+    customer_id: targetCustomerId || customer.id || "cust-default",
+    customer_name: customer.full_name || "Genel Müşteri",
+    customer_phone: customer.phone || "05000000000",
+    customer_email: "musteri@phonestore.local",
+    device_brand: values.deviceBrand.trim(),
+    device_model: values.deviceModel.trim(),
+    imei: formattedImei,
+    serial_number: values.serialNumber ? values.serialNumber.trim() : null,
+    device_password: passwordText,
+    pattern_code: patternNotes,
+    physical_condition: physicalConditionStr,
+    has_accessories: accessoriesStr,
+    issue_description: `[${values.issueCategory}] ${values.issueDescription.trim()}`,
+    issue_category: values.issueCategory,
+    technician_notes: values.technicianNotes ? values.technicianNotes.trim() : null,
+    status: "bekliyor",
+    priority: (values.priority as any) || "normal",
+    estimated_cost: Number(values.estimatedCost) || 0,
+    labor_cost: 0,
+    parts_total_cost: 0,
+    actual_cost: Number(values.estimatedCost) || 0,
+    parts_used: [],
+    assigned_technician: values.assignedTechnician || "Kerim Aydın",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+  INITIAL_KANBAN_TICKETS.unshift(fallbackTicketItem)
+
   return {
     success: true,
     ticketId: localTicketId,
