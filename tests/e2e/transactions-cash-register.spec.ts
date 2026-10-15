@@ -6,7 +6,6 @@ import { test, expect } from "@playwright/test"
  */
 test.describe("Kasa ve Finansal Hareketler Yönetimi", () => {
   test.beforeEach(async ({ context }) => {
-    // 1. ADIM: Demo Yönetici Oturum Çerezini (Cookie) Ekle
     await context.addCookies([
       {
         name: "phonestore_session",

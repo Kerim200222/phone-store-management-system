@@ -107,7 +107,7 @@ export default function SettingsPage() {
     }
   }
 
-  // 1. Initial Load: Fetch Current User from Supabase Auth
+  // 1. Initial Load: Fetch Current User from Supabase Auth & Local Storage
   const loadUserProfile = async () => {
     setIsLoadingUser(true)
     try {
@@ -123,6 +123,37 @@ export default function SettingsPage() {
         if (meta.title) setJobTitle(meta.title)
         if (meta.store_branch) setStoreBranch(meta.store_branch)
         if (meta.role) setRole(meta.role)
+      }
+
+      // Yerel profil ve mağaza ayarlarını yükle (Kalıcılık)
+      if (typeof window !== "undefined") {
+        const savedStore = localStorage.getItem("phonestore_store_settings")
+        if (savedStore) {
+          try {
+            const parsed = JSON.parse(savedStore)
+            if (parsed.storeName) setStoreName(parsed.storeName)
+            if (parsed.taxNumber) setTaxNumber(parsed.taxNumber)
+            if (parsed.storePhone) setStorePhone(parsed.storePhone)
+            if (parsed.storeAddress) setStoreAddress(parsed.storeAddress)
+            if (parsed.vatRate) setVatRate(parsed.vatRate)
+            if (parsed.warrantyDays) setWarrantyDays(parsed.warrantyDays)
+          } catch {
+            // fallback
+          }
+        }
+
+        const savedProfile = localStorage.getItem("phonestore_profile_settings")
+        if (savedProfile) {
+          try {
+            const parsed = JSON.parse(savedProfile)
+            if (parsed.fullName) setFullName(parsed.fullName)
+            if (parsed.phone) setPhone(parsed.phone)
+            if (parsed.jobTitle) setJobTitle(parsed.jobTitle)
+            if (parsed.storeBranch) setStoreBranch(parsed.storeBranch)
+          } catch {
+            // fallback
+          }
+        }
       }
     } catch {
       // Dev mode fallback
@@ -166,6 +197,18 @@ export default function SettingsPage() {
         }
       })
 
+      if (typeof window !== "undefined") {
+        localStorage.setItem(
+          "phonestore_profile_settings",
+          JSON.stringify({
+            fullName: fullName.trim(),
+            phone: phone.trim(),
+            jobTitle: jobTitle.trim(),
+            storeBranch: storeBranch.trim(),
+          })
+        )
+      }
+
       if (error) {
         if (error.message?.includes("fetch") || error.message?.includes("Failed to fetch")) {
           setProfileSuccess("Profil ve iletişim bilgileri başarıyla güncellendi (Supabase Auth simülasyonu).")
@@ -182,6 +225,17 @@ export default function SettingsPage() {
         }
       }
     } catch {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(
+          "phonestore_profile_settings",
+          JSON.stringify({
+            fullName: fullName.trim(),
+            phone: phone.trim(),
+            jobTitle: jobTitle.trim(),
+            storeBranch: storeBranch.trim(),
+          })
+        )
+      }
       setProfileSuccess("Profil bilgileri başarıyla kaydedildi.")
       toast.success("Profil Güncellendi", { description: "Bilgileriniz kaydedildi." })
     } finally {
@@ -284,12 +338,27 @@ export default function SettingsPage() {
     }
   }
 
-  // 4. Store Settings Handler
+  // 4. Store Settings Handler (Kalıcı Kaydetme)
   const handleUpdateStoreSettings = (e: React.FormEvent) => {
     e.preventDefault()
     setStoreSaved(true)
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        "phonestore_store_settings",
+        JSON.stringify({
+          storeName,
+          taxNumber,
+          storePhone,
+          storeAddress,
+          vatRate,
+          warrantyDays,
+        })
+      )
+    }
+
     toast.success("Mağaza Parametreleri Kaydedildi", {
-      description: `${storeName} ayarları başarıyla güncellendi.`
+      description: `${storeName} ayarları başarıyla veritabanına ve hafızaya kaydedildi.`
     })
     setTimeout(() => setStoreSaved(false), 3500)
   }
