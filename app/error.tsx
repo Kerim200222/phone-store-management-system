@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { parseAppError } from "@/lib/error-handler"
+import { captureTelemetryError } from "@/lib/telemetry"
 import { toast } from "sonner"
 
 interface ErrorProps {
@@ -30,9 +31,13 @@ export default function GlobalError({ error, reset }: ErrorProps) {
   const parsedError = parseAppError(error, "Uygulama Hatası Oluştu")
 
   useEffect(() => {
-    // Hatayı konsola güvenli logla
-    console.error("[Next.js App Error Boundary]:", error)
-  }, [error])
+    // Hatayı hem güvenli konsola hem de Sentry telemetri platformuna ilet
+    captureTelemetryError(error, {
+      digest: error.digest,
+      code: parsedError.code,
+      boundary: "app/error.tsx",
+    })
+  }, [error, parsedError.code])
 
   const copyErrorDetails = () => {
     const errorReport = `Telefon Mağazası Hata Raporu:

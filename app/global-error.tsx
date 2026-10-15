@@ -1,7 +1,8 @@
 "use client"
 
-import React from "react"
+import React, { useEffect } from "react"
 import { AlertTriangle, RefreshCw } from "lucide-react"
+import { captureTelemetryError } from "@/lib/telemetry"
 
 export default function GlobalLayoutError({
   error,
@@ -10,6 +11,12 @@ export default function GlobalLayoutError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    captureTelemetryError(error, {
+      digest: error.digest,
+      boundary: "app/global-error.tsx",
+    })
+  }, [error])
   return (
     <html lang="tr" className="dark">
       <body className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6 font-sans">
