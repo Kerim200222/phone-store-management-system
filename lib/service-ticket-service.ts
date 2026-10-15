@@ -10,6 +10,7 @@ import {
 import { RepairPartItem } from "@/types/database"
 import { POSCustomerSelect } from "@/types/pos"
 import { createClient } from "@/utils/supabase/client"
+import { StoreEngine } from "@/lib/store-engine"
 
 export interface CreateServiceTicketResult {
   success: boolean
@@ -231,19 +232,51 @@ export async function createServiceTicket(
     // Supabase repair_tickets tablosuna kayıt
     const { data, error } = await db.from("repair_tickets").insert([payload]).select()
 
+    let finalTicketId = "ticket-" + Date.now()
     if (!error && data && data.length > 0) {
-      const inserted = data[0]
-      return {
-        success: true,
-        ticketId: String(inserted.id || ""),
-        ticketNumber: String(inserted.ticket_number || ticketNumber),
-        message: "Servis kaydı başarıyla oluşturuldu.",
-        ticketData: inserted,
-      }
+      finalTicketId = String(data[0].id || finalTicketId)
     }
 
-    if (error) {
-      console.warn("Supabase repair_tickets kayıt uyarısı, simülasyon fallback devreye giriyor:", error.message)
+    const ticketItem: ServiceTicketDisplay = {
+      id: finalTicketId,
+      ticket_number: ticketNumber,
+      customer_id: targetCustomerId || customer.id || "cust-default",
+      customer_name: customer.full_name || "Genel Müşteri",
+      customer_phone: customer.phone || "05000000000",
+      customer_email: "musteri@phonestore.local",
+      device_brand: values.deviceBrand.trim(),
+      device_model: values.deviceModel.trim(),
+      imei: formattedImei,
+      serial_number: values.serialNumber ? values.serialNumber.trim() : null,
+      device_password: passwordText,
+      pattern_code: patternNotes,
+      physical_condition: physicalConditionStr,
+      has_accessories: accessoriesStr,
+      issue_description: `[${values.issueCategory}] ${values.issueDescription.trim()}`,
+      issue_category: values.issueCategory,
+      technician_notes: values.technicianNotes ? values.technicianNotes.trim() : null,
+      status: "bekliyor",
+      priority: (values.priority as ServicePriority) || "normal",
+      estimated_cost: Number(values.estimatedCost) || 0,
+      labor_cost: 0,
+      parts_total_cost: 0,
+      actual_cost: Number(values.estimatedCost) || 0,
+      parts_used: [],
+      assigned_technician: values.assignedTechnician || "Kerim Aydın",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    // Dual-Layer StoreEngine ile Kalıcı Kaydet ve Global Senkronizasyonu Tetikle
+    await StoreEngine.addServiceTicket(ticketItem)
+    INITIAL_KANBAN_TICKETS.unshift(ticketItem)
+
+    return {
+      success: true,
+      ticketId: finalTicketId,
+      ticketNumber,
+      message: "Servis kaydı başarıyla oluşturuldu ve senkronize edildi.",
+      ticketData: ticketItem as unknown as Record<string, unknown>,
     }
   } catch (err) {
     console.warn("Supabase bağlantı hatası, yerel modda devam ediliyor:", err)
@@ -280,36 +313,15 @@ export async function createServiceTicket(
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }
+  await StoreEngine.addServiceTicket(fallbackTicketItem)
   INITIAL_KANBAN_TICKETS.unshift(fallbackTicketItem)
 
   return {
     success: true,
     ticketId: localTicketId,
     ticketNumber,
-    message: "Servis kaydı yerel ve geçici belleğe başarıyla işlendi.",
-    ticketData: {
-      ticket_number: ticketNumber,
-      customer_id: customer.id,
-      device_brand: values.deviceBrand.trim(),
-      device_model: values.deviceModel.trim(),
-      imei: formattedImei,
-      serial_number: values.serialNumber ? values.serialNumber.trim() : null,
-      device_password: passwordText,
-      pattern_code: patternNotes,
-      physical_condition: physicalConditionStr,
-      has_accessories: accessoriesStr,
-      issue_description: `[${values.issueCategory}] ${values.issueDescription.trim()}`,
-      technician_notes: values.technicianNotes ? values.technicianNotes.trim() : null,
-      status: "bekliyor",
-      estimated_cost: Number(values.estimatedCost) || 0,
-      labor_cost: 0,
-      parts_total_cost: 0,
-      actual_cost: Number(values.estimatedCost) || 0,
-      parts_used: [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      id: localTicketId,
-    },
+    message: "Servis kaydı başarıyla oluşturuldu ve kaydedildi.",
+    ticketData: fallbackTicketItem as unknown as Record<string, unknown>,
   }
 }
 
@@ -622,7 +634,10 @@ export async function fetchServiceTickets(): Promise<ServiceTicketDisplay[]> {
         technician_notes,
         status,
         estimated_cost,
+        labor_cost,
+        parts_total_cost,
         actual_cost,
+        parts_used,
         created_at,
         updated_at,
         customers (
@@ -659,12 +674,18 @@ export async function fetchServiceTickets(): Promise<ServiceTicketDisplay[]> {
           status: normalizeStatus(String(item.status || "bekliyor")),
           priority: desc.toLowerCase().includes("acil") || desc.toLowerCase().includes("sıvı") ? "critical" : "normal",
           estimated_cost: Number(item.estimated_cost) || 0,
+          labor_cost: Number(item.labor_cost) || 0,
+          parts_total_cost: Number(item.parts_total_cost) || 0,
           actual_cost: Number(item.actual_cost) || Number(item.estimated_cost) || 0,
+          parts_used: (item.parts_used as RepairPartItem[]) || [],
           assigned_technician: "Kerim Aydın",
           created_at: String(item.created_at || new Date().toISOString()),
           updated_at: String(item.updated_at || new Date().toISOString()),
         }
       })
+      if (typeof window !== "undefined") {
+        localStorage.setItem("phonestore_kanban_tickets", JSON.stringify(mapped))
+      }
       return mapped
     }
 
@@ -675,6 +696,20 @@ export async function fetchServiceTickets(): Promise<ServiceTicketDisplay[]> {
     console.warn("fetchServiceTickets catch hatası, varsayılan veri yükleniyor:", err)
   }
 
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("phonestore_kanban_tickets")
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed
+        }
+      } catch {
+        // fallback
+      }
+    }
+  }
+
   return INITIAL_KANBAN_TICKETS
 }
 
@@ -683,28 +718,40 @@ export async function fetchServiceTickets(): Promise<ServiceTicketDisplay[]> {
  */
 export async function updateServiceTicketStatus(
   ticketId: string,
-  newStatus: KanbanColumnId
+  newStatus: KanbanColumnId | "teslim_edildi" | "iptal"
 ): Promise<{ success: boolean; message?: string }> {
   try {
     const supabase = createClient()
     const db = supabase as unknown as ServiceDbClient
-    const { error } = await db
-      .from("repair_tickets")
-      .update({
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", ticketId)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketId)
 
-    if (!error) {
-      return { success: true, message: `Bilet durumu '${newStatus}' olarak güncellendi.` }
-    }
-    console.warn("updateServiceTicketStatus Supabase uyarısı:", error.message)
+    const updateQuery = db.from("repair_tickets").update({
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    })
+    await (isUuid
+      ? updateQuery.eq("id", ticketId)
+      : updateQuery.eq("ticket_number", ticketId))
   } catch (err) {
-    console.warn("updateServiceTicketStatus catch hatası:", err)
+    console.warn("updateServiceTicketStatus Supabase uyarısı:", err)
   }
 
-  return { success: true, message: `Bilet durumu yerel olarak güncellendi.` }
+  // Dual-Layer StoreEngine ve emitGlobalSync ile kalıcı güncelle
+  await StoreEngine.updateServiceTicketStatus(ticketId, newStatus)
+
+  // Yerel bellek senkronizasyonu
+  const ticketIdx = INITIAL_KANBAN_TICKETS.findIndex(
+    (t) => t.id === ticketId || t.ticket_number.toLowerCase() === ticketId.toLowerCase()
+  )
+  if (ticketIdx !== -1) {
+    INITIAL_KANBAN_TICKETS[ticketIdx] = {
+      ...INITIAL_KANBAN_TICKETS[ticketIdx],
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    }
+  }
+
+  return { success: true, message: `Bilet durumu '${newStatus}' olarak güncellendi.` }
 }
 
 /**
@@ -796,7 +843,25 @@ export async function getServiceTicketById(ticketIdOrNumber: string): Promise<Se
     console.warn("getServiceTicketById catch hatası:", err)
   }
 
-  // Fallback to initial mock tickets
+  // Fallback to localStorage or initial mock tickets
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("phonestore_kanban_tickets")
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed)) {
+          const savedMatch = parsed.find(
+            (t: ServiceTicketDisplay) =>
+              t.id === ticketIdOrNumber || t.ticket_number?.toLowerCase() === ticketIdOrNumber.toLowerCase()
+          )
+          if (savedMatch) return savedMatch
+        }
+      } catch {
+        // fallback
+      }
+    }
+  }
+
   const localMatch = INITIAL_KANBAN_TICKETS.find(
     (t) => t.id === ticketIdOrNumber || t.ticket_number.toLowerCase() === ticketIdOrNumber.toLowerCase()
   )
@@ -829,10 +894,11 @@ export async function updateServiceTicketCostsAndParts(
       updateFields.status = payload.status
     }
 
-    const { error } = await db
-      .from("repair_tickets")
-      .update(updateFields)
-      .eq("id", ticketId)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketId)
+    const updateQuery = db.from("repair_tickets").update(updateFields)
+    const { error } = await (isUuid
+      ? updateQuery.eq("id", ticketId)
+      : updateQuery.eq("ticket_number", ticketId))
 
     // 2. Envanterden kullanılan parçaların stok adetlerini düş (varsa product_id)
     for (const part of payload.parts_used) {
@@ -850,8 +916,10 @@ export async function updateServiceTicketCostsAndParts(
       }
     }
 
-    // 3. Yerel bellekteki biletin değerlerini de güncelle (optimistik state)
-    const ticketIdx = INITIAL_KANBAN_TICKETS.findIndex((t) => t.id === ticketId)
+    // 3. Yerel bellekteki ve localStorage'daki biletin değerlerini güncelle (Kalıcı kaydetme)
+    const ticketIdx = INITIAL_KANBAN_TICKETS.findIndex(
+      (t) => t.id === ticketId || t.ticket_number.toLowerCase() === ticketId.toLowerCase()
+    )
     if (ticketIdx !== -1) {
       INITIAL_KANBAN_TICKETS[ticketIdx] = {
         ...INITIAL_KANBAN_TICKETS[ticketIdx],
@@ -862,6 +930,9 @@ export async function updateServiceTicketCostsAndParts(
         technician_notes: payload.technician_notes ?? INITIAL_KANBAN_TICKETS[ticketIdx].technician_notes,
         status: payload.status ?? INITIAL_KANBAN_TICKETS[ticketIdx].status,
         updated_at: new Date().toISOString(),
+      }
+      if (typeof window !== "undefined") {
+        localStorage.setItem("phonestore_kanban_tickets", JSON.stringify(INITIAL_KANBAN_TICKETS))
       }
     }
 
@@ -876,7 +947,9 @@ export async function updateServiceTicketCostsAndParts(
   }
 
   // Yerel güncelleme fallback
-  const ticketIdx = INITIAL_KANBAN_TICKETS.findIndex((t) => t.id === ticketId)
+  const ticketIdx = INITIAL_KANBAN_TICKETS.findIndex(
+    (t) => t.id === ticketId || t.ticket_number.toLowerCase() === ticketId.toLowerCase()
+  )
   if (ticketIdx !== -1) {
     INITIAL_KANBAN_TICKETS[ticketIdx] = {
       ...INITIAL_KANBAN_TICKETS[ticketIdx],
@@ -888,12 +961,55 @@ export async function updateServiceTicketCostsAndParts(
       status: payload.status ?? INITIAL_KANBAN_TICKETS[ticketIdx].status,
       updated_at: new Date().toISOString(),
     }
+    if (typeof window !== "undefined") {
+      localStorage.setItem("phonestore_kanban_tickets", JSON.stringify(INITIAL_KANBAN_TICKETS))
+    }
   }
 
   return {
     success: true,
-    message: "Yedek parça ve işçilik maliyetleri yerel belleğe kaydedildi.",
+    message: "Yedek parça ve işçilik maliyetleri başarıyla kaydedildi.",
   }
+}
+
+/**
+ * Cihaz Ekran Kilidi / Şifresini Kalıcı Olarak Günceller
+ */
+export async function updateServiceTicketDevicePassword(
+  ticketId: string,
+  newPassword: string
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    const supabase = createClient()
+    const db = supabase as unknown as ServiceDbClient
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketId)
+
+    const updateQuery = db.from("repair_tickets").update({
+      device_password: newPassword,
+      updated_at: new Date().toISOString(),
+    })
+    await (isUuid
+      ? updateQuery.eq("id", ticketId)
+      : updateQuery.eq("ticket_number", ticketId))
+  } catch (err) {
+    console.warn("updateServiceTicketDevicePassword catch:", err)
+  }
+
+  const ticketIdx = INITIAL_KANBAN_TICKETS.findIndex(
+    (t) => t.id === ticketId || t.ticket_number.toLowerCase() === ticketId.toLowerCase()
+  )
+  if (ticketIdx !== -1) {
+    INITIAL_KANBAN_TICKETS[ticketIdx] = {
+      ...INITIAL_KANBAN_TICKETS[ticketIdx],
+      device_password: newPassword,
+      updated_at: new Date().toISOString(),
+    }
+    if (typeof window !== "undefined") {
+      localStorage.setItem("phonestore_kanban_tickets", JSON.stringify(INITIAL_KANBAN_TICKETS))
+    }
+  }
+
+  return { success: true, message: "Cihaz şifresi başarıyla güncellendi." }
 }
 
 /**
@@ -1063,6 +1179,16 @@ export async function completeAndDeliverServiceTicket(
       }
     }
 
+    // StoreEngine kalıcı güncellemesi ve kasa geliri kaydı
+    try {
+      await StoreEngine.updateServiceTicketStatus(payload.ticketId, "teslim_edildi")
+      await StoreEngine.recordServiceDeliveryTransaction(
+        payload.ticketNumber,
+        payload.totalAmount,
+        payload.customerName
+      )
+    } catch {}
+
     return {
       success: true,
       transactionId: generatedTrxId,
@@ -1089,6 +1215,14 @@ export async function completeAndDeliverServiceTicket(
       updated_at: deliveredAt,
     }
   }
+
+  try {
+    await StoreEngine.recordServiceDeliveryTransaction(
+      payload.ticketNumber,
+      payload.totalAmount,
+      payload.customerName
+    )
+  } catch {}
 
   return {
     success: true,

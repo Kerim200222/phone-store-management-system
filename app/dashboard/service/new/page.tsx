@@ -38,27 +38,18 @@ import {
 import { POSCustomerSelect } from "@/types/pos"
 import { INITIAL_CUSTOMERS, CustomerFormValues } from "@/types/customer"
 import { generateLuhnIMEI } from "@/types/inventory"
-import { createClient } from "@/utils/supabase/client"
 import { createServiceTicket } from "@/lib/service-ticket-service"
 import { ServiceTicketModal } from "@/components/service/service-ticket-modal"
 import { CustomerModal } from "@/components/customers/customer-modal"
 import { toast } from "sonner"
 import { parseAppError } from "@/lib/error-handler"
-
-interface CustomerDbClient {
-  from(table: string): {
-    select(query?: string): {
-      order(column: string, options?: { ascending?: boolean }): Promise<{
-        data: Record<string, unknown>[] | null
-        error: { message: string } | null
-      }>
-    }
-  }
-}
+import { useSyncedCustomers } from "@/hooks/use-store-data"
 
 export default function NewServiceTicketPage() {
   const router = useRouter()
-  const [customers, setCustomers] = useState<POSCustomerSelect[]>(INITIAL_CUSTOMERS)
+  const { customers: syncedCustomers } = useSyncedCustomers()
+  const [localCustomers, setLocalCustomers] = useState<POSCustomerSelect[]>([])
+
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false)
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false)
   const [receiptData, setReceiptData] = useState<ServiceTicketReceiptData | null>(null)
@@ -127,43 +118,33 @@ export default function NewServiceTicketPage() {
   const watchedCaseDented = watch("condCaseDented")
   const watchedLiquid = watch("condLiquidDamage")
 
+  // Senkronize Müşteri Listesi
+  useEffect(() => {
+    if (syncedCustomers && syncedCustomers.length > 0) {
+      setLocalCustomers(syncedCustomers)
+      if (!watchedCustomerId) {
+        setValue("customerId", syncedCustomers[0].id)
+      }
+    }
+  }, [syncedCustomers, watchedCustomerId, setValue])
+
+  const customers: POSCustomerSelect[] = useMemo(() => {
+    if (localCustomers.length > 0) return localCustomers
+    if (syncedCustomers.length > 0) return syncedCustomers
+    return INITIAL_CUSTOMERS.map((c) => ({
+      id: c.id,
+      full_name: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Müşteri",
+      phone: c.phone || "",
+      balance: c.balance || 0,
+      tckn: c.identity_number || null,
+      address: c.address || null,
+    }))
+  }, [localCustomers, syncedCustomers])
+
   // Seçili Müşteri
   const selectedCustomer = useMemo(() => {
     return customers.find((c) => c.id === watchedCustomerId) || customers[0] || null
   }, [customers, watchedCustomerId])
-
-  // Müşterileri Supabase'den Çekme
-  useEffect(() => {
-    async function loadCustomers() {
-      try {
-        const supabase = createClient()
-        const db = supabase as unknown as CustomerDbClient
-        const { data, error } = await db
-          .from("customers")
-          .select("id, full_name, phone, balance")
-          .order("full_name", { ascending: true })
-
-        if (data && Array.isArray(data) && data.length > 0 && !error) {
-          const mapped: POSCustomerSelect[] = data.map((c) => ({
-            id: String(c.id || ""),
-            full_name: String(c.full_name || `${c.first_name || ""} ${c.last_name || ""}`.trim()),
-            phone: String(c.phone || ""),
-            tckn: c.tckn ? String(c.tckn) : undefined,
-            balance: Number(c.balance) || 0,
-            city: c.city ? String(c.city) : undefined,
-            address: c.address ? String(c.address) : undefined,
-          }))
-          setCustomers(mapped)
-          if (!watchedCustomerId) {
-            setValue("customerId", mapped[0].id)
-          }
-        }
-      } catch (err) {
-        console.warn("Müşteriler çekilirken yerel mock veriler kullanılıyor:", err)
-      }
-    }
-    loadCustomers()
-  }, [setValue, watchedCustomerId])
 
   // Luhn IMEI Doğrulama
   const isImeiValid = useMemo(() => {
@@ -211,7 +192,7 @@ export default function NewServiceTicketPage() {
         address: data.address || null,
         balance: 0,
       }
-      setCustomers((prev) => [newCust, ...prev])
+      setLocalCustomers((prev) => [newCust, ...prev])
       setValue("customerId", newCust.id, { shouldValidate: true })
       setIsCustomerModalOpen(false)
       toast.success("Müşteri Başarıyla Eklendi", {

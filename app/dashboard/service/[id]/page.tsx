@@ -18,7 +18,10 @@ import {
   Printer,
   DollarSign,
   MessageSquare,
-  History
+  History,
+  Edit2,
+  Check,
+  X
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -35,7 +38,8 @@ import { UniversalReceiptData } from "@/types/receipt"
 import { 
   getServiceTicketById, 
   updateServiceTicketCostsAndParts,
-  markServiceTicketAsCompleted
+  markServiceTicketAsCompleted,
+  updateServiceTicketDevicePassword
 } from "@/lib/service-ticket-service"
 import { formatServiceDeliveryToReceipt } from "@/lib/receipt-formatter"
 import { PartsTable } from "@/components/service/parts/parts-table"
@@ -58,6 +62,33 @@ export default function ServiceTicketDetailPage() {
   const [ticket, setTicket] = useState<ServiceTicketDisplay | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
+  const [isEditingPassword, setIsEditingPassword] = useState(false)
+  const [editedPassword, setEditedPassword] = useState("")
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
+
+  const handleStartEditPassword = () => {
+    setEditedPassword(ticket?.device_password || "")
+    setIsEditingPassword(true)
+  }
+
+  const handleSavePassword = async () => {
+    if (!ticket) return
+    setIsSavingPassword(true)
+    try {
+      const res = await updateServiceTicketDevicePassword(ticket.id, editedPassword.trim())
+      if (res.success) {
+        setTicket((prev) => (prev ? { ...prev, device_password: editedPassword.trim() } : prev))
+        setIsEditingPassword(false)
+        toast.success("Cihaz Şifresi Güncellendi", { description: "Yeni ekran şifresi kalıcı olarak kaydedildi." })
+      } else {
+        toast.error("Şifre Güncellenemedi", { description: res.message })
+      }
+    } catch {
+      toast.error("Hata", { description: "Cihaz şifresi güncellenirken bir sorun oluştu." })
+    } finally {
+      setIsSavingPassword(false)
+    }
+  }
 
   // Düzenlenebilir Durumlar
   const [parts, setParts] = useState<RepairPartItem[]>([])
@@ -524,24 +555,63 @@ export default function ServiceTicketDetailPage() {
 
         {/* Cihaz Şifresi */}
         <div className="p-3.5 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-            Ekran Kilidi / Şifre
-          </span>
           <div className="flex items-center justify-between">
-            <p className="font-mono font-bold text-amber-300 text-sm">
-              {showPassword ? (ticket.device_password || "Yok") : (ticket.device_password ? "••••••" : "Şifresiz")}
-            </p>
-            {ticket.device_password && ticket.device_password !== "Şifresiz / Ekran Kilidi Açık" && (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+              Ekran Kilidi / Şifre
+            </span>
+            {!isEditingPassword && (
               <button
-                onClick={() => setShowPassword(!showPassword)}
-                className="text-slate-400 hover:text-white p-1"
-                title={showPassword ? "Gizle" : "Göster"}
+                onClick={handleStartEditPassword}
+                className="text-slate-400 hover:text-amber-300 p-0.5 rounded transition-colors"
+                title="Şifreyi Düzenle"
               >
-                {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                <Edit2 className="w-3 h-3" />
               </button>
             )}
           </div>
+          {isEditingPassword ? (
+            <div className="flex items-center gap-1 pt-0.5">
+              <input
+                type="text"
+                value={editedPassword}
+                onChange={(e) => setEditedPassword(e.target.value)}
+                placeholder="Örn: 1234 veya Yok"
+                className="w-full bg-slate-950 border border-amber-500/50 rounded px-2 py-0.5 text-xs text-amber-300 font-mono focus:outline-none focus:ring-1 focus:ring-amber-400"
+                autoFocus
+              />
+              <button
+                onClick={handleSavePassword}
+                disabled={isSavingPassword}
+                className="p-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/40 transition-colors disabled:opacity-50"
+                title="Kaydet"
+              >
+                <Check className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setIsEditingPassword(false)}
+                className="p-1 rounded bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                title="İptal"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <p className="font-mono font-bold text-amber-300 text-sm">
+                {showPassword ? (ticket.device_password || "Yok") : (ticket.device_password ? "••••••" : "Şifresiz")}
+              </p>
+              {ticket.device_password && ticket.device_password !== "Şifresiz / Ekran Kilidi Açık" && (
+                <button
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-slate-400 hover:text-white p-1"
+                  title={showPassword ? "Gizle" : "Göster"}
+                >
+                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              )}
+            </div>
+          )}
           <p className="text-[10px] text-slate-500">Test ve kontrol için</p>
         </div>
 

@@ -28,11 +28,7 @@ import {
   ServiceDeliveryResult
 } from "@/types/service"
 import { UniversalReceiptData } from "@/types/receipt"
-import { 
-  fetchServiceTickets, 
-  updateServiceTicketStatus,
-  INITIAL_KANBAN_TICKETS
-} from "@/lib/service-ticket-service"
+import { INITIAL_KANBAN_TICKETS } from "@/lib/service-ticket-service"
 import { formatServiceDeliveryToReceipt } from "@/lib/receipt-formatter"
 import { KanbanColumn } from "@/components/service/kanban/kanban-column"
 import { ServiceDetailModal } from "@/components/service/service-detail-modal"
@@ -40,10 +36,29 @@ import { ServiceTicketModal } from "@/components/service/service-ticket-modal"
 import { CustomerNotificationModal } from "@/components/service/delivery/customer-notification-modal"
 import { ServiceDeliveryModal } from "@/components/service/delivery/service-delivery-modal"
 import { UniversalReceiptModal } from "@/components/receipt/universal-receipt-modal"
+import { useSyncedServiceTickets } from "@/hooks/use-store-data"
 
 export default function ServiceKanbanPage() {
-  const [tickets, setTickets] = useState<ServiceTicketDisplay[]>(INITIAL_KANBAN_TICKETS)
-  const [isLoading, setIsLoading] = useState(true)
+  // Global Senkronize StoreEngine Verileri
+  const { 
+    tickets: syncedTickets, 
+    isLoading: isStoreLoading, 
+    isValidating, 
+    mutate, 
+    updateTicketStatus 
+  } = useSyncedServiceTickets()
+
+  const [localTickets, setLocalTickets] = useState<ServiceTicketDisplay[]>([])
+
+  useEffect(() => {
+    if (syncedTickets && syncedTickets.length > 0) {
+      setLocalTickets(syncedTickets)
+    }
+  }, [syncedTickets])
+
+  const tickets = localTickets.length > 0 ? localTickets : (syncedTickets.length > 0 ? syncedTickets : INITIAL_KANBAN_TICKETS)
+  const isLoading = isStoreLoading && localTickets.length === 0
+
   const [searchQuery, setSearchQuery] = useState("")
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [brandFilter, setBrandFilter] = useState<string>("all")
@@ -63,37 +78,24 @@ export default function ServiceKanbanPage() {
   const [isUniversalReceiptOpen, setIsUniversalReceiptOpen] = useState(false)
   const [universalReceiptData, setUniversalReceiptData] = useState<UniversalReceiptData | null>(null)
 
-  // Biletleri Çekme Fonksiyonu
+  // Biletleri Çekme / Yenileme Fonksiyonu
   const loadTickets = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const data = await fetchServiceTickets()
-      setTickets(data)
-    } catch (err) {
-      console.warn("Veri çekme hatası:", err)
-      setTickets(INITIAL_KANBAN_TICKETS)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+    await mutate()
+  }, [mutate])
 
-  useEffect(() => {
-    loadTickets()
-  }, [loadTickets])
-
-  // Durum Değiştirme (Optimistic UI Update)
+  // Durum Değiştirme (Optimistic UI Update + Kalıcı StoreEngine)
   const handleStatusChange = useCallback(async (ticketId: string, newStatus: KanbanColumnId) => {
-    // Anlık state güncellemesi
-    setTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, status: newStatus, updated_at: new Date().toISOString() } : t))
+    // Anlık optimistic state güncellemesi
+    setLocalTickets((prev) =>
+      prev.map((t) => (t.id === ticketId || t.ticket_number === ticketId ? { ...t, status: newStatus, updated_at: new Date().toISOString() } : t))
     )
 
     // Detay modalı açıksa onun da state'ini güncelle
-    setSelectedTicketForDetail((prev) => (prev && prev.id === ticketId ? { ...prev, status: newStatus } : prev))
+    setSelectedTicketForDetail((prev) => (prev && (prev.id === ticketId || prev.ticket_number === ticketId) ? { ...prev, status: newStatus } : prev))
 
-    // Veritabanı güncellemesi
-    await updateServiceTicketStatus(ticketId, newStatus)
-  }, [])
+    // Veritabanı ve StoreEngine kalıcı güncellemesi
+    await updateTicketStatus(ticketId, newStatus)
+  }, [updateTicketStatus])
 
   // Fiş Yazdırma Modalı Açma
   const handlePrintTicket = useCallback((ticket: ServiceTicketDisplay) => {
@@ -160,12 +162,13 @@ export default function ServiceKanbanPage() {
   }, [])
 
   // Gün 24: Teslimat ve Kasa Tahsilatı Başarılı
-  const handleDeliverySuccess = useCallback((result: ServiceDeliveryResult, updatedTicket: ServiceTicketDisplay) => {
-    setTickets((prev) =>
-      prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t))
+  const handleDeliverySuccess = useCallback(async (result: ServiceDeliveryResult, updatedTicket: ServiceTicketDisplay) => {
+    setLocalTickets((prev) =>
+      prev.map((t) => (t.id === updatedTicket.id || t.ticket_number === updatedTicket.ticket_number ? updatedTicket : t))
     )
-    setSelectedTicketForDetail((prev) => (prev && prev.id === updatedTicket.id ? updatedTicket : prev))
-  }, [])
+    setSelectedTicketForDetail((prev) => (prev && (prev.id === updatedTicket.id || prev.ticket_number === updatedTicket.ticket_number) ? updatedTicket : prev))
+    await mutate()
+  }, [mutate])
 
   // Gün 24: Teslim Fişi / Makbuzunu Yazdır
   const handlePrintDeliveryReceipt = useCallback((
@@ -303,11 +306,11 @@ export default function ServiceKanbanPage() {
             size="sm"
             variant="outline"
             onClick={loadTickets}
-            disabled={isLoading}
+            disabled={isLoading || isValidating}
             className="h-9 border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5 text-xs"
             title="Yenile"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-cyan-400" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isValidating ? "animate-spin text-cyan-400" : ""}`} />
             <span className="hidden sm:inline">Yenile</span>
           </Button>
 
