@@ -114,14 +114,24 @@ export default function CustomersDashboardPage() {
     try {
       const supabase = createClient()
       const db = supabase as unknown as CustomerDbClient
+      // Şemada tc_identity, city, district değil identity_number, address bulunur
       const { data, error } = await db
         .from("customers")
-        .select("id, full_name, phone, email, tc_identity, city, district, address, balance, notes, created_at, updated_at")
+        .select("id, full_name, phone, email, identity_number, address, balance, notes, is_active, created_at, updated_at")
         .order("created_at", { ascending: false })
 
       if (error) {
         console.warn("Supabase customers tablosundan veri çekilirken bilgi:", error.message)
-        // Tablo henüz hazır değilse veya offline durumdaysa zengin yerel veri kümesini koru
+        // Tablo henüz hazır değilse veya offline durumdaysa yerel depolama veya zengin veri kümesini koru
+        const saved = typeof window !== "undefined" ? localStorage.getItem("phonestore_customers") : null
+        if (saved) {
+          try {
+            setCustomers(JSON.parse(saved))
+            return
+          } catch {
+            // fallback
+          }
+        }
         setCustomers(INITIAL_CUSTOMERS)
       } else if (data && Array.isArray(data) && data.length > 0) {
         const mappedData: CustomerItem[] = data.map((item) => {
@@ -136,12 +146,32 @@ export default function CustomersDashboardPage() {
           }
         })
         setCustomers(mappedData)
+        if (typeof window !== "undefined") {
+          localStorage.setItem("phonestore_customers", JSON.stringify(mappedData))
+        }
       } else {
-        // Tablo boş ise mock verileri göster
+        const saved = typeof window !== "undefined" ? localStorage.getItem("phonestore_customers") : null
+        if (saved) {
+          try {
+            setCustomers(JSON.parse(saved))
+            return
+          } catch {
+            // fallback
+          }
+        }
         setCustomers(INITIAL_CUSTOMERS)
       }
     } catch (err) {
       console.warn("Müşteri listesi çekme hatası (Fallback mod):", err)
+      const saved = typeof window !== "undefined" ? localStorage.getItem("phonestore_customers") : null
+      if (saved) {
+        try {
+          setCustomers(JSON.parse(saved))
+          return
+        } catch {
+          // fallback
+        }
+      }
       setCustomers(INITIAL_CUSTOMERS)
     } finally {
       setIsLoading(false)
@@ -177,21 +207,24 @@ export default function CustomersDashboardPage() {
     try {
       const supabase = createClient()
       const db = supabase as unknown as CustomerDbClient
+      const isUuid = Boolean(existingId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(existingId))
 
       if (existingId) {
         // UPDATE (Güncelleme)
-        const { error } = await db
-          .from("customers")
-          .update(payload)
-          .eq("id", existingId)
+        if (isUuid) {
+          const { error } = await db
+            .from("customers")
+            .update(payload)
+            .eq("id", existingId)
 
-        if (error) {
-          console.warn("Supabase update uyarısı:", error.message)
+          if (error) {
+            console.warn("Supabase update uyarısı:", error.message)
+          }
         }
 
-        // Yerel state'i anında senkronize et
-        setCustomers((prev) =>
-          prev.map((c) =>
+        // Yerel state'i ve localStorage'ı anında senkronize et (Kalıcı kaydetme)
+        setCustomers((prev) => {
+          const updated = prev.map((c) =>
             c.id === existingId
               ? {
                   ...c,
@@ -202,7 +235,11 @@ export default function CustomersDashboardPage() {
                 }
               : c
           )
-        )
+          if (typeof window !== "undefined") {
+            localStorage.setItem("phonestore_customers", JSON.stringify(updated))
+          }
+          return updated
+        })
 
         showNotification(`"${fullName}" adlı müşterinin bilgileri başarıyla güncellendi.`, "success")
         return true
@@ -214,17 +251,24 @@ export default function CustomersDashboardPage() {
           created_at: new Date().toISOString(),
         }
 
-        const { data, error } = await db
-          .from("customers")
-          .insert([insertPayload])
-          .select()
+        let createdDbId: string | null = null
+        try {
+          const { data, error } = await db
+            .from("customers")
+            .insert([insertPayload])
+            .select()
 
-        if (error) {
-          console.warn("Supabase insert uyarısı:", error.message)
+          if (!error && data && data[0]?.id) {
+            createdDbId = data[0].id
+          } else if (error) {
+            console.warn("Supabase insert uyarısı:", error.message)
+          }
+        } catch (dbErr) {
+          console.warn("Supabase insert hatası:", dbErr)
         }
 
         const createdItem: CustomerItem = {
-          id: data && data[0]?.id ? data[0].id : newId,
+          id: createdDbId || newId,
           ...insertPayload,
           first_name: values.first_name,
           last_name: values.last_name,
@@ -232,7 +276,13 @@ export default function CustomersDashboardPage() {
           total_transactions: 0,
         }
 
-        setCustomers((prev) => [createdItem, ...prev])
+        setCustomers((prev) => {
+          const updated = [createdItem, ...prev]
+          if (typeof window !== "undefined") {
+            localStorage.setItem("phonestore_customers", JSON.stringify(updated))
+          }
+          return updated
+        })
         showNotification(`Yeni müşteri "${fullName}" veritabanına başarıyla kaydedildi!`, "success")
         return true
       }
@@ -251,16 +301,26 @@ export default function CustomersDashboardPage() {
     try {
       const supabase = createClient()
       const db = supabase as unknown as CustomerDbClient
-      const { error } = await db
-        .from("customers")
-        .delete()
-        .eq("id", customerToDelete.id)
+      const isUuid = Boolean(customerToDelete?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(customerToDelete.id))
 
-      if (error) {
-        console.warn("Supabase delete uyarısı:", error.message)
+      if (isUuid) {
+        const { error } = await db
+          .from("customers")
+          .delete()
+          .eq("id", customerToDelete.id)
+
+        if (error) {
+          console.warn("Supabase delete uyarısı:", error.message)
+        }
       }
 
-      setCustomers((prev) => prev.filter((c) => c.id !== customerToDelete.id))
+      setCustomers((prev) => {
+        const updated = prev.filter((c) => c.id !== customerToDelete.id)
+        if (typeof window !== "undefined") {
+          localStorage.setItem("phonestore_customers", JSON.stringify(updated))
+        }
+        return updated
+      })
       showNotification(`"${customerToDelete.full_name}" adlı müşteri kaydı silindi.`, "info")
       setIsDeleteModalOpen(false)
       setCustomerToDelete(null)

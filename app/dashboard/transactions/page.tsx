@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo } from "react"
-import useSWR from "swr"
+import { useSyncedTransactions } from "@/hooks/use-store-data"
 import { 
   Receipt, 
   Search, 
@@ -27,7 +27,6 @@ import {
   SAMPLE_PURCHASE_RECEIPT 
 } from "@/types/receipt"
 import { formatTransactionRowToReceipt } from "@/lib/receipt-formatter"
-import { createClient } from "@/utils/supabase/client"
 
 export interface TransactionItemRow {
   id: string
@@ -95,81 +94,19 @@ const FALLBACK_TRANSACTIONS: TransactionItemRow[] = [
 ]
 
 // ==============================================================================
-// BUG-04 DÜZELTMESİ (CANLI VERİTABANI BAĞLANTISI):
-// Statik mock veri yerine Supabase 'transactions' tablosundan canlı verileri çeker.
-// POS'ta yapılan satışlar, cari tahsilatlar ve alımlar anında bu listeye yansır.
+// ENTERPRISE DATA PERSISTENCE & REAL-TIME CACHE SYNC:
+// Statik mock veri yerine StoreEngine ve useSyncedTransactions dinler.
+// POS satışı, 2. el alımı veya servis teslimatı olduğunda anında güncellenir.
 // ==============================================================================
-async function fetchTransactionsFromDb(): Promise<TransactionItemRow[]> {
-  try {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from("transactions")
-      .select(`
-        id,
-        transaction_number,
-        type,
-        payment_method,
-        total_amount,
-        net_amount,
-        notes,
-        created_at,
-        customers ( full_name )
-      `)
-      .order("created_at", { ascending: false })
-      .limit(100)
-
-    if (error || !data || data.length === 0) {
-      return FALLBACK_TRANSACTIONS
-    }
-
-    return data.map((t: Record<string, unknown>) => {
-      const cust = t.customers as { full_name?: string } | null
-      const dateStr = String(t.created_at || "")
-      const dateObj = new Date(dateStr)
-      return {
-        id: String(t.id),
-        trx_number: String(t.transaction_number || `TRX-${String(t.id).slice(0, 8)}`),
-        customer: cust?.full_name || "Perakende Müşteri",
-        type: String(t.type || "sale"),
-        payment_method: String(t.payment_method || "cash"),
-        total_amount: Number(t.total_amount ?? t.net_amount ?? 0),
-        net_amount: Number(t.net_amount ?? 0),
-        notes: String(t.notes || (t.type === "purchase" ? "2. El Cihaz Alımı" : "Perakende Satış")),
-        date: isNaN(dateObj.getTime())
-          ? dateStr
-          : dateObj.toLocaleString("tr-TR", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-        raw_created_at: dateStr,
-      }
-    })
-  } catch (err) {
-    console.warn("Canlı işlemler çekilirken hata oluştu, fallback kullanılıyor:", err)
-    return FALLBACK_TRANSACTIONS
-  }
-}
-
 export default function TransactionsDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
   const [activeReceipt, setActiveReceipt] = useState<UniversalReceiptData | null>(null)
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false)
 
-  // SWR ile Canlı Veri Çekme ve Otomatik Yenileme
-  const { data: transactionsData, isLoading, isValidating, mutate } = useSWR<TransactionItemRow[]>(
-    "dashboard-transactions-list",
-    fetchTransactionsFromDb,
-    {
-      revalidateOnFocus: true,
-      dedupingInterval: 10000,
-    }
-  )
-
-  const transactions = transactionsData || FALLBACK_TRANSACTIONS
+  // Real-time SWR senkronize kasa hareketleri hook'u
+  const { transactions: rawTransactions, isLoading, isValidating, mutate } = useSyncedTransactions()
+  const transactions = rawTransactions.length > 0 ? rawTransactions : FALLBACK_TRANSACTIONS
 
   // Canlı Finansal Özet Metrikleri (Gerçek Veriden Dinamik Hesaplanır)
   const summaryMetrics = useMemo(() => {
@@ -400,7 +337,7 @@ export default function TransactionsDashboardPage() {
       {/* Transactions Table */}
       <Card className="bg-slate-900/60 border-slate-800 shadow-xl">
         <CardContent className="p-0">
-          {isLoading && !transactionsData ? (
+          {isLoading && (!transactions || transactions.length === 0) ? (
             <div className="p-4 space-y-3">
               {Array.from({ length: 5 }).map((_, idx) => (
                 <div key={`tx-skel-${idx}`} className="flex items-center justify-between py-2.5 border-b border-slate-800/40">

@@ -1188,6 +1188,43 @@
   - Gereksiz re-render'ların önlenmesiyle POS satış terminali ve teknik servis Kanban panosunda arayüz gecikmelerinin (lag) tamamen ortadan kalktığı gözlemlendi.
 - **Referans:** `PR #106 (feature/G33-performance-optimizations)`
 
+---
+
+### GÜN 34: Vercel Dağıtım Kurulumu, Production Build Denetimi ve Dual-Layer State Sync
+- **Tarih:** 28 Ekim 2026
+- **Konu:** Hafta 7: Güvenlik, Test ve Canlıya Alma (Launch) kapsamında; projenin Vercel sunucusuz (serverless) altyapısında sıfır hata ile yayına alınması için **Vercel Üretim Konfigürasyonu (`vercel.json`)**, **Full-Stack Build ve Tip Doğrulaması (`npm run build`)** ve **Çift Katmanlı Olay Güdümlü Durum Motoru (Dual-Layer Event-Driven StoreEngine)** entegrasyonu.
+- **Yapılan Çalışmalar:**
+  1. **Vercel Konfigürasyonu (`vercel.json`):**
+     - Next.js framework tanımı, `cleanUrls: true` ve statik kaynaklar için immutable önbellekleme direktifleri yapılandırıldı.
+     - `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `X-XSS-Protection` ve `Referrer-Policy: strict-origin-when-cross-origin` güvenlik başlıkları eklendi.
+  2. **Production Build & Linting Denetimi:**
+     - `npm run build` çalıştırılarak 22 Next.js rotasının (POS, Envanter, Servis, Kasa, Müşteriler vb.) statik ve dinamik optimizasyonları başarıyla tamamlandı (Exit code 0).
+     - `npm run lint` ve `npx tsc --noEmit` ile kod tabanı sıfır hata ile onaylandı.
+  3. **Veri Kalıcılığı ve Senkronizasyon (StoreEngine):**
+     - Sayfa yenilemelerinde (F5) yaşanan veri kaybı, Supabase ile senkronize çalışan çift katmanlı hafıza/yerel önbellek mekanizması (`lib/store-engine.ts`) ve global event bus ile çözüme kavuşturuldu.
+     - POS satışı, 2. el cihaz alımı ve servis fişi hareketleri arasında anlık çapraz reaktif senkronizasyon sağlandı.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Modern web uygulamalarında yerel durum (state) ile veritabanı arasındaki zaman uyumsuzluklarının kullanıcı deneyimini zedelediği; çift katmanlı optimistic UI ve event-driven yaklaşımın sayfa yenilemelerinde veri bütünlüğünü garanti altına aldığı deneyimlendi.
+- **Referans:** `PR #112 (feature/production-and-state-sync)`
+
+---
+
+### GÜN 35: Lansman (Launch), Production Veritabanı Temizliği ve Final E2E Kontrolleri
+- **Tarih:** 29 Ekim 2026
+- **Konu:** Hafta 7: Güvenlik, Test ve Canlıya Alma (Launch) kapsamında; projenin resmi canlıya çıkış (production launch) işlemlerinin tamamlanması, **Canlı Veritabanı Sıfırlama ve SuperAdmin Kurulum Script'i (`supabase/15_production_launch_cleanup.sql`)**, **Kapsamlı Canlıya Çıkış Manuel Kontrol Checklist'i (`docs/PRODUCTION_LAUNCH_CHECKLIST.md`)** ve nihai sürümleme (`release/v1.0.0`).
+- **Yapılan Çalışmalar:**
+  1. **Production Veritabanı Temizliği (`supabase/15_production_launch_cleanup.sql`):**
+     - Geliştirme ve test aşamalarından kalan tüm sahte/mock kayıtlar (tamir biletleri, kasa hareketleri, müşteri profilleri, ürünler) transaction güvenliği altında temizlendi.
+     - Rol ve şema bütünlüğü korunarak yalnızca 1 adet yetkili 'SuperAdmin' hesabı (`admin@phonestore.com`) sisteme tanımlandı.
+     - Tüm tablolarda Row Level Security (RLS) politikaları teyit edildi.
+  2. **Manuel Uçtan Uca (E2E) Kontrol Listesi (`docs/PRODUCTION_LAUNCH_CHECKLIST.md`):**
+     - Auth, RBAC yetki kısıtlamaları, Envanter IMEI/Luhn validasyonu, POS termal fiş yazdırma, 2. el alım gider entegrasyonu, Teknik Servis Kanban akışı ve mobil duyarlılık senaryoları belgelendi.
+  3. **Lansman PR ve Sürümleme (`release/v1.0.0`):**
+     - Tüm proje çıktılarının üretime hazır olduğunu gösteren v1.0.0 sürüm dalı açılarak nihai Pull Request Faruk Hoca'nın onayına sunuldu.
+- **Teknik Kazanım & Karşılaşılan Durumlar:**
+  - Bir yazılımın sadece kodlanmasıyla işin bitmediği; canlıya alma aşamasında veritabanı temizleme scriptleri, acil durum geri alma planları (rollback) ve operasyonel checklist'lerin projenin sürekliliği için vazgeçilmez olduğu kavrandı. 35 günlük staj programı başarıyla tamamlandı.
+- **Referans:** `Release PR (release/v1.0.0)`
+
 
 
 

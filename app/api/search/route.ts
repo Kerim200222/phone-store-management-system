@@ -153,8 +153,64 @@ const MOCK_TICKETS: ServiceTicketSearchResult[] = [
     deviceModel: "Xiaomi Redmi Note 12",
     imei: "867543029182736",
     status: "Beklemede",
-    badge: "Beklemede",
-    badgeVariant: "outline",
+    badge: "Müşteri",
+    badgeVariant: "secondary",
+  },
+  {
+    id: "t-4",
+    ticketNumber: "SRV-20261015-0101",
+    title: "SRV-20261015-0101 — iPhone 13 (A2633)",
+    subtitle: "Müşteri: Ahmet Yılmaz • Ekran & Dokunmatik Arızası",
+    type: "service_ticket",
+    url: "/dashboard/service/history?imei=354892091234567",
+    customerName: "Ahmet Yılmaz",
+    deviceModel: "iPhone 13 (A2633)",
+    imei: "354892091234567",
+    status: "Bekliyor",
+    badge: "Bekliyor",
+    badgeVariant: "secondary",
+  },
+  {
+    id: "t-5",
+    ticketNumber: "SRV-20261015-0102",
+    title: "SRV-20261015-0102 — Xiaomi 12 (2201123G)",
+    subtitle: "Müşteri: Mehmet Öztürk • Şarj Soketi Temassızlık",
+    type: "service_ticket",
+    url: "/dashboard/service/history?imei=867543021984210",
+    customerName: "Mehmet Öztürk",
+    deviceModel: "Xiaomi 12 (2201123G)",
+    imei: "867543021984210",
+    status: "Bekliyor",
+    badge: "Bekliyor",
+    badgeVariant: "secondary",
+  },
+  {
+    id: "t-6",
+    ticketNumber: "SRV-20261015-0103",
+    title: "SRV-20261015-0103 — Galaxy S21 5G",
+    subtitle: "Müşteri: Fatma Kaya • Batarya Şişmesi (Teknisyen: Kerim Aydın)",
+    type: "service_ticket",
+    url: "/dashboard/service/history?imei=359876098765432",
+    customerName: "Fatma Kaya",
+    deviceModel: "Galaxy S21 5G (SM-G991B)",
+    imei: "359876098765432",
+    status: "İşlemde",
+    badge: "İşlemde",
+    badgeVariant: "secondary",
+  },
+  {
+    id: "t-7",
+    ticketNumber: "SRV-2026-004",
+    title: "SRV-2026-004 — iPhone 14 Pro",
+    subtitle: "Müşteri: Kerim Aydın • Sıvı Teması / Cihaz Açılmıyor",
+    type: "service_ticket",
+    url: "/dashboard/service/history?imei=354892019284729",
+    customerName: "Kerim Aydın",
+    deviceModel: "iPhone 14 Pro",
+    imei: "354892019284729",
+    status: "İşlemde",
+    badge: "İşlemde",
+    badgeVariant: "secondary",
   },
 ]
 
@@ -215,6 +271,20 @@ const MOCK_PRODUCTS: ProductSearchResult[] = [
     badge: "2 Adet",
     badgeVariant: "outline",
   },
+  {
+    id: "p-5",
+    title: "iPhone 13 128GB Gece Yarısı",
+    subtitle: "IMEI: 354892091234567 • Stok: 3 Adet • 32.499 ₺",
+    type: "product",
+    url: "/dashboard/inventory",
+    stockQuantity: 3,
+    price: 32499,
+    barcode: "194253401235",
+    imei: "354892091234567",
+    categoryName: "Telefon",
+    badge: "3 Adet",
+    badgeVariant: "outline",
+  },
 ]
 
 const MOCK_CUSTOMERS: CustomerSearchResult[] = [
@@ -251,11 +321,56 @@ const MOCK_CUSTOMERS: CustomerSearchResult[] = [
     badge: "Müşteri",
     badgeVariant: "secondary",
   },
+  {
+    id: "c-4",
+    title: "Kerim Aydın",
+    subtitle: "Tel: 0530 123 45 67 • kerim.aydin@phonestore.com",
+    type: "customer",
+    url: "/dashboard/customers",
+    phone: "0530 123 45 67",
+    email: "kerim.aydin@phonestore.com",
+    badge: "Personel / Müşteri",
+    badgeVariant: "default",
+  },
+  {
+    id: "c-5",
+    title: "Can Demir",
+    subtitle: "Tel: 0544 987 65 43 • can.demir@email.com",
+    type: "customer",
+    url: "/dashboard/customers",
+    phone: "0544 987 65 43",
+    email: "can.demir@email.com",
+    badge: "Müşteri",
+    badgeVariant: "secondary",
+  },
+  {
+    id: "c-6",
+    title: "Fatma Kaya",
+    subtitle: "Tel: 0542 333 44 55 • fatma.kaya@outlook.com",
+    type: "customer",
+    url: "/dashboard/customers",
+    phone: "0542 333 44 55",
+    email: "fatma.kaya@outlook.com",
+    badge: "Müşteri",
+    badgeVariant: "secondary",
+  },
+  {
+    id: "c-7",
+    title: "Mehmet Öztürk",
+    subtitle: "Tel: 0555 777 88 99 • mehmet.oz@holding.com.tr",
+    type: "customer",
+    url: "/dashboard/customers",
+    phone: "0555 777 88 99",
+    email: "mehmet.oz@holding.com.tr",
+    badge: "Kurumsal",
+    badgeVariant: "default",
+  },
 ]
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get("q")?.trim() || ""
+  const supabase = createClient()
 
   // Boş veya çok kısa sorgularda sadece hızlı navigasyon kısayollarını dön
   if (query.length < 2) {
@@ -272,23 +387,54 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response)
   }
 
-  const supabase = createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // 1. Çift Katmanlı Kimlik Doğrulama: Supabase Auth SSR + phonestore_session Demo Cookie
+  let isAuthenticated = false
+
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (user && !authError) {
+      isAuthenticated = true
+    }
+  } catch {
+    isAuthenticated = false
+  }
+
+  // 1.B: Supabase oturumu yoksa veya SSR başarısız olduysa 'phonestore_session' çerezini doğrula
+  if (!isAuthenticated) {
+    const sessionCookie = request.cookies.get("phonestore_session")?.value
+    if (sessionCookie) {
+      try {
+        const demoSession = JSON.parse(decodeURIComponent(sessionCookie))
+        if (demoSession && (demoSession.email || demoSession.role)) {
+          isAuthenticated = true
+        }
+      } catch {
+        isAuthenticated = false
+      }
+    }
+  }
+
+  // Geliştirme/test ortamında veya oturum açılmışsa arama aktif olur
+  const isAllowed = isAuthenticated || process.env.NODE_ENV === "development"
 
   const lowerQuery = query.toLowerCase()
+  const trLowerQuery = query.toLocaleLowerCase("tr-TR")
 
-  // 1. Navigasyon Filtreleme (Her zaman erişilebilir)
+  // Navigasyon Filtreleme (Her zaman erişilebilir)
   const matchedNav = NAVIGATION_ITEMS.filter(
     (item) =>
       item.title.toLowerCase().includes(lowerQuery) ||
+      item.title.toLocaleLowerCase("tr-TR").includes(trLowerQuery) ||
       item.subtitle.toLowerCase().includes(lowerQuery) ||
       item.badge?.toLowerCase().includes(lowerQuery)
   )
 
-  // Oturum açılmamışsa veri tabanı kayıtlarını arama, yalnızca navigasyon sonuçlarını dön (Zero-Trust)
-  if (!user) {
+  // Oturum açılmamışsa ve prod ortamındaysa yalnızca güvenli navigasyonu dön
+  if (!isAllowed) {
     const safeResponse: GlobalSearchResponse = {
       query,
       totalCount: matchedNav.length,
@@ -459,36 +605,43 @@ export async function GET(request: NextRequest) {
   }
 
   // 3. Fallback / Mock Eşleme (Canlı veritabanında sonuç yoksa veya mock testinde)
+  const matches = (target?: string | null) => {
+    if (!target) return false
+    const tLower = target.toLowerCase()
+    const tTr = target.toLocaleLowerCase("tr-TR")
+    return tLower.includes(lowerQuery) || tTr.includes(trLowerQuery) || target.includes(query)
+  }
+
   if (tickets.length === 0) {
     tickets = MOCK_TICKETS.filter(
       (t) =>
-        t.title.toLowerCase().includes(lowerQuery) ||
-        t.subtitle.toLowerCase().includes(lowerQuery) ||
-        t.customerName.toLowerCase().includes(lowerQuery) ||
-        t.deviceModel.toLowerCase().includes(lowerQuery) ||
-        (t.imei && t.imei.includes(query)) ||
-        t.ticketNumber.toLowerCase().includes(lowerQuery)
+        matches(t.title) ||
+        matches(t.subtitle) ||
+        matches(t.customerName) ||
+        matches(t.deviceModel) ||
+        matches(t.imei) ||
+        matches(t.ticketNumber)
     )
   }
 
   if (products.length === 0) {
     products = MOCK_PRODUCTS.filter(
       (p) =>
-        p.title.toLowerCase().includes(lowerQuery) ||
-        p.subtitle.toLowerCase().includes(lowerQuery) ||
-        (p.barcode && p.barcode.includes(query)) ||
-        (p.imei && p.imei.includes(query)) ||
-        (p.categoryName && p.categoryName.toLowerCase().includes(lowerQuery))
+        matches(p.title) ||
+        matches(p.subtitle) ||
+        matches(p.barcode) ||
+        matches(p.imei) ||
+        matches(p.categoryName)
     )
   }
 
   if (customers.length === 0) {
     customers = MOCK_CUSTOMERS.filter(
       (c) =>
-        c.title.toLowerCase().includes(lowerQuery) ||
-        c.subtitle.toLowerCase().includes(lowerQuery) ||
-        (c.phone && c.phone.includes(query)) ||
-        (c.email && c.email.toLowerCase().includes(lowerQuery))
+        matches(c.title) ||
+        matches(c.subtitle) ||
+        matches(c.phone) ||
+        matches(c.email)
     )
   }
 
